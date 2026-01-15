@@ -7,11 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
-import { createOrganization } from '../../app/onboarding/actions';
 import { Spinner } from '@/components/ui/spinner';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { createOrganization } from '@/app/onboarding/actions';
 
 const formSchema = z.object({
   name: z

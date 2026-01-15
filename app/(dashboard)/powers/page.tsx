@@ -2,8 +2,8 @@
 
 import { Button } from '@/components/ui/button';
 import { Suspense, useState } from 'react';
-import Tiptap from '@/components/tip-tap';
 import { Spinner } from '@/components/ui/spinner';
+import Tiptap from '@/components/common/tip-tap';
 
 export default function PowerPage() {
   const [loading, setLoading] = useState(false);

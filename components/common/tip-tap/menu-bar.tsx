@@ -1,6 +1,6 @@
+import { Button } from '@/components/ui/button';
 import { useEditorState } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
-import { Button } from '../ui/button';
 import {
   Bold,
   Code,
