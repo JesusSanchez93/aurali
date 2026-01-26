@@ -7,8 +7,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { ForwardRefExoticComponent, ReactNode, RefAttributes } from 'react';
-import { ButtonProps } from '../ui/button';
+import { ReactNode } from 'react';
 
 interface Props {
   trigger: ReactNode;
@@ -16,6 +15,8 @@ interface Props {
   description?: string;
   className?: string;
   body?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export default function Sheet({
@@ -24,9 +25,11 @@ export default function Sheet({
   description,
   className,
   body,
+  open,
+  onOpenChange,
 }: Props) {
   return (
-    <SheetUI>
+    <SheetUI open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetOverlay className="bg-background/10 backdrop-blur-[3px] transition-all duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <SheetContent>

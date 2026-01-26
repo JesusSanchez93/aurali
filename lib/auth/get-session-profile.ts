@@ -12,7 +12,7 @@ export async function getSessionProfile() {
   const { data: profile } = await supabase
     .from('profiles')
     .select(
-      'id, firstname, lastname, email, phone, onboarding_status, created_at, updated_at',
+      'id, firstname, lastname, email, phone, onboarding_status, created_at, updated_at, current_organization_id',
     )
     .eq('id', user.id)
     .maybeSingle();

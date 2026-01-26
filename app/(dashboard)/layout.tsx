@@ -13,13 +13,15 @@ interface Props {
 export default async function DashboardLayout({ children }: Props) {
   const { user, profile } = await getSessionProfile();
 
-  if (!user) {
-    redirect('/auth/login');
-  }
+  // if (!user) {
+  //   redirect('/auth/login');
+  // }
 
-  if (profile?.onboarding_status !== 'completed') {
-    redirect('/onboarding');
-  }
+  // if (user && profile?.onboarding_status !== 'completed') {
+  //   redirect('/onboarding');
+  // }
+
+  if (!profile?.id) return <div>Loading...</div>;
 
   return (
     <div className="flex min-h-screen bg-muted">

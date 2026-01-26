@@ -25,8 +25,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+
+import { logoutAction } from '@/app/auth/actions';
 import Link from 'next/link';
 import { useProfile } from '@/components/providers/profile-provider';
 
@@ -34,16 +34,12 @@ export function NavUser() {
   const profile = useProfile();
   const { isMobile } = useSidebar();
 
-  const router = useRouter();
-
   const initials =
     profile.firstname[0]?.toUpperCase() + profile.lastname[0]?.toUpperCase();
   const fullName = profile.firstname + ' ' + profile.lastname;
 
   const logout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/auth/login');
+    await logoutAction();
   };
 
   return (

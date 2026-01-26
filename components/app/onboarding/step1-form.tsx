@@ -83,7 +83,12 @@ export default function Step1Form({ profile }: Props) {
               label="Email"
               type="email"
             />
-            <FormInput control={form.control} name="phone" label="Teléfono" />
+            <FormInput
+              control={form.control}
+              type="phone"
+              name="phone"
+              label="Teléfono"
+            />
           </div>
           <ViewTransition name="onboarding-form-footer">
             <div className="mt-6 flex justify-end">

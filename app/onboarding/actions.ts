@@ -36,7 +36,7 @@ export async function updateProfileAction(values: {
   }
 }
 
-export async function createOrganization(values: {
+export async function updateFirstOrganization(values: {
   name: string;
   legal_name: string;
   nit: string;
@@ -63,16 +63,51 @@ export async function createOrganization(values: {
     })
     .eq('id', user.id);
 
-  const { error } = await supabase.from('organizations').insert({
-    name: values.name,
-    legal_name: values.legal_name,
-    nit: values.nit,
-    address: values.address,
-    country: values.country,
-    city: values.city,
-    created_by: user.id,
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('current_organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.current_organization_id) {
+    throw new Error('Organization not found');
+  }
+
+  // DEBUG: Check if we can see the organization
+  const { data: orgCheck, error: checkError } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', profile?.current_organization_id)
+    .single();
+
+  console.log('[DEBUG] Organization visibility check:', {
+    found: !!orgCheck,
+    id: profile?.current_organization_id,
+    createdByInDb: orgCheck?.created_by,
+    userId: user.id,
+    checkError,
   });
-  console.log('createOrganization: ', { error });
+
+  if (!orgCheck) {
+    console.error(
+      'User cannot see the organization. RLS is likely blocking generic access.',
+    );
+  }
+
+  const { data, error } = await supabase
+    .from('organizations')
+    .update({
+      name: values.name,
+      legal_name: values.legal_name,
+      nit: values.nit,
+      address: values.address,
+      country: values.country,
+      city: values.city,
+      created_by: user.id,
+    })
+    .eq('id', profile?.current_organization_id)
+    .select();
+  console.log('updateFirstOrganization: ', { data, error, values, profile });
 
   if (error) {
     throw new Error(error.message);

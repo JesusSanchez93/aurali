@@ -8,11 +8,11 @@ export default async function AuthLayout({
 }) {
   const { user, profile } = await getSessionProfile();
 
-  if (user && profile?.onboarding_status === 'COMPLETED') {
+  if (user && profile?.onboarding_status === 'completed') {
     redirect('/dashboard');
   }
 
-  if (user && profile?.onboarding_status !== 'COMPLETED') {
+  if (user && profile?.onboarding_status !== 'completed') {
     redirect('/onboarding');
   }
 

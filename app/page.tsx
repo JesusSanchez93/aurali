@@ -5,10 +5,10 @@ export default async function Home() {
   const { user, profile } = await getSessionProfile();
 
   if (!user) {
-    redirect('/auth/login');
+    // redirect('/auth/login');
   }
 
-  if (profile?.onboarding_status !== 'COMPLETED') {
+  if (user && profile?.onboarding_status !== 'completed') {
     redirect('/onboarding');
   }
 

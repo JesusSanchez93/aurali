@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { redirect } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
-import { createOrganization } from '@/app/onboarding/actions';
+import { updateFirstOrganization } from '@/app/onboarding/actions';
 
 const formSchema = z.object({
   name: z
@@ -57,7 +57,7 @@ export default function Step2Form() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
-      await createOrganization({
+      await updateFirstOrganization({
         ...values,
         onboarding_status: 'completed',
       });

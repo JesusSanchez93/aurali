@@ -22,7 +22,7 @@ export default function ProcessList({ data }: ProcessListProps) {
   return (
     <div className="mt-8 space-y-4">
       <h2 className="text-xl font-semibold tracking-tight">Process List</h2>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-1">
         {data.map((process, index) => (
           <ProcessCard key={process.id} process={process} index={index} />
         ))}
@@ -38,11 +38,17 @@ function ProcessCard({ process, index }: { process: Client; index: number }) {
       className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards hover:shadow-md"
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      <div className="p-6">
-        <div className="flex items-center justify-between space-x-4">
-          <div className="space-y-1">
+      <div className="p-5">
+        <div className="flex items-center space-x-4">
+          <Badge
+            variant={process.status === 'draft' ? 'secondary' : 'default'}
+            className="capitalize"
+          >
+            {process.status}
+          </Badge>
+          <div>
             <h3
-              className="max-w-[200px] truncate font-semibold leading-none tracking-tight"
+              className="truncate font-semibold leading-none tracking-tight"
               title={process.email || ''}
             >
               {process.email || 'No Email'}
@@ -54,12 +60,6 @@ function ProcessCard({ process, index }: { process: Client; index: number }) {
                 : 'Unknown'}
             </p>
           </div>
-          <Badge
-            variant={process.status === 'draft' ? 'secondary' : 'default'}
-            className="capitalize"
-          >
-            {process.status}
-          </Badge>
         </div>
       </div>
     </div>
