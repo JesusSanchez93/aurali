@@ -5,22 +5,25 @@ import { createClient } from '@/lib/supabase/server';
 export default async function EntryPage({
   searchParams,
 }: {
-  searchParams: { token?: string };
+  searchParams: Promise<{ token?: string }>;
 }) {
   const cookieStore = await cookies();
 
-  const token = searchParams.token;
+  const { token } = await searchParams;
+
   if (!token) redirect('/link-invalido');
+
 
   const supabase = await createClient();
 
-  const { data: process } = await supabase
+  const { data: process, error } = await supabase
     .from('legal_processes')
     .select('id')
     .eq('access_token', token)
     .eq('access_token_used', false)
     .gt('access_token_expires_at', new Date().toISOString())
     .single();
+
 
   if (!process) redirect('/link-invalido');
 

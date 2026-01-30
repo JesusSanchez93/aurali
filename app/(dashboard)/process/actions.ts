@@ -56,6 +56,7 @@ export async function createLegalProcessDraft(values: {
 
   const publicToken = randomUUID();
 
+
   const { data: newProcess, error: processError } = await supabase
     .from('legal_processes')
     .insert({
@@ -66,12 +67,12 @@ export async function createLegalProcessDraft(values: {
       email: values.email,
       organization_id: values.current_organization_id,
       access_token: publicToken,
-      access_token_expires_at: new Date(Date.now() + 1000 * 60 * 30),
-      // created_by: user.id,
+      access_token_expires_at: new Date(Date.now() + 1000 * 60 * 30), // 30 minutes
+      created_by: user.id,
     });
 
   if (processError) {
-    console.error({ processError });
+    console.error(processError);
     throw new Error(processError.message);
   }
 
