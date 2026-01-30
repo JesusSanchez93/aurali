@@ -76,7 +76,7 @@ export async function createLegalProcessDraft(values: {
     throw new Error(processError.message);
   }
 
-  const link = `${process.env.NEXT_PUBLIC_APP_URL}/process/access?token=${publicToken}`;
+  const link = `${process.env.NEXT_PUBLIC_APP_URL}/process/validate-token?token=${publicToken}`;
 
   await resend.emails.send({
     from: 'Aurali Legal <no-reply@aurali.app>',

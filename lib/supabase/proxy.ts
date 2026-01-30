@@ -49,10 +49,8 @@ export async function updateSession(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/process/access') ||
+    pathname.startsWith('/process/validate-token') ||
     pathname.startsWith('/process/complete');
-
-
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
