@@ -9,7 +9,9 @@ import {
   FormMessage,
 } from '../../ui/form';
 import { Input } from '../../ui/input';
+import { PasswordInput } from '../../ui/password-input';
 import { PhoneInput } from './phone-input';
+import { cn } from '@/lib/utils';
 
 interface Props<T extends FieldValues> {
   control: Control<T>;
@@ -19,8 +21,9 @@ interface Props<T extends FieldValues> {
   placeholder?: string;
   required?: boolean;
   className?: string;
-  type?: 'text' | 'number' | 'email' | 'phone';
+  type?: 'text' | 'number' | 'email' | 'phone' | 'password';
   description?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 export function FormInput<T extends FieldValues>({
@@ -33,6 +36,7 @@ export function FormInput<T extends FieldValues>({
   className,
   description,
   type = 'text',
+  size = 'md',
 }: Props<T>): JSX.Element {
   const id = name.replace('.', '-').toLowerCase();
   return (
@@ -54,6 +58,18 @@ export function FormInput<T extends FieldValues>({
                   disabled={disabled}
                   aria-invalid={fieldState.error ? true : undefined}
                   placeholder={placeholder}
+                  className={cn({ 'border-red-500 focus:ring-red-500': fieldState.error })}
+                  size={size || 'md'}
+                />
+              ) : type === 'password' ? (
+                <PasswordInput
+                  {...field}
+                  id={id}
+                  disabled={disabled}
+                  aria-invalid={fieldState.error ? true : undefined}
+                  placeholder={placeholder}
+                  className={cn({ 'border-red-500 focus:ring-red-500': fieldState.error })}
+                  size={size || 'md'}
                 />
               ) : (
                 <Input
@@ -63,6 +79,8 @@ export function FormInput<T extends FieldValues>({
                   aria-invalid={fieldState.error ? true : undefined}
                   placeholder={placeholder}
                   type={type}
+                  className={cn({ 'border-red-500 focus:ring-red-500': fieldState.error })}
+                  size={size || 'md'}
                 />
               )}
             </FormControl>

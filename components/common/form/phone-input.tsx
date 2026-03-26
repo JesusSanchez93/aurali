@@ -23,15 +23,16 @@ import { cn } from '@/lib/utils';
 
 type PhoneInputProps = Omit<
   React.ComponentProps<'input'>,
-  'onChange' | 'value' | 'ref'
+  'onChange' | 'value' | 'ref' | 'size'
 > &
   Omit<RPNInput.Props<typeof RPNInput.default>, 'onChange'> & {
     onChange?: (value: RPNInput.Value) => void;
+    size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   };
 
 const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
   React.forwardRef<React.ElementRef<typeof RPNInput.default>, PhoneInputProps>(
-    ({ className, onChange, value, ...props }, ref) => {
+    ({ className, onChange, value, size, ...props }, ref) => {
       return (
         <RPNInput.default
           ref={ref}
@@ -52,6 +53,8 @@ const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
            */
           onChange={(value) => onChange?.(value || ('' as RPNInput.Value))}
           {...props}
+          size={size as any}
+          countrySelectProps={{ size } as any}
         />
       );
     },
@@ -60,11 +63,12 @@ PhoneInput.displayName = 'PhoneInput';
 
 const InputComponent = React.forwardRef<
   HTMLInputElement,
-  React.ComponentProps<'input'>
->(({ className, ...props }, ref) => (
+  Omit<React.ComponentProps<'input'>, 'size'> & { size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' }
+>(({ className, size, ...props }, ref) => (
   <Input
     className={cn('rounded-e-lg rounded-s-none', className)}
     {...props}
+    size={size}
     ref={ref}
   />
 ));
@@ -77,6 +81,7 @@ type CountrySelectProps = {
   value: RPNInput.Country;
   options: CountryEntry[];
   onChange: (country: RPNInput.Country) => void;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 };
 
 const CountrySelect = ({
@@ -84,6 +89,7 @@ const CountrySelect = ({
   value: selectedCountry,
   options: countryList,
   onChange,
+  size,
 }: CountrySelectProps) => {
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
   const [searchValue, setSearchValue] = React.useState('');
@@ -102,7 +108,14 @@ const CountrySelect = ({
         <Button
           type="button"
           variant="outline"
-          className="flex gap-1 rounded-e-none rounded-s-lg border-r-0 px-3 focus:z-10"
+          className={cn(
+            'flex gap-1 rounded-e-none rounded-s-lg border-r-0 px-3 focus:z-10',
+            size === 'sm' && 'h-8 text-sm',
+            size === 'md' && 'h-9 text-base',
+            size === 'lg' && 'h-10 text-lg',
+            size === 'xl' && 'h-12 text-xl',
+            size === '2xl' && 'h-16 text-2xl',
+          )}
           disabled={disabled}
         >
           <FlagComponent
@@ -117,7 +130,7 @@ const CountrySelect = ({
           />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent align='start' className="w-[300px] p-0">
         <Command>
           <CommandInput
             value={searchValue}

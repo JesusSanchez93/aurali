@@ -7,6 +7,7 @@ import {
   CreditCard,
   LogOut,
   Sparkles,
+  ArrowLeft,
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,11 +27,14 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-import { logoutAction } from '@/app/auth/actions';
+import { logoutAction } from '@/app/[locale]/auth/actions';
+import { exitOrganizationAction } from '@/app/[locale]/(dashboard)/admin/clients/actions';
 import Link from 'next/link';
 import { useProfile } from '@/components/providers/profile-provider';
+import { useTranslations } from 'next-intl';
 
 export function NavUser() {
+  const t = useTranslations('common.nav.user');
   const profile = useProfile();
   const { isMobile } = useSidebar();
 
@@ -38,8 +42,15 @@ export function NavUser() {
     profile.firstname[0]?.toUpperCase() + profile.lastname[0]?.toUpperCase();
   const fullName = profile.firstname + ' ' + profile.lastname;
 
+  const isSuperAdmin = profile?.system_role === 'SUPERADMIN';
+  const isInsideOrg = isSuperAdmin && !!profile?.current_organization_id;
+
   const logout = async () => {
     await logoutAction();
+  };
+
+  const exitOrg = async () => {
+    await exitOrganizationAction();
   };
 
   return (
@@ -88,7 +99,7 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem disabled>
                 <Sparkles />
-                Upgrade to Pro
+                {t('upgrade')}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -96,25 +107,37 @@ export function NavUser() {
               <DropdownMenuItem asChild>
                 <Link href={'/account'}>
                   <BadgeCheck />
-                  Account
+                  {t('account')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <CreditCard />
-                Billing
+                {t('billing')}
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <Bell />
-                Notifications
+                {t('notifications')}
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            {isInsideOrg && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={exitOrg}
+                  className="cursor-pointer text-muted-foreground"
+                >
+                  <ArrowLeft />
+                  {t('exit_organization')}
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={logout}
               className="cursor-pointer text-red-600 hover:bg-red-100 focus:text-red-600 dark:text-red-500 dark:hover:bg-red-900"
             >
               <LogOut />
-              Log out
+              {t('logout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

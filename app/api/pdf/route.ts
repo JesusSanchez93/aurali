@@ -10,7 +10,7 @@ export async function GET() {
   const supabase = await createClient();
 
   const { data, error } = await supabase
-    .from('test_document')
+    .from('legal_templates')
     .select('content')
     .order('created_at', { ascending: false })
     .limit(1)

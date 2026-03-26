@@ -1,0 +1,341 @@
+{
+    "metadata": {
+        "title": "Aurali.app",
+        "description": "Legal Process Manager"
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "An error occurred",
+        "error_fallback": "An unexpected error occurred",
+        "save": "Save",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "delete": "Delete",
+        "pagination": {
+            "showing": "Showing {start} to {end} of {total} processes",
+            "previous": "Previous",
+            "next": "Next"
+        },
+        "status": "Status",
+        "yes": "Yes",
+        "no": "No",
+        "no_data": "No information could be loaded.",
+        "validation": {
+            "required": "Required field",
+            "invalid_email": "Invalid email format",
+            "passwords_not_match": "Passwords do not match"
+        },
+        "nav": {
+            "home": "Home",
+            "processes": "Legal processes",
+            "clients": "Clients",
+            "users": "Users",
+            "documents": "Documents",
+            "settings": "Settings",
+            "email": "Email",
+            "repeat_password": "Repeat Password",
+            "check_email": "Check Your Email",
+            "password_reset_sent": "Password reset instructions sent",
+            "password_reset_instructions": "If you registered using your email and password, you will receive a password reset email.",
+            "user": {
+                "upgrade": "Upgrade to Pro",
+                "account": "Account",
+                "billing": "Billing",
+                "notifications": "Notifications",
+                "settings": "Settings",
+                "logout": "Log out",
+                "exit_organization": "Exit organization"
+            },
+            "workflows": "Workflows",
+            "admin_clients": "Clients",
+            "catalog": "Global Catalog"
+        },
+        "upload": {
+            "click_to_upload": "Click to upload a document",
+            "click_to_upload_image": "Click to upload",
+            "can_upload_more": "You can upload {count} more file{pluralShort}",
+            "confirm_crop": "Confirm crop",
+            "document_fallback": "Document"
+        }
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "welcome": "Welcome back",
+        "stats": {
+            "total_clients": "Registered Clients",
+            "total_clients_desc": "Total in the organization",
+            "total_processes": "Legal Processes",
+            "total_processes_desc": "Total processes registered",
+            "completed_processes": "Completed Processes",
+            "completed_processes_desc": "Processes that have finished"
+        }
+    },
+    "process": {
+        "tabs": {
+            "processes": "Legal processes",
+            "formats": "Formats"
+        },
+        "detail": "Process Detail",
+        "created_at": "Created on {date}",
+        "status": {
+            "label": "Status",
+            "draft": "Draft",
+            "pending_client_data": "In process",
+            "completed": "Completed",
+            "approved": "Approved",
+            "paid": "Paid",
+            "documents_approved": "Documents approved",
+            "documents_sent": "Documents sent",
+            "documents_received": "Documents received",
+            "finished": "Finished"
+        },
+        "sections": {
+            "personal_data": "Personal Data",
+            "document_images": "Identity Document",
+            "banking_info": "Banking Information",
+            "facts_info": "Information about the Facts"
+        },
+        "fields": {
+            "first_name": "First Name",
+            "last_name": "Last Name",
+            "email": "Email",
+            "phone": "Phone",
+            "document_type": "Document Type",
+            "document_number": "Document Number",
+            "document_front": "Front",
+            "document_back": "Back",
+            "bank_name": "Bank",
+            "last_4_digits": "Last 4 digits",
+            "file_complait": "Did you file a complaint?",
+            "no_signal": "No signal?",
+            "bank_notification": "Bank notifications?",
+            "access_website": "Did you access the website?",
+            "access_link": "Did you access a suspicious link?",
+            "used_to_operate_stolen_amount": "Operations for stolen amount?",
+            "lost_card": "Did you lose your card?",
+            "fraud_incident_summary": "Incident summary",
+            "assigned_to": "Assigned to"
+        },
+        "list": {
+            "empty_title": "No active processes found.",
+            "empty_desc": "Start a new process using the form above.",
+            "no_email": "No Email",
+            "created": "Created"
+        },
+        "filter": {
+            "all": "All",
+            "placeholder": "Filter by status"
+        },
+        "search": {
+            "placeholder": "Search by client or document...",
+            "clear": "Clear search"
+        },
+        "form": {
+            "trigger": "New legal process",
+            "sheet_title": "New process",
+            "description": "Form to create a new process",
+            "title": "Start New Process",
+            "submit": "Start process",
+            "submitting": "Starting...",
+            "success_toast": "Process created",
+            "success_desc": "The process has been created successfully.",
+            "error_toast": "Error"
+        },
+        "payment": {
+            "mark_as_paid": "Mark as paid",
+            "revert_payment": "Revert payment",
+            "confirm_title": "Confirm initial payment",
+            "confirm_description": "Are you sure you want to mark this process as paid? This indicates that the client has made the payment for the start of the legal process.",
+            "revert_title": "Revert payment status",
+            "revert_description": "Are you sure you want to revert the payment status? The process will return to the completed state.",
+            "confirm_revert_desc": "Are you sure you want to revert the payment? The status will return to 'In process'.",
+            "confirm_button": "Confirm",
+            "cancel_button": "Cancel"
+        }
+    },
+    "clients": {
+        "list": {
+            "empty": "No active clients found.",
+            "document": "Document",
+            "created": "Created"
+        },
+        "search": {
+            "placeholder": "Search by name, email, phone or ID...",
+            "clear": "Clear search"
+        },
+        "detail": {
+            "title": "Client Detail",
+            "registered_at": "Registered on",
+            "personal_data": "Personal Data",
+            "annex_documents": "Annex Documents",
+            "front_image": "Front image",
+            "back_image": "Back image"
+        }
+    },
+    "onboarding": {
+        "home": {
+            "title": "Aurali.app",
+            "description": "The digital employee for law firms and lawyers that helps you automate internal processes and be more effective in time use, so your focus is on what truly matters.",
+            "start": "Start"
+        },
+        "step1": {
+            "title": "Step 1 of 4: Personal user data"
+        },
+        "step2": {
+            "title": "Step 2 of 4: Organization data"
+        },
+        "step3": {
+            "title": "Step 3 of 4: Configure banks",
+            "description": "Select the banks your organization will work with. You can change them later.",
+            "add_bank": "Add bank",
+            "bank_name": "Bank name",
+            "bank_name_placeholder": "E.g. Bancolombia",
+            "no_banks": "No banks configured yet.",
+            "add": "Add",
+            "remove": "Remove"
+        },
+        "step4": {
+            "title": "Step 4 of 4: Document types",
+            "description": "Configure the identity document types your organization will accept.",
+            "add_document": "Add document",
+            "document_name": "Document name",
+            "document_name_placeholder": "E.g. National ID",
+            "document_slug": "Code (abbreviation)",
+            "document_slug_placeholder": "E.g. ID",
+            "no_documents": "No document types configured.",
+            "add": "Add",
+            "remove": "Remove"
+        },
+        "fields": {
+            "legal_name": "Legal name",
+            "nit": "NIT",
+            "address": "Address",
+            "city": "City",
+            "region": "Region / State",
+            "country": "Country"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "Login",
+            "description": "Enter your email below to login to your account",
+            "submit": "Login",
+            "forgot_password": "Forgot your password?",
+            "no_account": "Don't have an account?",
+            "sign_up": "Sign up"
+        },
+        "signUp": {
+            "title": "Create Account",
+            "description": "Enter your email below to create your account",
+            "submit": "Create Account",
+            "already_have_account": "Already have an account?",
+            "login": "Login"
+        },
+        "forgotPassword": {
+            "title": "Forgot your password?",
+            "description": "Enter your email and we'll send you a link to reset it",
+            "submit": "Send Link"
+        },
+        "updatePassword": {
+            "title": "Update Password",
+            "description": "Enter your new password below",
+            "submit": "Update Password"
+        },
+        "sign_up_success": {
+            "title": "Thank you for signing up!",
+            "description": "Check your email to confirm",
+            "content": "You've successfully signed up. Please check your email to confirm your account before signing in.",
+            "continue": "Continue to Onboarding"
+        },
+        "fields": {
+            "password": "Password",
+            "new_password": "New Password"
+        }
+    },
+    "formats": {
+        "title": "Document Templates",
+        "description": "Manage templates for legal process document generation.",
+        "new": "New Template",
+        "new_title": "New Template",
+        "edit_title": "Edit Template",
+        "form_description": "Define the name and content of the template.",
+        "field_name": "Template name",
+        "field_name_placeholder": "e.g. Bank letter, Power of attorney...",
+        "field_content": "Content",
+        "empty": "No templates created yet. Create the first one using the button above.",
+        "col_name": "Name",
+        "col_version": "Version",
+        "col_created_at": "Created",
+        "col_actions": "Actions",
+        "create_success": "Template created successfully.",
+        "update_success": "Template updated successfully.",
+        "delete_success": "Template deleted.",
+        "delete_title": "Delete template",
+        "delete_description": "Are you sure you want to delete this template? This action cannot be undone.",
+        "variables": {
+            "title": "Dynamic variables",
+            "description": "Click to insert into the editor or type them manually.",
+            "manual_hint": "You can also type them directly in the editor using the format '{VARIABLE_NAME}'.",
+            "groups": {
+                "client": "Client Information",
+                "process": "Process Information",
+                "banking": "Banking Information",
+                "lawyer": "Lawyer Information",
+                "org_rep": "Firm Legal Representative"
+            },
+            "FIRST_NAME": "First Name",
+            "LAST_NAME": "Last Name",
+            "DOCUMENT_TYPE": "Document Type",
+            "DOCUMENT_NAME": "Document Name",
+            "DOCUMENT_NUMBER": "Document Number",
+            "EMAIL": "Email",
+            "PHONE": "Phone",
+            "ADDRESS": "Address",
+            "PROCESS_ID": "Process ID",
+            "PROCESS_DATE": "Process Date",
+            "PROCESS_STATUS": "Process Status",
+            "BANK_NAME": "Bank Name",
+            "BANK_DOCUMENT_SLUG": "Bank Document Type",
+            "BANK_DOCUMENT_NUMBER": "Bank Document Number",
+            "BANK_LAST_4_DIGITS": "Last 4 Digits",
+            "FRAUD_INCIDENT_SUMMARY": "Fraud Incident Summary",
+            "LAWYER_FIRST_NAME": "Lawyer First Name",
+            "LAWYER_LAST_NAME": "Lawyer Last Name",
+            "LAWYER_DOCUMENT_TYPE": "Lawyer Document Type",
+            "LAWYER_DOCUMENT_NAME": "Lawyer Document Name",
+            "LAWYER_DOCUMENT_NUMBER": "Lawyer Document Number",
+            "ORG_REP_FIRST_NAME": "Representative First Name",
+            "ORG_REP_LAST_NAME": "Representative Last Name",
+            "ORG_REP_DOCUMENT_TYPE": "Representative Document Type",
+            "ORG_REP_DOCUMENT_NAME": "Representative Document Name",
+            "ORG_REP_DOCUMENT_NUMBER": "Representative Document Number",
+            "ORG_REP_EMAIL": "Representative Email",
+            "ORG_NAME": "Firm Name"
+        }
+    },
+    "settings": {
+        "workflows": {
+            "title": "Workflow Settings",
+            "description": "Manage legal process types and their automated stages.",
+            "new": "New Template",
+            "save": "Save",
+            "name": "Template name",
+            "name_placeholder": "e.g. Health Tutelage",
+            "steps": "Workflow Stages",
+            "add_step": "Add Stage",
+            "step_title": "Stage title",
+            "step_type": "Action type",
+            "order": "Order",
+            "actions": "Notifications",
+            "save_success": "Workflow saved successfully",
+            "types": {
+                "manual": "Manual",
+                "client_input": "Client Input",
+                "payment": "Initial Payment",
+                "ai_generation": "AI Generation",
+                "ai_wait": "AI Wait",
+                "internal_review": "Internal Review"
+            }
+        }
+    }
+}

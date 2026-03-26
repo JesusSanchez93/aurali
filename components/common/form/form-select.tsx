@@ -14,16 +14,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/select';
+import { cn } from '@/lib/utils';
 
 interface Props<T extends FieldValues> {
   control: Control<T>;
-  disabled: boolean;
+  disabled?: boolean;
   name: Path<T>;
   label: string;
   placeholder?: string;
   required?: boolean;
   options: { label: string; value: string; key?: string }[];
   className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 export function FormSelect<T extends FieldValues>({
@@ -35,6 +37,7 @@ export function FormSelect<T extends FieldValues>({
   required,
   options,
   className,
+  size = 'md',
 }: Props<T>): JSX.Element {
   const id = name.replace('.', '-').toLowerCase();
   return (
@@ -49,11 +52,18 @@ export function FormSelect<T extends FieldValues>({
               {required && <span className="ml-0.5 text-red-500">*</span>}
             </FormLabel>
             <FormControl>
-              <Select {...field} disabled={disabled}>
+              <Select {...field} disabled={disabled} value={field.value}
+                onValueChange={field.onChange}>
                 <SelectTrigger
                   id={id}
                   className={
-                    fieldState.error ? 'border-red-500 focus:ring-red-500' : ''
+                    cn({ 'border-red-500 focus:ring-red-500': fieldState.error }, 'bg-white dark:bg-black ',
+                      size === 'sm' && 'h-8 text-sm',
+                      size === 'md' && 'h-9 text-base',
+                      size === 'lg' && 'h-10 text-lg',
+                      size === 'xl' && 'h-12 text-xl',
+                      size === '2xl' && 'h-16 text-2xl',
+                    )
                   }
                 >
                   <SelectValue placeholder={placeholder} />

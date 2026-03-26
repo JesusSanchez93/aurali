@@ -1,0 +1,77 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { requireSuperAdmin } from '@/lib/auth/permissions'
+import { revalidatePath } from 'next/cache'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Supabase = any
+
+/**
+ * Returns all global workflow templates (organization_id = NULL).
+ * Only callable by authenticated users; SUPERADMIN sees all.
+ */
+export async function getGlobalWorkflows() {
+  await requireSuperAdmin()
+
+  const supabase = await createClient()
+  const db = supabase as Supabase
+
+  const { data, error } = await db
+    .from('workflow_templates')
+    .select('id, name, description, is_default, created_at')
+    .is('organization_id', null)
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return data as Array<{
+    id: string
+    name: string
+    description: string | null
+    is_default: boolean
+    created_at: string
+  }>
+}
+
+/**
+ * Creates a new global workflow template (organization_id = NULL).
+ * SUPERADMIN only.
+ */
+export async function createGlobalWorkflow(name: string, description?: string) {
+  await requireSuperAdmin()
+
+  const supabase = await createClient()
+  const db = supabase as Supabase
+
+  const { data, error } = await db
+    .from('workflow_templates')
+    .insert({ name, description: description ?? null, organization_id: null })
+    .select('id')
+    .single()
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/workflows')
+  return data as { id: string }
+}
+
+/**
+ * Deletes a global workflow template.
+ * SUPERADMIN only. Will cascade-delete all nodes, edges, and org assignments.
+ */
+export async function deleteGlobalWorkflow(id: string) {
+  await requireSuperAdmin()
+
+  const supabase = await createClient()
+  const db = supabase as Supabase
+
+  const { error } = await db
+    .from('workflow_templates')
+    .delete()
+    .eq('id', id)
+    .is('organization_id', null)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/workflows')
+}

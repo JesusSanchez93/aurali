@@ -1,57 +1,93 @@
 'use client';
 
 import { z } from 'zod';
-import { useTransition } from 'react';
+import { useTransition, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
+import { FormSelect } from '@/components/common/form/form-select';
 import { Spinner } from '@/components/ui/spinner';
-import { redirect } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { ViewTransition } from 'react';
-import { updateProfileAction } from '@/app/onboarding/actions';
-
-const formSchema = z.object({
-  firstname: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-  lastname: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-  email: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .email('Invalid email format')
-    .min(1, 'Required field'),
-  phone: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-});
+import { updateProfileAction } from '@/app/[locale]/onboarding/actions';
+import { useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
 
 type Props = {
-  profile: z.infer<typeof formSchema>;
+  isInvited?: boolean;
+  documentTypeOptions: { value: string; label: string }[];
+  profile: {
+    firstname: string;
+    lastname: string;
+    email: string;
+    phone: string;
+    document_type: string;
+    document_number: string;
+  };
 };
 
-export default function Step1Form({ profile }: Props) {
+export default function Step1Form({ profile, isInvited = false, documentTypeOptions }: Props) {
+  const t = useTranslations('onboarding.step1');
+  const processT = useTranslations('process.fields');
+  const validationT = useTranslations('common.validation');
+  const router = useRouter();
+
   const [isPending, startTransition] = useTransition();
+
+  const formSchema = useMemo(() => z.object({
+    firstname: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    lastname: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    email: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .email(validationT('invalid_email'))
+      .min(1, validationT('required')),
+    phone: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    document_type: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    document_number: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+  }), [validationT]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: profile,
+    defaultValues: {
+      firstname: profile.firstname || '',
+      lastname: profile.lastname || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      document_type: profile.document_type || '',
+      document_number: profile.document_number || '',
+    },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
       await updateProfileAction({
-        ...values,
-        onboarding_status: 'step1_completed',
+        first_name: values.firstname,
+        last_name: values.lastname,
+        email: values.email,
+        phone: values.phone,
+        document_type: values.document_type,
+        document_number: values.document_number,
+        onboarding_status: isInvited ? 'completed' : 'step1_completed',
       });
-      redirect('/onboarding/step2');
+      router.push(isInvited ? '/dashboard' : '/onboarding/step2');
     });
   }
 
@@ -60,7 +96,7 @@ export default function Step1Form({ profile }: Props) {
       <ViewTransition name="onboarding-form-header">
         <div className="mb-12">
           <span className="text-2xl">
-            Paso 1 de 2: Datos personales del Usuario
+            {t('title')}
           </span>
         </div>
       </ViewTransition>
@@ -70,24 +106,36 @@ export default function Step1Form({ profile }: Props) {
             <FormInput
               control={form.control}
               name="firstname"
-              label="Nombres"
+              label={processT('first_name')}
             />
             <FormInput
               control={form.control}
               name="lastname"
-              label="Apellidos"
+              label={processT('last_name')}
             />
             <FormInput
               control={form.control}
               name="email"
-              label="Email"
+              label={processT('email')}
               type="email"
+              disabled
             />
             <FormInput
               control={form.control}
               type="phone"
               name="phone"
-              label="Teléfono"
+              label={processT('phone')}
+            />
+            <FormSelect
+              control={form.control}
+              name="document_type"
+              label={processT('document_type')}
+              options={documentTypeOptions}
+            />
+            <FormInput
+              control={form.control}
+              name="document_number"
+              label={processT('document_number')}
             />
           </div>
           <ViewTransition name="onboarding-form-footer">

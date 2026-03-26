@@ -1,0 +1,341 @@
+{
+    "metadata": {
+        "title": "Aurali.app",
+        "description": "Gestor de Procesos Legales"
+    },
+    "common": {
+        "loading": "Cargando...",
+        "error": "Ocurrió un error",
+        "error_fallback": "Ocurrió un error inesperado",
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "confirm": "Confirmar",
+        "pagination": {
+            "showing": "Mostrando {start} a {end} de {total} procesos",
+            "previous": "Anterior",
+            "next": "Siguiente"
+        },
+        "delete": "Eliminar",
+        "status": "Estado",
+        "yes": "Sí",
+        "no": "No",
+        "no_data": "No se pudo cargar la información.",
+        "validation": {
+            "required": "Campo requerido",
+            "invalid_email": "Formato de email inválido",
+            "passwords_not_match": "Las contraseñas no coinciden"
+        },
+        "nav": {
+            "home": "Inicio",
+            "processes": "Procesos legales",
+            "clients": "Clientes",
+            "users": "Usuarios",
+            "documents": "Documentos",
+            "settings": "Configuración",
+            "email": "Email",
+            "repeat_password": "Repetir Contraseña",
+            "check_email": "Revisa tu Correo",
+            "password_reset_sent": "Instrucciones de restablecimiento enviadas",
+            "password_reset_instructions": "Si te registraste usando tu email y contraseña, recibirás un correo para restablecerla.",
+            "user": {
+                "upgrade": "Mejorar a Pro",
+                "account": "Cuenta",
+                "billing": "Facturación",
+                "notifications": "Notificaciones",
+                "settings": "Configuración",
+                "logout": "Cerrar sesión",
+                "exit_organization": "Salir de la organización"
+            },
+            "workflows": "Flujos de Trabajo",
+            "admin_clients": "Clientes",
+            "catalog": "Catálogo global"
+        },
+        "upload": {
+            "click_to_upload": "Haz clic para subir un documento",
+            "click_to_upload_image": "Haz clic para subir",
+            "can_upload_more": "Puedes subir {count} archivo{pluralShort} más",
+            "confirm_crop": "Confirmar recorte",
+            "document_fallback": "Documento"
+        }
+    },
+    "dashboard": {
+        "title": "Panel de Control",
+        "welcome": "Bienvenido de nuevo",
+        "stats": {
+            "total_clients": "Clientes Registrados",
+            "total_clients_desc": "Total en la organización",
+            "total_processes": "Procesos Legales",
+            "total_processes_desc": "Procesos totales registrados",
+            "completed_processes": "Procesos Completados",
+            "completed_processes_desc": "Procesos que han finalizado"
+        }
+    },
+    "process": {
+        "tabs": {
+            "processes": "Procesos legales",
+            "formats": "Formatos"
+        },
+        "detail": "Detalle del Proceso",
+        "created_at": "Creado el {date}",
+        "status": {
+            "label": "Estado",
+            "draft": "Borrador",
+            "pending_client_data": "En proceso",
+            "completed": "Completado",
+            "approved": "Aprobado",
+            "paid": "Pagado",
+            "documents_approved": "Documentos aprobados",
+            "documents_sent": "Documentos enviados",
+            "documents_received": "Documentos recibidos",
+            "finished": "Finalizado"
+        },
+        "sections": {
+            "personal_data": "Datos Personales",
+            "document_images": "Documento de Identidad",
+            "banking_info": "Información Bancaria",
+            "facts_info": "Información de los Hechos"
+        },
+        "fields": {
+            "first_name": "Nombre",
+            "last_name": "Apellido",
+            "email": "Email",
+            "phone": "Teléfono",
+            "document_type": "Tipo de documento",
+            "document_number": "Número de documento",
+            "document_front": "Frente",
+            "document_back": "Reverso",
+            "bank_name": "Banco",
+            "last_4_digits": "Últimos 4 dígitos",
+            "file_complait": "¿Presentó denuncia?",
+            "no_signal": "¿Sin señal?",
+            "bank_notification": "¿Notificaciones del banco?",
+            "access_website": "¿Ingresó a página web?",
+            "access_link": "¿Ingresó a link sospechoso?",
+            "used_to_operate_stolen_amount": "¿Operaciones por monto hurtado?",
+            "lost_card": "¿Perdió su tarjeta?",
+            "fraud_incident_summary": "Relato de los hechos",
+            "assigned_to": "Asignado a"
+        },
+        "list": {
+            "empty_title": "No se encontraron procesos activos.",
+            "empty_desc": "Inicia un nuevo proceso usando el formulario de arriba.",
+            "no_email": "Sin Correo",
+            "created": "Creado"
+        },
+        "filter": {
+            "all": "Todos",
+            "placeholder": "Filtrar por estado"
+        },
+        "search": {
+            "placeholder": "Buscar por cliente o documento...",
+            "clear": "Limpiar búsqueda"
+        },
+        "form": {
+            "trigger": "Nuevo proceso legal",
+            "sheet_title": "Nuevo proceso",
+            "description": "Formulario para crear un nuevo proceso",
+            "title": "Iniciar Nuevo Proceso",
+            "submit": "Iniciar proceso",
+            "submitting": "Iniciando...",
+            "success_toast": "Proceso creado",
+            "success_desc": "El proceso ha sido creado exitosamente.",
+            "error_toast": "Error"
+        },
+        "payment": {
+            "mark_as_paid": "Marcar como pagado",
+            "revert_payment": "Revertir pago",
+            "confirm_title": "Confirmar pago de inicio",
+            "confirm_description": "¿Estás seguro de que deseas marcar este proceso como pagado? Esto indica que el cliente realizó el pago del inicio del proceso legal.",
+            "revert_title": "Revertir estado de pago",
+            "revert_description": "¿Estás seguro de que deseas revertir el estado de pago? El proceso volverá al estado completado.",
+            "confirm_revert_desc": "¿Está seguro que desea revertir el pago? El estado regresará a 'En proceso'.",
+            "confirm_button": "Confirmar",
+            "cancel_button": "Cancelar"
+        }
+    },
+    "clients": {
+        "list": {
+            "empty": "No se encontraron clientes activos.",
+            "document": "Documento",
+            "created": "Creado"
+        },
+        "search": {
+            "placeholder": "Buscar por nombre, email, teléfono o DNI...",
+            "clear": "Limpiar búsqueda"
+        },
+        "detail": {
+            "title": "Detalle del Cliente",
+            "registered_at": "Registrado el",
+            "personal_data": "Datos Personales",
+            "annex_documents": "Documentos Anexos",
+            "front_image": "Imagen frontal",
+            "back_image": "Imagen trasera"
+        }
+    },
+    "onboarding": {
+        "home": {
+            "title": "Aurali.app",
+            "description": "La empleada digital para bufete y abogados que te ayuda a automatizar los procesos internos y a ser mas efectivos en el uso del tiempo, para que tu enfoque sea en lo verdaderamente importante.",
+            "start": "Iniciar"
+        },
+        "step1": {
+            "title": "Paso 1 de 4: Datos personales del Usuario"
+        },
+        "step2": {
+            "title": "Paso 2 de 4: Datos de la organización"
+        },
+        "step3": {
+            "title": "Paso 3 de 4: Configura los bancos",
+            "description": "Selecciona los bancos con los que trabajará tu organización. Podrás modificarlos después.",
+            "add_bank": "Agregar banco",
+            "bank_name": "Nombre del banco",
+            "bank_name_placeholder": "Ej: Bancolombia",
+            "no_banks": "No hay bancos configurados aún.",
+            "add": "Agregar",
+            "remove": "Eliminar"
+        },
+        "step4": {
+            "title": "Paso 4 de 4: Tipos de documentos",
+            "description": "Configura los tipos de documento de identidad que aceptará tu organización.",
+            "add_document": "Agregar documento",
+            "document_name": "Nombre del documento",
+            "document_name_placeholder": "Ej: Cédula de ciudadanía",
+            "document_slug": "Código (siglas)",
+            "document_slug_placeholder": "Ej: CC",
+            "no_documents": "No hay tipos de documento configurados.",
+            "add": "Agregar",
+            "remove": "Eliminar"
+        },
+        "fields": {
+            "legal_name": "Razón Social",
+            "nit": "NIT",
+            "address": "Dirección",
+            "city": "Ciudad",
+            "region": "Región / Departamento",
+            "country": "País"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "Iniciar Sesión",
+            "description": "Ingresa tu correo abajo para iniciar sesión en tu cuenta",
+            "submit": "Iniciar Sesión",
+            "forgot_password": "¿Olvidaste tu contraseña?",
+            "no_account": "¿No tienes una cuenta?",
+            "sign_up": "Regístrate"
+        },
+        "signUp": {
+            "title": "Crear Cuenta",
+            "description": "Ingresa tu correo abajo para crear tu cuenta",
+            "submit": "Crear Cuenta",
+            "already_have_account": "¿Ya tienes una cuenta?",
+            "login": "Inicia Sesión"
+        },
+        "forgotPassword": {
+            "title": "¿Olvidaste tu contraseña?",
+            "description": "Ingresa tu correo y te enviaremos un link para restablecerla",
+            "submit": "Enviar Link"
+        },
+        "updatePassword": {
+            "title": "Actualizar Contraseña",
+            "description": "Ingresa tu nueva contraseña abajo",
+            "submit": "Actualizar Contraseña"
+        },
+        "sign_up_success": {
+            "title": "¡Gracias por registrarte!",
+            "description": "Revisa tu correo para confirmar",
+            "content": "Te has registrado exitosamente. Por favor, revisa tu correo electrónico para confirmar tu cuenta antes de iniciar sesión.",
+            "continue": "Continuar al Onboarding"
+        },
+        "fields": {
+            "password": "Contraseña",
+            "new_password": "Nueva Contraseña"
+        }
+    },
+    "formats": {
+        "title": "Plantillas de Documentos",
+        "description": "Gestiona las plantillas para la generación de documentos del proceso legal.",
+        "new": "Nueva Plantilla",
+        "new_title": "Nueva Plantilla",
+        "edit_title": "Editar Plantilla",
+        "form_description": "Define el nombre y el contenido de la plantilla.",
+        "field_name": "Nombre de la plantilla",
+        "field_name_placeholder": "Ej: Carta al banco, Poder notarial...",
+        "field_content": "Contenido",
+        "empty": "No hay plantillas creadas. Crea la primera usando el botón de arriba.",
+        "col_name": "Nombre",
+        "col_version": "Versión",
+        "col_created_at": "Creado",
+        "col_actions": "Acciones",
+        "create_success": "Plantilla creada exitosamente.",
+        "update_success": "Plantilla actualizada exitosamente.",
+        "delete_success": "Plantilla eliminada.",
+        "delete_title": "Eliminar plantilla",
+        "delete_description": "¿Estás seguro de que deseas eliminar esta plantilla? Esta acción no se puede deshacer.",
+        "variables": {
+            "title": "Variables dinámicas",
+            "description": "Haz clic para insertar en el editor o escríbelas manualmente.",
+            "manual_hint": "También puedes escribirlas directamente en el editor con el formato '{NOMBRE_VARIABLE}'.",
+            "groups": {
+                "client": "Información del Cliente",
+                "process": "Información del Proceso",
+                "banking": "Información Bancaria",
+                "lawyer": "Información del Abogado",
+                "org_rep": "Representante Legal del Bufete"
+            },
+            "FIRST_NAME": "Nombre",
+            "LAST_NAME": "Apellido",
+            "DOCUMENT_TYPE": "Tipo de Documento",
+            "DOCUMENT_NAME": "Nombre de Documento",
+            "DOCUMENT_NUMBER": "Número de Documento",
+            "EMAIL": "Email",
+            "PHONE": "Teléfono",
+            "ADDRESS": "Dirección",
+            "PROCESS_ID": "ID del Proceso",
+            "PROCESS_DATE": "Fecha del Proceso",
+            "PROCESS_STATUS": "Estado del Proceso",
+            "BANK_NAME": "Nombre del Banco",
+            "BANK_DOCUMENT_SLUG": "Tipo de Documento del Banco",
+            "BANK_DOCUMENT_NUMBER": "Número de Documento del Banco",
+            "BANK_LAST_4_DIGITS": "Últimos 4 Dígitos",
+            "FRAUD_INCIDENT_SUMMARY": "Relato de los Hechos",
+            "LAWYER_FIRST_NAME": "Nombre del Abogado",
+            "LAWYER_LAST_NAME": "Apellido del Abogado",
+            "LAWYER_DOCUMENT_TYPE": "Tipo de Documento del Abogado",
+            "LAWYER_DOCUMENT_NAME": "Nombre del Documento del Abogado",
+            "LAWYER_DOCUMENT_NUMBER": "Número de Documento del Abogado",
+            "ORG_REP_FIRST_NAME": "Nombre del Representante",
+            "ORG_REP_LAST_NAME": "Apellido del Representante",
+            "ORG_REP_DOCUMENT_TYPE": "Tipo de Documento del Representante",
+            "ORG_REP_DOCUMENT_NAME": "Nombre del Documento del Representante",
+            "ORG_REP_DOCUMENT_NUMBER": "Número de Documento del Representante",
+            "ORG_REP_EMAIL": "Email del Representante",
+            "ORG_NAME": "Nombre del Bufete"
+        }
+    },
+    "settings": {
+        "workflows": {
+            "title": "Configuración de Flujos",
+            "description": "Gestiona los tipos de procesos legales y sus etapas automatizadas.",
+            "new": "Nueva Plantilla",
+            "save": "Guardar",
+            "name": "Nombre de la plantilla",
+            "name_placeholder": "Ej: Tutela de Salud",
+            "steps": "Etapas del Flujo",
+            "add_step": "Agregar Etapa",
+            "step_title": "Título de la etapa",
+            "step_type": "Tipo de acción",
+            "order": "Orden",
+            "actions": "Notificaciones",
+            "save_success": "Flujo guardado correctamente",
+            "types": {
+                "manual": "Manual",
+                "client_input": "Entrada de Cliente",
+                "payment": "Pago Inicial",
+                "ai_generation": "Generación IA",
+                "ai_wait": "Espera IA",
+                "internal_review": "Revisión Interna"
+            }
+        }
+    }
+}

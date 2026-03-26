@@ -1,0 +1,2 @@
+select * from public.organization_members where organization_id = 'de78d28e-aed8-4fc3-a3c9-7c49f3e5364a';
+-- select * from public.profiles where id in ('d21db690-aaa4-4ece-bea6-fd9ce1d132f5', '9c69c7e1-d21b-441e-8f8b-6c1404bd55ab');

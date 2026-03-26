@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat '/c/Users/devjd/Documents/Personal/aurali/app/[locale]/\\(dashboard\\)/legal-process/formats/page.tsx')",
+      "Bash(cat '/c/Users/devjd/Documents/Personal/aurali/app/[locale]/\\(dashboard\\)/legal-process/formats/_components/variables.ts')",
+      "Bash(cat '/c/Users/devjd/Documents/Personal/aurali/app/[locale]/\\(dashboard\\)/legal-process/formats/actions.ts')",
+      "Bash(cat '/c/Users/devjd/Documents/Personal/aurali/app/[locale]/\\(dashboard\\)/legal-process/formats/_components/formats-manager.tsx')",
+      "Bash(npx tsc:*)",
+      "Bash(pnpx supabase:*)",
+      "Bash(ls -la \"/c/Users/devjd/Documents/Personal/aurali/app/[locale]/\\(dashboard\\)/legal-process/formats/\")",
+      "Bash(find /c/Users/devjd/Documents/Personal/aurali/lib/documents -type f -name *.ts)",
+      "Bash(find \"app/[locale]/\\(dashboard\\)\" -type f)"
+    ]
+  }
+}

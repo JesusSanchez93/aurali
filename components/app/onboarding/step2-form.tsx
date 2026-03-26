@@ -1,47 +1,68 @@
 'use client';
 
 import { z } from 'zod';
-import { useTransition, ViewTransition } from 'react';
+import { useTransition, useMemo } from 'react';
+import { ViewTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
+import { CountrySelector } from '@/components/ui/country-selector';
+import { RegionSelector } from '@/components/ui/region-selector';
+import { CitySelector } from '@/components/ui/city-selector';
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Spinner } from '@/components/ui/spinner';
-import { redirect } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
-import { updateFirstOrganization } from '@/app/onboarding/actions';
-
-const formSchema = z.object({
-  name: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-  legal_name: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-  nit: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-  address: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-  city: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-  country: z
-    .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
-});
+import { Link, useRouter } from '@/i18n/routing';
+import { updateFirstOrganization } from '@/app/[locale]/onboarding/actions';
+import { useTranslations } from 'next-intl';
 
 export default function Step2Form() {
+  const t = useTranslations('onboarding.step2');
+  const fieldsT = useTranslations('onboarding.fields');
+  const processFieldsT = useTranslations('process.fields');
+  const validationT = useTranslations('common.validation');
+  const router = useRouter();
+
   const [isPending, startTransition] = useTransition();
+
+  const formSchema = useMemo(() => z.object({
+    name: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    legal_name: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    nit: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    address: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    country: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    region: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+    city: z
+      .string({ required_error: validationT('required') })
+      .trim()
+      .min(1, validationT('required')),
+  }), [validationT]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,18 +71,25 @@ export default function Step2Form() {
       legal_name: '',
       nit: '',
       address: '',
+      country: 'CO',
+      region: '',
       city: '',
-      country: '',
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     startTransition(async () => {
       await updateFirstOrganization({
-        ...values,
-        onboarding_status: 'completed',
+        name: values.name,
+        legal_name: values.legal_name,
+        nit: values.nit,
+        address: values.address,
+        country: values.country,
+        region: values.region,
+        city: values.city,
+        onboarding_status: 'step2_completed',
       });
-      redirect('/');
+      router.push('/onboarding/step3');
     });
   }
 
@@ -70,7 +98,7 @@ export default function Step2Form() {
       <ViewTransition name="onboarding-form-header">
         <div className="mb-12">
           <span className="text-2xl">
-            Paso 2 de 2: Datos de la organización
+            {t('title')}
           </span>
         </div>
       </ViewTransition>
@@ -80,33 +108,73 @@ export default function Step2Form() {
             <FormInput
               control={form.control}
               name="name"
-              label="Nombres"
+              label={processFieldsT('first_name')}
               required
             />
             <FormInput
               control={form.control}
               name="legal_name"
-              label="Legal name"
+              label={fieldsT('legal_name')}
               required
             />
-            <FormInput control={form.control} name="nit" label="Nit" required />
+            <FormInput control={form.control} name="nit" label={fieldsT('nit')} required />
             <FormInput
               control={form.control}
               name="address"
-              label="Address"
+              label={fieldsT('address')}
               required
             />
-            <FormInput
+            <FormField
               control={form.control}
               name="country"
-              label="Country"
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{fieldsT('country')}</FormLabel>
+                  <CountrySelector
+                    value={field.value}
+                    onChange={(val) => {
+                      field.onChange(val);
+                      form.setValue('region', '');
+                      form.setValue('city', '');
+                    }}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            <FormInput
+            <FormField
+              control={form.control}
+              name="region"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{fieldsT('region')}</FormLabel>
+                  <RegionSelector
+                    countryCode={form.watch('country')}
+                    value={field.value}
+                    onChange={(val) => {
+                      field.onChange(val);
+                      form.setValue('city', '');
+                    }}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
               control={form.control}
               name="city"
-              label="City"
-              required
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{fieldsT('city')}</FormLabel>
+                  <CitySelector
+                    countryCode={form.watch('country')}
+                    stateName={form.watch('region')}
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
           <ViewTransition name="onboarding-form-footer">
