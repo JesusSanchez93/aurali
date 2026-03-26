@@ -8,6 +8,8 @@ import {
   Controls,
   MiniMap,
   useReactFlow,
+  ConnectionLineType,
+  MarkerType,
   type OnConnect,
   type OnNodesChange,
   type OnEdgesChange,
@@ -32,9 +34,10 @@ interface WorkflowCanvasProps {
 }
 
 const DEFAULT_EDGE_OPTIONS = {
-  type: 'smoothstep',
+  type: 'bezier',
   animated: true,
   style: { strokeWidth: 2 },
+  markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
 };
 
 export function WorkflowCanvas({
@@ -100,6 +103,7 @@ export function WorkflowCanvas({
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
+        connectionLineType={ConnectionLineType.Bezier}
         fitView
         fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
         deleteKeyCode={readOnly ? null : 'Delete'}

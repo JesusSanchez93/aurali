@@ -80,8 +80,9 @@ export async function loadAdminWorkflow(
     target: e.target_node_id,
     sourceHandle: e.source_handle_id ?? undefined,
     targetHandle: e.target_handle_id ?? undefined,
-    type: 'smoothstep',
+    type: 'bezier',
     animated: true,
+    markerEnd: { type: 'arrowclosed' as const, width: 18, height: 18 },
     data: (e.condition as WorkflowEdge['data']) ?? undefined,
   }))
 

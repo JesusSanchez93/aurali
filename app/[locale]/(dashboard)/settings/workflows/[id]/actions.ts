@@ -72,8 +72,9 @@ export async function loadWorkflow(
     id: e.id,
     source: e.source_node_id,
     target: e.target_node_id,
-    type: 'smoothstep',
+    type: 'bezier',
     animated: true,
+    markerEnd: { type: 'arrowclosed' as const, width: 18, height: 18 },
     data: (e.condition as WorkflowEdge['data']) ?? undefined,
   }));
 

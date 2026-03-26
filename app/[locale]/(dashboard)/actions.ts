@@ -37,8 +37,8 @@ export async function getDashboardStats() {
     const { count: totalProcesses } = await withOrg('legal_processes');
 
     const completedQuery = orgId
-        ? base('legal_processes').eq('organization_id', orgId).eq('status', 'completed')
-        : base('legal_processes').eq('status', 'completed');
+        ? base('legal_processes').eq('organization_id', orgId).eq('status', 'finished')
+        : base('legal_processes').eq('status', 'finished');
     const { count: completedProcesses } = await completedQuery;
 
     return {

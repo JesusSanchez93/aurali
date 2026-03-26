@@ -120,6 +120,7 @@
             "empty_title": "No active processes found.",
             "empty_desc": "Start a new process using the form above.",
             "no_email": "No Email",
+            "no_name": "Process not started",
             "created": "Created"
         },
         "filter": {

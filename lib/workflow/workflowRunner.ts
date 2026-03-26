@@ -28,7 +28,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { executeNode, getNextNode } from './nodeExecutors';
+import { executeNode, getNextNodes } from './nodeExecutors';
 import type {
   WorkflowRunRow,
   WorkflowNodeRow,
@@ -87,6 +87,18 @@ export async function startWorkflow(
     .update({ workflow_run_id: run.id })
     .eq('id', legalProcessId);
 
+  // Audit: workflow started
+  void (supabase as unknown as Record<string, unknown> & SupabaseClient)
+    .from('audit_logs')
+    .insert({
+      organization_id: legalProcess.organization_id,
+      user_id: legalProcess.lawyer_id,
+      action: 'workflow_started',
+      entity: 'legal_process',
+      entity_id: legalProcessId,
+      metadata: { workflow_run_id: run.id, template_id: templateId },
+    });
+
   // 6. Load client data for variable substitution
   const clientData = await fetchClientData(legalProcessId, supabase);
 
@@ -144,7 +156,33 @@ export async function resumeWorkflow(
     .eq('node_id', run.current_node_id)
     .eq('status', 'running');
 
-  // 4. Resolve the next node from the waiting node's outgoing edges
+  // Audit: workflow resumed
+  void db.from('audit_logs').insert({
+    organization_id: legalProcess.organization_id,
+    user_id: legalProcess.lawyer_id,
+    action: 'workflow_resumed',
+    entity: 'legal_process',
+    entity_id: run.legal_process_id,
+    metadata: {
+      workflow_run_id: workflowRunId,
+      resumed_from_node: run.current_node_id,
+    },
+  });
+
+  // 4. Find the waiting node from step_runs (robust against fan-out races)
+  const { data: waitingStep } = await db
+    .from('workflow_step_runs')
+    .select('node_id')
+    .eq('workflow_run_id', workflowRunId)
+    .eq('status', 'running')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle() as { data: { node_id: string } | null };
+
+  const resumeFromNodeId = waitingStep?.node_id ?? run.current_node_id;
+  if (!resumeFromNodeId) throw new Error('No se encontró nodo en espera para reanudar');
+
+  // 5. Resolve the next nodes from the waiting node's outgoing edges
   const context: ExecutionContext = {
     workflowRun: run,
     legalProcess,
@@ -152,17 +190,18 @@ export async function resumeWorkflow(
     clientData,
   };
 
-  const nextNodeId = getNextNode(edges, run.current_node_id, context);
+  const nextNodeIds = getNextNodes(edges, resumeFromNodeId, context);
 
-  if (!nextNodeId) {
+  if (nextNodeIds.length === 0) {
     await markRunCompleted(run.id, supabase);
     return;
   }
 
-  const nextNode = nodes.find((n) => n.node_id === nextNodeId);
-  if (!nextNode) throw new Error(`Nodo "${nextNodeId}" no encontrado en el template`);
+  const nextNodes = nextNodeIds
+    .map((id) => nodes.find((n) => n.node_id === id))
+    .filter((n): n is WorkflowNodeRow => !!n);
 
-  await runFromNode(nextNode, nodes, edges, context, supabase, 0);
+  await Promise.all(nextNodes.map((n) => runFromNode(n, nodes, edges, context, supabase, 0)));
 }
 
 // -----------------------------------------------------------------------------
@@ -220,6 +259,20 @@ export async function retryWorkflow(workflowRunId: string): Promise<void> {
   const { nodes, edges } = await fetchGraph(run.template_id, supabase);
   const legalProcess = await fetchLegalProcess(run.legal_process_id, supabase);
   const clientData = await fetchClientData(run.legal_process_id, supabase);
+
+  // Audit: workflow retried (legalProcess now available)
+  void db.from('audit_logs').insert({
+    organization_id: legalProcess.organization_id,
+    user_id: legalProcess.lawyer_id,
+    action: 'workflow_retried',
+    entity: 'legal_process',
+    entity_id: run.legal_process_id,
+    metadata: {
+      workflow_run_id: workflowRunId,
+      retried_from_node: run.current_node_id,
+      source: 'system',
+    },
+  });
 
   const currentNode = nodes.find((n) => n.node_id === run.current_node_id);
   if (!currentNode) throw new Error(`Nodo "${run.current_node_id}" no encontrado en el template`);
@@ -283,6 +336,19 @@ async function runFromNode(
     result = await executeNode(node, context, supabase);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    void db.from('audit_logs').insert({
+      organization_id: context.legalProcess.organization_id,
+      user_id: context.legalProcess.lawyer_id,
+      action: 'workflow_failed',
+      entity: 'legal_process',
+      entity_id: context.legalProcess.id,
+      metadata: {
+        workflow_run_id: context.workflowRun.id,
+        node_id: node.node_id,
+        node_title: node.title,
+        error: message,
+      },
+    });
     await failStep(stepRun.id, context.workflowRun.id, message, supabase);
     return;
   }
@@ -311,6 +377,19 @@ async function runFromNode(
   }
 
   if (result.status === 'failed') {
+    void db.from('audit_logs').insert({
+      organization_id: context.legalProcess.organization_id,
+      user_id: context.legalProcess.lawyer_id,
+      action: 'workflow_failed',
+      entity: 'legal_process',
+      entity_id: context.legalProcess.id,
+      metadata: {
+        workflow_run_id: context.workflowRun.id,
+        node_id: node.node_id,
+        node_title: node.title,
+        error: result.error,
+      },
+    });
     await failRun(context.workflowRun.id, result.error ?? 'Error en nodo', supabase);
     return;
   }
@@ -321,26 +400,56 @@ async function runFromNode(
     previousOutput: result.output,
   };
 
-  const nextNodeId = getNextNode(allEdges, node.node_id, updatedContext);
+  const nextNodeIds = getNextNodes(allEdges, node.node_id, updatedContext);
 
-  if (!nextNodeId) {
-    // No outgoing edge → workflow has naturally finished
-    await markRunCompleted(context.workflowRun.id, supabase);
+  if (nextNodeIds.length === 0) {
+    // This branch has no more nodes to execute.
+    // In a fan-out workflow other branches may still be running or waiting,
+    // so only mark the run as completed when ALL step_runs are done.
+    const { count: runningCount } = await (db
+      .from('workflow_step_runs')
+      .select('id', { count: 'exact', head: true })
+      .eq('workflow_run_id', context.workflowRun.id)
+      .eq('status', 'running') as unknown as Promise<{ count: number | null }>);
+
+    if ((runningCount ?? 0) === 0) {
+      void db.from('audit_logs').insert({
+        organization_id: context.legalProcess.organization_id,
+        user_id: context.legalProcess.lawyer_id,
+        action: 'workflow_completed',
+        entity: 'legal_process',
+        entity_id: context.legalProcess.id,
+        metadata: { workflow_run_id: context.workflowRun.id },
+      });
+      await markRunCompleted(context.workflowRun.id, supabase);
+    }
+    // else: other branches still active — do not close the run yet
     return;
   }
 
-  const nextNode = allNodes.find((n) => n.node_id === nextNodeId);
-  if (!nextNode) {
+  const nextNodes = nextNodeIds
+    .map((id) => allNodes.find((n) => n.node_id === id))
+    .filter((n): n is WorkflowNodeRow => !!n);
+
+  const missingIds = nextNodeIds.filter((id) => !allNodes.find((n) => n.node_id === id));
+  if (missingIds.length > 0) {
     await failRun(
       context.workflowRun.id,
-      `Nodo siguiente "${nextNodeId}" no encontrado`,
+      `Nodos siguientes no encontrados: ${missingIds.join(', ')}`,
       supabase,
     );
     return;
   }
 
-  // Tail-recurse into the next node
-  await runFromNode(nextNode, allNodes, allEdges, updatedContext, supabase, stepCount + 1);
+  if (nextNodes.length === 1) {
+    // Single path — tail-recurse (original behavior)
+    await runFromNode(nextNodes[0], allNodes, allEdges, updatedContext, supabase, stepCount + 1);
+  } else {
+    // Fan-out — run all branches in parallel
+    await Promise.all(
+      nextNodes.map((n) => runFromNode(n, allNodes, allEdges, updatedContext, supabase, stepCount + 1)),
+    );
+  }
 }
 
 // =============================================================================

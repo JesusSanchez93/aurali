@@ -78,7 +78,7 @@ function WorkflowEditorInner({
     (connection) =>
       setEdges((eds) =>
         addEdge(
-          { ...connection, type: 'smoothstep', animated: true } as WorkflowEdge,
+          { ...connection, type: 'bezier', animated: true } as WorkflowEdge,
           eds,
         ),
       ),

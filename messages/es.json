@@ -120,6 +120,7 @@
             "empty_title": "No se encontraron procesos activos.",
             "empty_desc": "Inicia un nuevo proceso usando el formulario de arriba.",
             "no_email": "Sin Correo",
+            "no_name": "Proceso no iniciado",
             "created": "Creado"
         },
         "filter": {

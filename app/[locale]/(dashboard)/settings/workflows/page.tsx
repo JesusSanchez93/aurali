@@ -87,8 +87,9 @@ export default async function WorkflowsPage() {
     target: e.target_node_id,
     sourceHandle: e.source_handle_id ?? undefined,
     targetHandle: e.target_handle_id ?? undefined,
-    type: 'smoothstep' as const,
+    type: 'bezier' as const,
     animated: true,
+    markerEnd: { type: 'arrowclosed' as const, width: 18, height: 18 },
     data: (e.condition ?? undefined) as undefined,
   }))
 

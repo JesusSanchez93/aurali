@@ -66,7 +66,12 @@ export default async function ProcessPage(props: {
           />
         </div>
       </div>
-      <ProcessList data={processes || []} />
+      <ProcessList
+        data={processes || []}
+        canViewTimeline={
+          profile?.system_role === 'SUPERADMIN' || profile?.org_role === 'ORG_ADMIN'
+        }
+      />
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-2">
           <div className="text-sm text-muted-foreground">

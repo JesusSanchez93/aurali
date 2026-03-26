@@ -3,7 +3,7 @@
  *
  * Handles variable substitution and HTML layout wrapping for document templates.
  *
- * Variable syntax: {{variable_name}}
+ * Variable syntax: {variable_name}
  * Supports nested dot notation in the input data map, e.g.:
  *   data = { 'client_name': 'Juan Pérez', 'document_number': '12345678' }
  */
@@ -11,7 +11,7 @@
 // ─── Variable resolution ───────────────────────────────────────────────────────
 
 /**
- * Replaces every {{variable_name}} token in `template` with the
+ * Replaces every {variable_name} token in `template` with the
  * corresponding value from `data`.
  *
  * Unknown tokens are left as-is so the caller can detect them via
@@ -21,7 +21,7 @@ export function substituteVars(
   template: string,
   data: Record<string, string>,
 ): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
     return Object.prototype.hasOwnProperty.call(data, key) ? (data[key] ?? '') : match;
   });
 }
@@ -31,7 +31,7 @@ export function substituteVars(
  * after substitution (i.e. keys present in the template but absent in data).
  */
 export function getUnresolvedVars(template: string, data: Record<string, string>): string[] {
-  const tokens = [...template.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
+  const tokens = [...template.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
   const unique  = [...new Set(tokens)];
   return unique.filter((key) => !Object.prototype.hasOwnProperty.call(data, key));
 }
