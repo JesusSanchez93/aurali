@@ -245,6 +245,14 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                     refreshKey={refreshKey}
                                 />
                             )}
+
+                            {processId && (
+                                <DocumentPreviews
+                                    legalProcessId={processId}
+                                    refreshKey={refreshKey}
+                                    readOnly
+                                />
+                            )}
                         </div>
                     )
                 }

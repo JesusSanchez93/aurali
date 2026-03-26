@@ -8,7 +8,7 @@ import { PlayCircle, RotateCcw, FileCheck } from 'lucide-react';
 import {
   getPendingManualAction,
   retryFailedWorkflow,
-  updateLegalProcessStatus,
+  approveDocumentPreviews,
   type PendingWorkflowAction,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
 
@@ -59,14 +59,14 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
     }
   };
 
-  // ── Document preview: approve → generate PDFs via autoAdvanceWorkflow ────
+  // ── Document preview: approve → generate final PDFs and resume workflow ──
   const handleApproveDocuments = async () => {
     setExecuting(true);
     try {
-      await updateLegalProcessStatus(legalProcessId, 'documents_approved');
+      await approveDocumentPreviews(legalProcessId);
       onSuccess();
     } catch (err) {
-      console.error(err);
+      console.error('[WorkflowActionButton] approveDocumentPreviews:', err);
     } finally {
       setExecuting(false);
       setConfirming(false);

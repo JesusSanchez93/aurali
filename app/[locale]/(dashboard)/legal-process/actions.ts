@@ -49,7 +49,7 @@ export async function getLegalProcesses(page: number = 1, pageSize: number = 10,
     query = query.eq('status', status);
   }
 
-  const { data: legalProcesses, error, count } = await query
+  const { data: legalProcesses, count } = await query
     .order('created_at', { ascending: false })
     .range(from, to);
 
@@ -82,7 +82,7 @@ export async function getDocuments() {
   if (!profile?.current_organization_id)
     throw new Error('Organization not found');
 
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from('documents')
     .select('id, name, slug')
     .eq('organization_id', profile?.current_organization_id);
@@ -256,6 +256,20 @@ export async function createLegalProcessDraft(values: {
   // via the send_email node configured with email_template: 'client_form_email'
   await startWorkflow(orgWorkflow.workflow_template_id, newLegalProcess.id);
 
+  // Audit: process created
+  void supabase.from('audit_logs').insert({
+    organization_id: values.current_organization_id,
+    user_id: user.id,
+    action: 'process_created',
+    entity: 'legal_process',
+    entity_id: newLegalProcess.id,
+    metadata: {
+      document_slug: values.document_slug,
+      assigned_to: values.assigned_to,
+      client_email: values.email,
+    },
+  });
+
   revalidatePath('/legal-process');
 }
 
@@ -320,7 +334,7 @@ export async function markLegalProcessAsPaid(legalProcessId: string) {
 
   const { data: process } = await supabase
     .from('legal_processes')
-    .select('workflow_run_id, status')
+    .select('workflow_run_id, status, organization_id')
     .eq('id', legalProcessId)
     .single();
 
@@ -333,6 +347,15 @@ export async function markLegalProcessAsPaid(legalProcessId: string) {
   }
 
   await resumeWorkflow(process.workflow_run_id, { paid_at: new Date().toISOString() });
+
+  void supabase.from('audit_logs').insert({
+    organization_id: process.organization_id,
+    user_id: user.id,
+    action: 'payment_confirmed',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { workflow_run_id: process.workflow_run_id, source: 'manual' },
+  });
 
   revalidatePath('/legal-process');
 }
@@ -482,14 +505,92 @@ export async function retryFailedWorkflow(legalProcessId: string): Promise<void>
 
   const { data: lp } = await supabase
     .from('legal_processes')
-    .select('workflow_run_id')
+    .select('workflow_run_id, organization_id')
     .eq('id', legalProcessId)
     .single();
 
   if (!lp?.workflow_run_id) throw new Error('No hay flujo de trabajo asociado');
 
   await retryWorkflow(lp.workflow_run_id);
+
+  void supabase.from('audit_logs').insert({
+    organization_id: lp.organization_id,
+    user_id: user.id,
+    action: 'workflow_retried',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { workflow_run_id: lp.workflow_run_id, source: 'manual' },
+  });
+
   revalidatePath('/legal-process');
+}
+
+export interface WorkflowStepEntry {
+  id: string;
+  node_id: string;
+  node_title: string;
+  node_type: string;
+  status: string;
+  created_at: string;
+  executed_at: string | null;
+  output: Record<string, unknown>;
+}
+
+/**
+ * Returns all workflow_step_runs for the given legal process,
+ * joined with workflow_nodes to get title and type.
+ */
+export async function getProcessWorkflowSteps(legalProcessId: string): Promise<WorkflowStepEntry[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  // Get the workflow_run for this process
+  const { data: run } = await (supabase as any)
+    .from('workflow_runs')
+    .select('id, template_id')
+    .eq('legal_process_id', legalProcessId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle() as { data: { id: string; template_id: string } | null };
+
+  if (!run) return [];
+
+  // Get all step runs for this workflow run
+  const { data: steps, error } = await (supabase as any)
+    .from('workflow_step_runs')
+    .select('id, node_id, status, output, created_at, executed_at')
+    .eq('workflow_run_id', run.id)
+    .order('created_at', { ascending: true }) as {
+      data: { id: string; node_id: string; status: string; output: Record<string, unknown>; created_at: string; executed_at: string | null }[] | null;
+      error: { message: string } | null;
+    };
+
+  if (error || !steps || steps.length === 0) return [];
+
+  // Load node metadata (title, type) for all nodes in this template
+  const { data: nodes } = await (supabase as any)
+    .from('workflow_nodes')
+    .select('node_id, title, type')
+    .eq('template_id', run.template_id) as {
+      data: { node_id: string; title: string; type: string }[] | null;
+    };
+
+  const nodeMap = Object.fromEntries((nodes ?? []).map((n) => [n.node_id, n]));
+
+  return steps.map((step) => {
+    const node = nodeMap[step.node_id];
+    return {
+      id:          step.id,
+      node_id:     step.node_id,
+      node_title:  node?.title ?? step.node_id,
+      node_type:   node?.type  ?? 'unknown',
+      status:      step.status,
+      created_at:  step.created_at,
+      executed_at: step.executed_at,
+      output:      step.output ?? {},
+    };
+  });
 }
 
 export async function getDocumentPreviews(legalProcessId: string) {
@@ -509,6 +610,197 @@ export async function getDocumentPreviews(legalProcessId: string) {
   return data ?? [];
 }
 
+/**
+ * Called when the lawyer approves the document previews in the UI.
+ * Generates the final PDFs from the preview templates, deletes the previews,
+ * and resumes the workflow — without requiring a status change.
+ *
+ * This replaces the previous approach of setting status='documents_approved'
+ * (which is not a valid DB status and was causing a silent constraint failure).
+ */
+export async function approveDocumentPreviews(legalProcessId: string): Promise<void> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  // ── 1. Get the running workflow run ──────────────────────────────────────
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('workflow_run_id, organization_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!lp?.workflow_run_id) throw new Error('No hay flujo de trabajo asociado');
+
+  const { data: run } = await db
+    .from('workflow_runs')
+    .select('id, template_id, current_node_id, status')
+    .eq('id', lp.workflow_run_id)
+    .single() as { data: { id: string; template_id: string; current_node_id: string; status: string } | null };
+
+  if (!run || run.status !== 'running' || !run.current_node_id) {
+    throw new Error('El flujo de trabajo no está en un estado válido para aprobar documentos');
+  }
+
+  // ── 2. Verify current node is generate_document(preview=true) ─────────────
+  const { data: node } = await db
+    .from('workflow_nodes')
+    .select('type, config')
+    .eq('template_id', run.template_id)
+    .eq('node_id', run.current_node_id)
+    .single() as { data: { type: string; config: Record<string, unknown> } | null };
+
+  if (!node || node.type !== 'generate_document' || !(node.config as { preview?: boolean }).preview) {
+    throw new Error('El flujo no está esperando aprobación de documentos');
+  }
+
+  const cfg = node.config as { template_ids?: string[]; template_id?: string };
+  const ids = cfg.template_ids && cfg.template_ids.length > 0
+    ? cfg.template_ids
+    : cfg.template_id ? [cfg.template_id] : [];
+
+  // ── 3. Generate final PDFs ────────────────────────────────────────────────
+  if (ids.length > 0) {
+    const { buildDocumentTemplateData } = await import('@/lib/workflow/nodeExecutors');
+    const { generateDocument } = await import('@/lib/documents/generateDocument');
+    const { templateData, organizationId } = await buildDocumentTemplateData(legalProcessId, supabase);
+
+    for (const tid of ids) {
+      await generateDocument({
+        templateId:     tid,
+        data:           templateData,
+        legalProcessId,
+        organizationId: organizationId ?? undefined,
+      });
+    }
+  }
+
+  // ── 4. Remove preview records ─────────────────────────────────────────────
+  await db.from('generated_documents')
+    .delete()
+    .eq('legal_process_id', legalProcessId)
+    .eq('is_preview', true);
+
+  // ── 5. Resume workflow ────────────────────────────────────────────────────
+  await resumeWorkflow(run.id, {
+    approved_by: user.id,
+    approved_at: new Date().toISOString(),
+  });
+
+  void supabase.from('audit_logs').insert({
+    organization_id: lp.organization_id,
+    user_id: user.id,
+    action: 'documents_approved',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { workflow_run_id: run.id, templates_generated: ids.length },
+  });
+
+  revalidatePath('/legal-process');
+}
+
+export async function getFinalDocuments(legalProcessId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const { data } = await (supabase as any)
+    .from('generated_documents')
+    .select('id, document_name, html_content, tiptap_content, created_at')
+    .eq('legal_process_id', legalProcessId)
+    .eq('is_preview', false)
+    .order('created_at', { ascending: true }) as {
+      data: { id: string; document_name: string | null; html_content: string | null; tiptap_content: unknown; created_at: string }[] | null;
+    };
+
+  return data ?? [];
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  entity: string;
+  entity_id: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  user: {
+    id: string;
+    firstname: string | null;
+    lastname: string | null;
+    email: string | null;
+  } | null;
+}
+
+/**
+ * Returns all audit_logs entries for a given legal process.
+ * Only accessible by SUPERADMIN and ORG_ADMIN.
+ */
+export async function getProcessAuditLogs(legalProcessId: string): Promise<AuditLogEntry[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('system_role, current_organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) throw new Error('Unauthorized');
+
+  const isSuperAdmin = profile.system_role === 'SUPERADMIN';
+
+  if (!isSuperAdmin && profile.current_organization_id) {
+    const { data: membership } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', profile.current_organization_id)
+      .eq('user_id', user.id)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (membership?.role !== 'ORG_ADMIN') {
+      throw new Error('Forbidden');
+    }
+  }
+
+  const { data, error } = await (supabase as any)
+    .from('audit_logs')
+    .select('id, action, entity, entity_id, metadata, created_at, user_id')
+    .eq('entity', 'legal_process')
+    .eq('entity_id', legalProcessId)
+    .order('created_at', { ascending: true }) as {
+      data: { id: string; action: string; entity: string; entity_id: string; metadata: Record<string, unknown>; created_at: string; user_id: string | null }[] | null;
+      error: { message: string } | null;
+    };
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) return [];
+
+  // Load profile info for each unique user_id
+  const userIds = [...new Set(data.map((e) => e.user_id).filter(Boolean))] as string[];
+  let profileMap: Record<string, { id: string; firstname: string | null; lastname: string | null; email: string | null }> = {};
+
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, firstname, lastname, email')
+      .in('id', userIds);
+
+    for (const p of profiles ?? []) {
+      profileMap[p.id] = p;
+    }
+  }
+
+  return data.map((entry) => ({
+    ...entry,
+    user: entry.user_id ? (profileMap[entry.user_id] ?? null) : null,
+  }));
+}
+
 export async function updateDocumentPreviewContent(
   documentId: string,
   tiptapContent: unknown,
@@ -517,17 +809,43 @@ export async function updateDocumentPreviewContent(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { data: doc } = await (supabase as any)
+  if (!tiptapContent) throw new Error('Contenido vacío');
+
+  const { data: doc, error: docErr } = await (supabase as any)
     .from('generated_documents')
-    .select('document_name')
+    .select('document_name, legal_process_id')
     .eq('id', documentId)
-    .single() as { data: { document_name: string | null } | null };
+    .single() as { data: { document_name: string | null; legal_process_id: string | null } | null; error: { message: string } | null };
 
-  const { tiptapJsonToHtml } = await import('@/lib/documents/generateDocument');
-  const html = tiptapJsonToHtml(tiptapContent, doc?.document_name ?? 'Documento Legal');
+  if (docErr) throw new Error(`Documento no encontrado: ${docErr.message}`);
 
-  await (supabase as any)
+  let html: string;
+  try {
+    const { tiptapJsonToHtml } = await import('@/lib/documents/generateDocument');
+    html = tiptapJsonToHtml(tiptapContent, doc?.document_name ?? 'Documento Legal');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[updateDocumentPreviewContent] tiptapJsonToHtml falló:', msg);
+    throw new Error(`Error al convertir el documento a HTML: ${msg}`);
+  }
+
+  const { error: updateErr } = await (supabase as any)
     .from('generated_documents')
     .update({ tiptap_content: tiptapContent, html_content: html })
-    .eq('id', documentId);
+    .eq('id', documentId) as { error: { message: string } | null };
+
+  if (updateErr) {
+    console.error('[updateDocumentPreviewContent] update falló:', updateErr.message);
+    throw new Error(`Error al guardar: ${updateErr.message}`);
+  }
+
+  if (doc?.legal_process_id) {
+    void (supabase as any).from('audit_logs').insert({
+      user_id: user.id,
+      action: 'document_preview_updated',
+      entity: 'legal_process',
+      entity_id: doc.legal_process_id,
+      metadata: { document_id: documentId, document_name: doc.document_name },
+    });
+  }
 }

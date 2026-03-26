@@ -11,17 +11,20 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { FileText, Pencil } from 'lucide-react';
+import { FileText, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import Tiptap from '@/components/common/tip-tap';
 import {
   getDocumentPreviews,
+  getFinalDocuments,
   updateDocumentPreviewContent,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
 
 interface Props {
   legalProcessId: string;
   refreshKey?: number;
+  /** When true, shows documents as read-only (no edit capability). */
+  readOnly?: boolean;
 }
 
 type PreviewDoc = {
@@ -32,20 +35,24 @@ type PreviewDoc = {
   created_at: string;
 };
 
-export function DocumentPreviews({ legalProcessId, refreshKey }: Props) {
-  const [previews, setPreviews]     = useState<PreviewDoc[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [editingDoc, setEditingDoc] = useState<PreviewDoc | null>(null);
+export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false }: Props) {
+  const [previews, setPreviews]       = useState<PreviewDoc[]>([]);
+  const [loading, setLoading]         = useState(true);
+  // edit state (only used when readOnly=false)
+  const [editingDoc, setEditingDoc]   = useState<PreviewDoc | null>(null);
   const [editContent, setEditContent] = useState<unknown>(null);
-  const [saving, setSaving]         = useState(false);
+  const [saving, setSaving]           = useState(false);
+  // view state (read-only modal)
+  const [viewingDoc, setViewingDoc]   = useState<PreviewDoc | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    getDocumentPreviews(legalProcessId)
+    const fetch = readOnly ? getFinalDocuments : getDocumentPreviews;
+    fetch(legalProcessId)
       .then(setPreviews)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [legalProcessId]);
+  }, [legalProcessId, readOnly]);
 
   useEffect(() => { load(); }, [load, refreshKey]);
 
@@ -63,8 +70,9 @@ export function DocumentPreviews({ legalProcessId, refreshKey }: Props) {
       setEditingDoc(null);
       toast.success('Documento actualizado');
     } catch (err) {
-      console.error(err);
-      toast.error('Error al guardar el documento');
+      const msg = err instanceof Error ? err.message : 'Error al guardar el documento';
+      console.error('[DocumentPreviews] handleSave:', err);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -80,13 +88,15 @@ export function DocumentPreviews({ legalProcessId, refreshKey }: Props) {
 
   if (previews.length === 0) return null;
 
+  const sectionTitle = readOnly ? 'Documentos finales' : 'Documentos preliminares';
+
   return (
     <>
       <Separator />
       <div>
         <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
           <FileText className="h-4 w-4" />
-          Documentos preliminares
+          {sectionTitle}
         </h4>
 
         <div className="flex flex-col gap-6">
@@ -96,10 +106,17 @@ export function DocumentPreviews({ legalProcessId, refreshKey }: Props) {
                 <p className="text-xs font-medium text-muted-foreground">
                   {doc.document_name ?? 'Documento'}
                 </p>
-                <Button size="sm" variant="outline" onClick={() => openEdit(doc)}>
-                  <Pencil className="mr-1.5 h-3 w-3" />
-                  Editar
-                </Button>
+                {readOnly ? (
+                  <Button size="sm" variant="outline" onClick={() => setViewingDoc(doc)}>
+                    <Eye className="mr-1.5 h-3 w-3" />
+                    Ver
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => openEdit(doc)}>
+                    <Pencil className="mr-1.5 h-3 w-3" />
+                    Editar
+                  </Button>
+                )}
               </div>
 
               {doc.html_content ? (
@@ -131,43 +148,78 @@ export function DocumentPreviews({ legalProcessId, refreshKey }: Props) {
         </div>
       </div>
 
-      {/* ── Edit dialog ───────────────────────────────────────────────────── */}
-      <Dialog
-        open={!!editingDoc}
-        onOpenChange={(open) => { if (!open) setEditingDoc(null); }}
-      >
-        <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-0 p-0">
-          <DialogHeader className="shrink-0 border-b px-6 py-4">
-            <DialogTitle className="text-base">
-              {editingDoc?.document_name ?? 'Editar documento'}
-            </DialogTitle>
-          </DialogHeader>
+      {/* ── Edit dialog (editable) ─────────────────────────────────────────── */}
+      {!readOnly && (
+        <Dialog
+          open={!!editingDoc}
+          onOpenChange={(open) => { if (!open) setEditingDoc(null); }}
+        >
+          <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-0 p-0">
+            <DialogHeader className="shrink-0 border-b px-6 py-4">
+              <DialogTitle className="text-base">
+                {editingDoc?.document_name ?? 'Editar documento'}
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-hidden">
-            {editingDoc && (
-              <Tiptap
-                mode="document"
-                value={editContent}
-                onChange={setEditContent}
-              />
-            )}
-          </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {editingDoc && (
+                <Tiptap
+                  mode="document"
+                  value={editContent}
+                  onChange={setEditContent}
+                />
+              )}
+            </div>
 
-          <DialogFooter className="shrink-0 border-t px-6 py-4">
-            <Button
-              variant="outline"
-              onClick={() => setEditingDoc(null)}
-              disabled={saving}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Spinner className="mr-2 h-4 w-4" />}
-              Guardar cambios
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="shrink-0 border-t px-6 py-4">
+              <Button
+                variant="outline"
+                onClick={() => setEditingDoc(null)}
+                disabled={saving}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Spinner className="mr-2 h-4 w-4" />}
+                Guardar cambios
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── View dialog (read-only) ────────────────────────────────────────── */}
+      {readOnly && (
+        <Dialog
+          open={!!viewingDoc}
+          onOpenChange={(open) => { if (!open) setViewingDoc(null); }}
+        >
+          <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-0 p-0">
+            <DialogHeader className="shrink-0 border-b px-6 py-4">
+              <DialogTitle className="text-base">
+                {viewingDoc?.document_name ?? 'Documento'}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="min-h-0 flex-1 overflow-hidden bg-white">
+              {viewingDoc?.html_content && (
+                <iframe
+                  srcDoc={viewingDoc.html_content}
+                  title={viewingDoc.document_name ?? 'Documento'}
+                  sandbox="allow-same-origin"
+                  className="h-full w-full border-none"
+                />
+              )}
+            </div>
+
+            <DialogFooter className="shrink-0 border-t px-6 py-4">
+              <Button variant="outline" onClick={() => setViewingDoc(null)}>
+                Cerrar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

@@ -22,7 +22,7 @@ import { DEFAULT_TEMPLATES } from './templates/index';
 import { generateHTML } from '@tiptap/html';
 import { Node, mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
-import { TextStyleKit } from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 
@@ -82,7 +82,7 @@ const TwoColumnExtensionServer = Node.create({
 
 const TIPTAP_EXTENSIONS = [
   StarterKit,
-  TextStyleKit,
+  TextStyle,
   TextAlign.configure({ types: ['heading', 'paragraph'] }),
   SignatureExtensionServer,
   SignatureRowExtensionServer,
@@ -156,22 +156,25 @@ export async function generateDocument(
     throw new Error(`La plantilla "${template.name}" no tiene contenido definido.`);
   }
 
-  // ── 2. Convert TipTap JSON → HTML ────────────────────────────────────────
+  // ── 2. Substitute variables in TipTap JSON (preserves structure for editor) ─
+  const tiptapContent = substituteVarsInJson(template.content, data);
+
+  // ── 3. Convert substituted TipTap JSON → HTML ────────────────────────────
   let bodyHtml: string;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    bodyHtml = generateHTML(template.content as any, TIPTAP_EXTENSIONS as any);
+    bodyHtml = generateHTML(tiptapContent as any, TIPTAP_EXTENSIONS as any);
   } catch {
     throw new Error(`Error al convertir la plantilla "${template.name}" a HTML.`);
   }
 
-  // ── 3. Substitute variables ───────────────────────────────────────────────
+  // ── 4. Substitute any remaining tokens in HTML (edge cases) ───────────────
   const resolvedBody = substituteVars(bodyHtml, data);
 
-  // ── 4. Wrap in page layout ────────────────────────────────────────────────
+  // ── 5. Wrap in page layout ────────────────────────────────────────────────
   const fullHtml = wrapWithPageLayout(resolvedBody, template.name);
 
-  // ── 5. Generate PDF ───────────────────────────────────────────────────────
+  // ── 6. Generate PDF ───────────────────────────────────────────────────────
   const buffer = await htmlToPdf(fullHtml);
 
   // Normalise a string to ASCII-safe slug (for storage keys)
@@ -221,6 +224,9 @@ export async function generateDocument(
         file_url:         fileUrl,
         document_name:    fileName,
         storage_path:     storagePath,
+        html_content:     fullHtml,
+        tiptap_content:   tiptapContent,
+        is_preview:       false,
       })
       .select('id')
       .single() as { data: { id: string } | null; error: { message: string } | null };
@@ -246,7 +252,7 @@ export async function generateDocument(
  */
 export function substituteVarsInJson(node: unknown, data: Record<string, string>): unknown {
   if (typeof node === 'string') {
-    return node.replace(/\{\{(\w+)\}\}/g, (_, key: string) => data[key] ?? `{{${key}}}`);
+    return node.replace(/\{(\w+)\}/g, (_, key: string) => data[key] ?? `{${key}}`);
   }
   if (Array.isArray(node)) {
     return (node as unknown[]).map((n) => substituteVarsInJson(n, data));

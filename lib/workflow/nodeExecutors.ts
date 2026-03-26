@@ -7,7 +7,7 @@
  *
  * The three public exports used by workflowRunner are:
  *   executeNode()      — dispatches to the correct executor
- *   getNextNode()      — resolves which node comes next given edges + conditions
+ *   getNextNodes()     — resolves all next nodes (fan-out) given edges + conditions
  *   handleConditions() — evaluates a single EdgeCondition against context
  *
  * Node types (v2):
@@ -52,7 +52,7 @@ export async function executeNode(
     case 'notify_lawyer': return executeNotifyLawyer(node, context, supabase);
     case 'manual_action': return executeManualAction(node, context);
     case 'generate_document': return executeGenerateDocument(node, context, supabase);
-    case 'send_documents': return executeSendDocuments(node, context);
+    case 'send_documents': return executeSendDocuments(node, context, supabase);
     case 'status_update': return executeStatusUpdate(node, context, supabase);
     case 'end': return executeEnd();
     default:
@@ -67,32 +67,34 @@ export async function executeNode(
 // ─── Public: edge resolution ───────────────────────────────────────────────────
 
 /**
- * Returns the node_id of the next node to execute, or null if the workflow
- * should stop (no more outgoing edges).
+ * Returns ALL node_ids that should be executed next (fan-out support).
  *
  * Priority:
- *   1. Edges with conditions are evaluated first; first match wins.
- *   2. If no edge with a condition matches, an unconditional edge is followed.
- *   3. If multiple unconditional edges exist, the first one is used.
+ *   1. Conditional edges are evaluated first; ALL that match are collected.
+ *   2. If no conditional edge matches, ALL unconditional edges are followed.
+ *   3. Returns [] when the workflow should stop (no more outgoing edges).
+ *
+ * Single-path workflows return a 1-element array (unchanged behavior).
+ * Multi-output nodes return 2+ elements and trigger parallel execution.
  */
-export function getNextNode(
+export function getNextNodes(
   edges: WorkflowEdgeRow[],
   currentNodeId: string,
   context: ExecutionContext,
-): string | null {
+): string[] {
   const outgoing = edges.filter((e) => e.source_node_id === currentNodeId);
-  if (outgoing.length === 0) return null;
+  if (outgoing.length === 0) return [];
 
   const conditional = outgoing.filter((e) => e.condition !== null);
   const unconditional = outgoing.filter((e) => e.condition === null);
 
-  for (const edge of conditional) {
-    if (handleConditions(edge.condition!, context)) {
-      return edge.target_node_id;
-    }
-  }
+  const conditionalMatches = conditional
+    .filter((e) => handleConditions(e.condition!, context))
+    .map((e) => e.target_node_id);
 
-  return unconditional[0]?.target_node_id ?? null;
+  if (conditionalMatches.length > 0) return conditionalMatches;
+
+  return unconditional.map((e) => e.target_node_id);
 }
 
 /**
@@ -154,39 +156,40 @@ function resolveField(field: string, context: ExecutionContext): unknown {
 // ─── Template variable substitution ───────────────────────────────────────────
 
 /**
- * Replaces {{placeholder}} tokens in a string.
+ * Replaces {placeholder} and {{placeholder}} tokens in a string.
+ * Both single and double brace formats are supported.
  *
  * Available tokens:
- *   {{process.id}}, {{process.email}}, {{process.status}},
- *   {{process.document_number}}, {{process.document_type}}
- *   {{client.first_name}}, {{client.last_name}}, {{client.email}}, ...
- *   {{output.*}} — any key from previousOutput
+ *   {process.id} / {{process.id}}, {process.email}, {process.status}, ...
+ *   {client.first_name} / {{client.first_name}}, {client.email}, ...
+ *   {output.*} / {{output.*}} — any key from previousOutput
  */
 function substituteVars(template: string, context: ExecutionContext): string {
-  if (!template.includes('{{')) return template;
+  if (!template) return template;
 
-  const vars: Record<string, string> = {};
+  const vals: Record<string, string> = {};
 
   // process.*
   for (const [k, v] of Object.entries(context.legalProcess)) {
-    vars[`{{process.${k}}}`] = v != null ? String(v) : '';
-    if (!vars[`{{${k}}}`]) vars[`{{${k}}}`] = v != null ? String(v) : '';
+    const str = v != null ? String(v) : '';
+    vals[`process.${k}`] = str;
+    vals[k] = str;
   }
 
   // client.*
   for (const [k, v] of Object.entries(context.clientData)) {
-    vars[`{{client.${k}}}`] = v != null ? String(v) : '';
+    vals[`client.${k}`] = v != null ? String(v) : '';
   }
 
   // output.*
   for (const [k, v] of Object.entries(context.previousOutput)) {
-    vars[`{{output.${k}}}`] = v != null ? String(v) : '';
+    vals[`output.${k}`] = v != null ? String(v) : '';
   }
 
-  return Object.entries(vars).reduce(
-    (str, [placeholder, val]) => str.replaceAll(placeholder, val),
-    template,
-  );
+  // Replace {{key}} first (longer match), then {key}
+  return template
+    .replace(/\{\{([\w.]+)\}\}/g, (match, key: string) => vals[key] ?? match)
+    .replace(/\{([\w.]+)\}/g,   (match, key: string) => vals[key] ?? match);
 }
 
 // ─── TipTap → HTML converter ───────────────────────────────────────────────────
@@ -226,7 +229,7 @@ async function sendEmail(
   bodyHtml: string,
   attachments?: EmailAttachment[],
 ): Promise<void> {
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: 'Aurali Legal <no-reply@aurali.app>',
     to,
     subject,
@@ -242,6 +245,10 @@ async function sendEmail(
     `,
     attachments,
   });
+  if (error) {
+    console.error('[sendEmail] Resend error:', error);
+    throw new Error(`Error al enviar email a ${to}: ${error.message}`);
+  }
 }
 
 /** Fetches a file from a URL and returns it as a named Buffer for email attachment. */
@@ -301,18 +308,39 @@ async function executeSendEmail(
       .from('generated_documents')
       .select('file_url, template_id, document_name')
       .eq('legal_process_id', context.legalProcess.id)
+      .eq('is_preview', false)
       .in('template_id', templateIds) as {
         data: { file_url: string; template_id: string; document_name: string }[] | null;
       };
 
     for (const doc of docs ?? []) {
-      const filename = doc.document_name ? `${doc.document_name}.pdf` : `documento_${doc.template_id}.pdf`;
+      const baseName = doc.document_name?.replace(/\.pdf$/i, '') ?? `documento_${doc.template_id}`;
+      const filename = `${baseName}.pdf`;
       const att = await fetchAttachment(doc.file_url, filename);
-      if (att) attachments.push(att);
+      if (!att) {
+        console.error(`[send_email] fetchAttachment falló para: ${doc.file_url}`);
+        continue;
+      }
+      attachments.push(att);
     }
   }
 
   await sendEmail(to, subject, bodyHtml, attachments.length ? attachments : undefined);
+
+  void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
+    organization_id: context.legalProcess.organization_id,
+    user_id: context.legalProcess.lawyer_id,
+    action: 'email_sent',
+    entity: 'legal_process',
+    entity_id: context.legalProcess.id,
+    metadata: {
+      to,
+      subject,
+      attachments_count: attachments.length,
+      workflow_run_id: context.workflowRun.id,
+      node_title: node.title,
+    },
+  });
 
   return {
     status: 'completed',
@@ -808,6 +836,20 @@ async function executeGenerateDocument(
       previews.push(inserted);
     }
 
+    void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
+      organization_id: context.legalProcess.organization_id,
+      user_id: context.legalProcess.lawyer_id,
+      action: 'document_preview_generated',
+      entity: 'legal_process',
+      entity_id: context.legalProcess.id,
+      metadata: {
+        preview_count: previews.length,
+        document_ids: previews.map((p) => p.id),
+        workflow_run_id: context.workflowRun.id,
+        node_title: node.title,
+      },
+    });
+
     return {
       status: 'waiting',
       output: { waiting_for: 'document_preview', preview_count: previews.length },
@@ -848,6 +890,20 @@ async function executeGenerateDocument(
     }
   }
 
+  void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
+    organization_id: context.legalProcess.organization_id,
+    user_id: context.legalProcess.lawyer_id,
+    action: 'document_generated',
+    entity: 'legal_process',
+    entity_id: context.legalProcess.id,
+    metadata: {
+      documents_count: documents.length,
+      document_names: documents.map((d) => d.document_name),
+      workflow_run_id: context.workflowRun.id,
+      node_title: node.title,
+    },
+  });
+
   // Expose file_url of the first document for backwards compat with send_documents node
   const first = documents[0];
   return {
@@ -869,10 +925,12 @@ async function executeGenerateDocument(
 async function executeSendDocuments(
   node: WorkflowNodeRow,
   context: ExecutionContext,
+  supabase: SupabaseClient,
 ): Promise<NodeResult> {
   const cfg = node.config as { to?: string; subject?: string; body?: unknown };
 
-  const to = substituteVars(cfg.to ?? '', context).trim();
+  const toRaw = cfg.to ?? '';
+  const to = substituteVars(toRaw, context).trim();
   const subject = substituteVars(cfg.subject ?? 'Sus documentos legales están listos', context);
 
   // Inject the document URL from the previous generate_document step
@@ -882,21 +940,45 @@ async function executeSendDocuments(
     previousOutput: { ...context.previousOutput, document_url: documentUrl },
   };
 
+  console.log('[send_documents] cfg.to raw:', toRaw);
+  console.log('[send_documents] to resuelto:', to);
+  console.log('[send_documents] subject:', subject);
+  console.log('[send_documents] documentUrl:', documentUrl || '(vacío)');
+  console.log('[send_documents] previousOutput keys:', Object.keys(context.previousOutput));
+  console.log('[send_documents] clientData.email:', context.clientData.email);
+
   if (!to) {
-    return { status: 'failed', output: {}, error: 'Campo "to" vacío o sin resolver' };
+    const err = `Campo "to" vacío. Raw: "${toRaw}". clientData.email: "${context.clientData.email}"`;
+    console.error('[send_documents]', err);
+    return { status: 'failed', output: {}, error: err };
   }
 
   if (!documentUrl) {
-    return {
-      status: 'failed',
-      output: {},
-      error: 'No se encontró file_url en el output del nodo anterior (generate_document debe preceder a send_documents)',
-    };
+    const err = 'No se encontró file_url en el output del nodo anterior (generate_document debe preceder a send_documents)';
+    console.error('[send_documents]', err);
+    return { status: 'failed', output: {}, error: err };
   }
 
-  const fallback = 'Sus documentos están disponibles en: {{output.document_url}}';
+  const fallback = 'Sus documentos están disponibles en: {output.document_url}';
   const bodyHtml = substituteVars(resolveBodyHtml(cfg.body ?? fallback), enrichedContext);
+  console.log('[send_documents] enviando email a:', to);
   await sendEmail(to, subject, bodyHtml);
+
+  void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
+    organization_id: context.legalProcess.organization_id,
+    user_id: context.legalProcess.lawyer_id,
+    action: 'email_sent',
+    entity: 'legal_process',
+    entity_id: context.legalProcess.id,
+    metadata: {
+      to,
+      subject,
+      document_url: documentUrl,
+      type: 'send_documents',
+      workflow_run_id: context.workflowRun.id,
+      node_title: node.title,
+    },
+  });
 
   return {
     status: 'completed',
