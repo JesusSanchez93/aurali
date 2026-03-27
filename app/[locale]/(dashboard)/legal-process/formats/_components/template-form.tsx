@@ -160,7 +160,7 @@ function PreviewModal({
                 </DialogHeader>
 
                 {/* A4 paper: 794px wide, padding simulates margins */}
-                <div className="mx-auto mt-2 w-[794px] border bg-white px-16 py-12 pt-0 shadow-sm dark:bg-zinc-950">
+                <div className="mx-auto mt-2 w-[794px] border bg-white px-[100px] pt-[120px] pb-[80px] shadow-sm dark:bg-zinc-950">
                     {/* Header */}
                     {(headerContent as DocContent | null)?.image || (headerContent as DocContent | null)?.text ? (
                         <>
@@ -270,10 +270,10 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
                         <p className="text-sm text-muted-foreground">{t('form_description')}</p>
                     </div>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
+                {/* <Button type="button" variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
                     <Eye className="mr-1.5 h-4 w-4" />
                     Vista previa
-                </Button>
+                </Button> */}
             </div>
 
             <Form {...form}>
@@ -293,12 +293,14 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
 
                                 {/* Header select + inline preview */}
                                 <div>
-                                    <FormSelect
-                                        control={form.control}
-                                        name="header_id"
-                                        label="Cabecera"
-                                        options={headerOptions}
-                                    />
+                                    <div className='grid grid-cols-2'>
+                                        <FormSelect
+                                            control={form.control}
+                                            name="header_id"
+                                            label="Cabecera"
+                                            options={headerOptions}
+                                        />
+                                    </div>
                                     {selectedHeader && (
                                         <InlinePreview
                                             content={selectedHeader.content}
@@ -319,7 +321,7 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
                                                     ref={tiptapRef}
                                                     value={field.value}
                                                     onChange={field.onChange}
-                                                    mode="document"
+                                                    // mode="document"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -329,12 +331,14 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
 
                                 {/* Footer select + inline preview */}
                                 <div>
-                                    <FormSelect
-                                        control={form.control}
-                                        name="footer_id"
-                                        label="Pie de página"
-                                        options={footerOptions}
-                                    />
+                                    <div className="grid grid-cols-2">
+                                        <FormSelect
+                                            control={form.control}
+                                            name="footer_id"
+                                            label="Pie de página"
+                                            options={footerOptions}
+                                        />
+                                    </div>
                                     {selectedFooter && (
                                         <InlinePreview
                                             content={selectedFooter.content}
@@ -368,15 +372,15 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
                 </form>
             </Form>
 
-            {/* Full document preview modal */}
-            <PreviewModal
+            {/* Full document preview modal — temporarily disabled */}
+            {/* <PreviewModal
                 open={previewOpen}
                 onOpenChange={setPreviewOpen}
                 name={form.getValues('name')}
                 headerContent={selectedHeader?.content ?? null}
                 bodyContent={watchedContent}
                 footerContent={selectedFooter?.content ?? null}
-            />
+            /> */}
         </div>
     );
 }
