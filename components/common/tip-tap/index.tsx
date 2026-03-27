@@ -5,11 +5,12 @@ import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
 import { MenuBar } from './menu-bar';
 import TextAlign from '@tiptap/extension-text-align';
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { SignatureExtension } from './extensions/signature-node';
 import { SignatureRowExtension } from './extensions/signature-row-node';
 import { ColumnExtension, TwoColumnExtension } from './extensions/two-column-node';
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import { PercentTable, PercentTableCell, PercentTableHeader } from './extensions/table-node';
+import { TableRow } from '@tiptap/extension-table';
 const extensions = [
     TextStyleKit,
     StarterKit,
@@ -20,12 +21,12 @@ const extensions = [
     SignatureRowExtension,
     ColumnExtension,
     TwoColumnExtension,
-    Table.configure({ resizable: true, cellMinWidth: 20, lastColumnResizable: false }),
+    // resizable: false — we replace columnResizing with our own plugin
+    PercentTable.configure({ resizable: false, cellMinWidth: 20 }),
     TableRow,
-    TableCell,
-    TableHeader,
+    PercentTableCell,
+    PercentTableHeader,
 ];
-
 // ─── Page sizes ──────────────────────────────────────────────────────────────
 const PAGE_SIZES = {
     A4: { label: 'A4', width: 794, minHeight: 1123 },
@@ -46,25 +47,97 @@ interface Props {
     mode?: 'default' | 'document';
 }
 
+// ─── Gap between pages (px) ──────────────────────────────────────────────────
+const PAGE_GAP = 32;
+
+// ─── Vertical padding inside each page (py-12 = 3rem = 48px) ─────────────────
+const PADDING_Y = 50;
+
+// ─── Dot-grid background style (shared) ──────────────────────────────────────
+const DOT_GRID: React.CSSProperties = {
+    backgroundImage: 'radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)',
+    backgroundSize: '20px 20px',
+};
+
 // ─── Document mode wrapper ────────────────────────────────────────────────────
 function DocumentCanvas({ children, pageSize }: { children: React.ReactNode; pageSize: PageSize }) {
     const { width, minHeight } = PAGE_SIZES[pageSize];
+    const contentWrapRef = useRef<HTMLDivElement>(null);
+    const [contentHeight, setContentHeight] = useState<number>(minHeight);
+
+    useEffect(() => {
+        const el = contentWrapRef.current;
+        if (!el) return;
+        const ro = new ResizeObserver(([entry]) => {
+            setContentHeight(entry.contentRect.height);
+        });
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
+    const PAGE_STRIDE = minHeight + PAGE_GAP;
+    const numPages = Math.max(1, Math.ceil(contentHeight / minHeight));
+    // Total canvas height: all page sheets + gaps between them
+    const totalHeight = numPages * minHeight + (numPages - 1) * PAGE_GAP;
+
+    // Clip the editor content to the usable area of each page (excluding
+    // top/bottom margins and inter-page gaps). This is more reliable than
+    // relying on z-index overlays to hide text that bleeds into gap regions.
+    const clipPath = useMemo(() => {
+        const rects = Array.from({ length: numPages }, (_, i) => {
+            const y0 = i * PAGE_STRIDE + PADDING_Y;
+            const y1 = i * PAGE_STRIDE + minHeight - PADDING_Y;
+            return `M0,${y0} H${width} V${y1} H0 Z`;
+        });
+        return `path("${rects.join(' ')}")`;
+    }, [numPages, PAGE_STRIDE, width, minHeight]);
+
     return (
-        // Dot-grid background area
         <div
             className="overflow-auto rounded-b-md p-8"
-            style={{
-                backgroundImage: 'radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)',
-                backgroundSize: '20px 20px',
-                minHeight: 400,
-            }}
+            style={{ ...DOT_GRID, minHeight: 400 }}
         >
-            {/* A4 paper sheet */}
-            <div
-                className="mx-auto bg-background shadow-lg ring-1 ring-border"
-                style={{ width, minHeight }}
-            >
-                {children}
+            {/* Fixed-size canvas containing page sheets + content + gap overlays */}
+            <div className="relative mx-auto" style={{ width, height: totalHeight }}>
+
+                {/* ── White page sheets (behind editor content) ── */}
+                {Array.from({ length: numPages }, (_, i) => (
+                    <div
+                        key={i}
+                        className="absolute inset-x-0 bg-background shadow-md ring-1 ring-border"
+                        style={{
+                            top: i * (minHeight + PAGE_GAP),
+                            height: minHeight,
+                        }}
+                    />
+                ))}
+
+                {/* ── Editor content (above page sheets, below gap overlays) ── */}
+                <div ref={contentWrapRef} className="relative z-5" style={{ clipPath:'' }}>
+                    {children}
+                </div>
+
+                {/* ── Gap overlays between pages (above content) ── */}
+                {Array.from({ length: numPages - 1 }, (_, i) => (
+                    <div
+                        key={i}
+                        className="pointer-events-none absolute inset-x-0 z-5"
+                        style={{
+                            top: (i + 1) * minHeight + i * PAGE_GAP,
+                            height: PAGE_GAP,
+                        }}
+                    >
+                        <div
+                            className="h-full"
+                            style={{
+                                // backgroundColor: 'hsl(var(--background))',
+                                // ...DOT_GRID,
+                                // Inset shadows simulate bottom/top page edges
+                                //boxShadow: 'inset 0 6px 10px -4px rgba(0,0,0,0.25), inset 0 -6px 10px -4px rgba(0,0,0,0.25)',
+                            }}
+                        />
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -84,7 +157,7 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
         editorProps: {
             attributes: {
                 class: isDocument
-                    ? 'min-h-[1000px] px-16 py-12 prose max-w-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0'
+                    ? 'min-h-[1000px] px-[100px] pt-0 prose max-w-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0'
                     : 'min-h-[300px] px-3 py-2 prose max-w-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0',
             },
         },
@@ -109,6 +182,64 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
         }),
         [editor],
     );
+
+    // ── Page break adjustment: push blocks that cross a page boundary to the next page ──
+    useEffect(() => {
+        if (!editor || !isDocument) return;
+
+        const { minHeight } = PAGE_SIZES[pageSize];
+        // Distance from one page's top to the next page's top (sheet + gap)
+        const PAGE_STRIDE = minHeight + PAGE_GAP;
+
+        const applyPageBreaks = () => {
+            const pm = editor.view.dom as HTMLElement;
+            // pmTop is stable while we apply padding to children
+            const pmTop = pm.getBoundingClientRect().top;
+            const blocks = Array.from(pm.children) as HTMLElement[];
+
+            // 1. Reset all previously applied padding first
+            blocks.forEach(b => {
+                if (b.dataset.pb) {
+                    b.style.removeProperty('padding-top');
+                    delete b.dataset.pb;
+                }
+            });
+
+            // 2. Process top-to-bottom; each getBoundingClientRect() call is a forced
+            //    reflow so it sees the updated layout from any padding applied above.
+            blocks.forEach(b => {
+                const rect = b.getBoundingClientRect();
+                if (rect.height === 0 || rect.height >= minHeight) return;
+
+                const blockTop = rect.top - pmTop;
+                const blockBottom = blockTop + rect.height;
+
+                // Which page is this block on?  Pages are PAGE_STRIDE apart.
+                const pageIdx = Math.floor(blockTop / PAGE_STRIDE);
+
+                // Bottom of the usable content area on this page (before bottom margin)
+                const pageContentBottom = pageIdx * PAGE_STRIDE + minHeight - PADDING_Y;
+                // Top of the usable content area on the NEXT page (after top margin)
+                const nextPageContentTop = (pageIdx + 1) * PAGE_STRIDE + PADDING_Y;
+
+                if (blockBottom > pageContentBottom) {
+                    const pushAmount = nextPageContentTop - blockTop;
+                    if (pushAmount > 0) {
+                        b.style.paddingTop = `${pushAmount}px`;
+                        b.dataset.pb = '1';
+                    }
+                }
+            });
+        };
+
+        const schedule = () => requestAnimationFrame(applyPageBreaks);
+
+        setTimeout(schedule, 0);
+        editor.on('update', schedule);
+        return () => {
+            editor.off('update', schedule);
+        };
+    }, [editor, isDocument, pageSize]);
 
     const pageSizeProps = isDocument
         ? {
