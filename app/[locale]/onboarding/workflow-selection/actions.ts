@@ -14,7 +14,7 @@ export async function getAvailableWorkflows() {
 
   const { data, error } = await db
     .from('workflow_templates')
-    .select('id, name, description, is_default')
+    .select('id, name, description, is_default, icon_svg')
     .is('organization_id', null)
     .order('is_default', { ascending: false })
     .order('created_at', { ascending: true })
@@ -25,6 +25,7 @@ export async function getAvailableWorkflows() {
     name: string
     description: string | null
     is_default: boolean
+    icon_svg: string | null
   }>
 }
 

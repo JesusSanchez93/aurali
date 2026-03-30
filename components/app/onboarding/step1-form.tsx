@@ -25,6 +25,7 @@ type Props = {
     phone: string;
     document_type: string;
     document_number: string;
+    professional_card_number: string | null;
   };
 };
 
@@ -62,6 +63,7 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
       .string({ required_error: validationT('required') })
       .trim()
       .min(1, validationT('required')),
+    professional_card_number: z.string().trim().optional(),
   }), [validationT]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -73,6 +75,7 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
       phone: profile.phone || '',
       document_type: profile.document_type || '',
       document_number: profile.document_number || '',
+      professional_card_number: profile.professional_card_number ?? '',
     },
   });
 
@@ -85,6 +88,7 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
         phone: values.phone,
         document_type: values.document_type,
         document_number: values.document_number,
+        professional_card_number: values.professional_card_number || undefined,
         onboarding_status: isInvited ? 'completed' : 'step1_completed',
       });
       router.push(isInvited ? '/dashboard' : '/onboarding/step2');
@@ -92,17 +96,19 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
   }
 
   return (
-    <div className="w-full max-w-screen-sm space-y-4">
+    <div className="w-full max-w-screen-sm animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
       <ViewTransition name="onboarding-form-header">
-        <div className="mb-12">
-          <span className="text-2xl">
-            {t('title')}
-          </span>
+        <div className="mb-8">
+          <p className="mb-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Paso 1 · Perfil
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         </div>
       </ViewTransition>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <FormInput
               control={form.control}
               name="firstname"
@@ -137,9 +143,15 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
               name="document_number"
               label={processT('document_number')}
             />
+            <FormInput
+              control={form.control}
+              name="professional_card_number"
+              label={processT('professional_card_number')}
+            />
           </div>
+
           <ViewTransition name="onboarding-form-footer">
-            <div className="mt-6 flex justify-end">
+            <div className="sticky bottom-0 z-10 mt-8 flex justify-end bg-background/80 py-4 backdrop-blur-sm">
               <Button
                 type="submit"
                 disabled={isPending}
@@ -147,7 +159,7 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
                 size="icon"
                 className="rounded-full"
               >
-                {!isPending ? <ArrowRight /> : <Spinner />}
+                {isPending ? <Spinner /> : <ArrowRight className="h-4 w-4" />}
               </Button>
             </div>
           </ViewTransition>

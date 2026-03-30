@@ -9,6 +9,7 @@ export interface SessionProfile {
   system_role: 'SUPERADMIN' | 'USER'
   current_organization_id: string | null
   onboarding_status: string | null
+  workflow_guide_seen: boolean
   org_role: 'ORG_ADMIN' | 'ORG_USER' | null
 }
 
@@ -27,7 +28,7 @@ export async function getSessionProfile(): Promise<{
 
   const { data } = await supabase
     .from('profiles')
-    .select('id, email, firstname, lastname, system_role, current_organization_id, onboarding_status')
+    .select('id, email, firstname, lastname, system_role, current_organization_id, onboarding_status, workflow_guide_seen')
     .eq('id', user.id)
     .single()
 

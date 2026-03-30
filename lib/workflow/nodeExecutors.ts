@@ -494,7 +494,7 @@ export async function buildDocumentTemplateData(
   if (legalProcess.lawyer_id) {
     const { data: lawyer } = await db
       .from('profiles')
-      .select('id, email, firstname, lastname, document_type, document_number')
+      .select('id, email, firstname, lastname, document_type, document_number, signature_url')
       .eq('id', legalProcess.lawyer_id)
       .single() as { data: ProfileRow | null };
     lawyerData = lawyer;
@@ -630,6 +630,7 @@ export async function buildDocumentTemplateData(
     LAWYER_DOCUMENT_TYPE: lawyerData?.document_type ?? '',
     LAWYER_DOCUMENT_NAME: lawyerData?.document_type ?? '',
     LAWYER_DOCUMENT_NUMBER: lawyerData?.document_number ?? '',
+    LAWYER_SIGNATURE: lawyerData?.signature_url ?? '',
     // Organization representative
     ORG_NAME: orgData?.name ?? '',
     ORG_REP_FIRST_NAME: orgRepData?.firstname ?? '',
@@ -678,7 +679,7 @@ async function executeGenerateDocument(
   if (context.legalProcess.lawyer_id) {
     const { data: lawyer } = await (supabase as SupabaseClient & Record<string, unknown>)
       .from('profiles')
-      .select('id, email, firstname, lastname, document_type, document_number')
+      .select('id, email, firstname, lastname, document_type, document_number, signature_url')
       .eq('id', context.legalProcess.lawyer_id)
       .single() as { data: ProfileRow | null };
     lawyerData = lawyer;
@@ -789,6 +790,7 @@ async function executeGenerateDocument(
     LAWYER_DOCUMENT_TYPE: lawyerData?.document_type ?? '',
     LAWYER_DOCUMENT_NAME: lawyerData?.document_type ?? '',
     LAWYER_DOCUMENT_NUMBER: lawyerData?.document_number ?? '',
+    LAWYER_SIGNATURE: lawyerData?.signature_url ?? '',
     // Organization representative
     ORG_NAME: orgData2?.name ?? '',
     ORG_REP_FIRST_NAME: orgRepData2?.firstname ?? '',

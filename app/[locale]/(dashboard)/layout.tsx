@@ -5,6 +5,7 @@ import { SuperAdminBanner } from '@/components/dashboard/superadmin-banner';
 import { CSSProperties, ReactNode } from 'react';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import ProfileProvider from '@/components/providers/profile-provider';
+import { WorkflowGuideModal } from '@/components/app/dashboard/workflow-guide-modal';
 
 interface Props {
   children: ReactNode;
@@ -28,6 +29,11 @@ export default async function DashboardLayout({ children }: Props) {
         }
       >
         <ProfileProvider profile={profile}>
+          {profile.onboarding_status === 'completed' &&
+            !profile.workflow_guide_seen &&
+            profile.system_role !== 'SUPERADMIN' && (
+              <WorkflowGuideModal defaultOpen />
+            )}
           <AppSidebar />
           <main className="relative flex flex-1 flex-col overflow-auto bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:shadow-sm">
             <SuperAdminBanner profile={profile} />

@@ -87,7 +87,9 @@
             "documents_approved": "Documents approved",
             "documents_sent": "Documents sent",
             "documents_received": "Documents received",
-            "finished": "Finished"
+            "finished": "Finished",
+            "archived": "Archived",
+            "declined": "Declined"
         },
         "sections": {
             "personal_data": "Personal Data",
@@ -102,6 +104,7 @@
             "phone": "Phone",
             "document_type": "Document Type",
             "document_number": "Document Number",
+            "professional_card_number": "Professional Card Number",
             "document_front": "Front",
             "document_back": "Back",
             "bank_name": "Bank",
@@ -125,10 +128,11 @@
         },
         "filter": {
             "all": "All",
-            "placeholder": "Filter by status"
+            "placeholder": "Filter by status",
+            "selected_count": "{count} statuses"
         },
         "search": {
-            "placeholder": "Search by client or document...",
+            "placeholder": "Search by client, document... or #0001",
             "clear": "Clear search"
         },
         "form": {
@@ -142,6 +146,31 @@
             "success_desc": "The process has been created successfully.",
             "error_toast": "Error"
         },
+        "archive": {
+            "trigger": "Archive process",
+            "confirm_title": "Archive process",
+            "confirm_description": "Are you sure you want to archive this process? The process will become inactive but its data will be preserved. You can revert this action later.",
+            "confirm_button": "Archive",
+            "cancel_button": "Cancel",
+            "success": "Process archived",
+            "revert_trigger": "Revert archive",
+            "revert_confirm_title": "Revert archive",
+            "revert_confirm_description": "Do you want to restore this process to its previous status? The process will return to the state it was in before being archived.",
+            "revert_confirm_button": "Restore",
+            "revert_success": "Process restored",
+            "note_label": "Note",
+            "note_placeholder": "Add an optional note..."
+        },
+        "decline": {
+            "trigger": "Decline process",
+            "confirm_title": "Decline process",
+            "confirm_description": "Are you sure you want to decline this process? This indicates the process was rejected and will not continue. This action cannot be undone.",
+            "confirm_button": "Decline",
+            "cancel_button": "Cancel",
+            "success": "Process declined",
+            "note_label": "Note",
+            "note_placeholder": "Add an optional note..."
+        },
         "payment": {
             "mark_as_paid": "Mark as paid",
             "revert_payment": "Revert payment",
@@ -152,6 +181,80 @@
             "confirm_revert_desc": "Are you sure you want to revert the payment? The status will return to 'In process'.",
             "confirm_button": "Confirm",
             "cancel_button": "Cancel"
+        },
+        "timeline": {
+            "button": "History",
+            "title": "Process history",
+            "empty": "No events recorded for this process.",
+            "error_loading": "Error loading history",
+            "badge_audit": "audit",
+            "badge_workflow": "workflow",
+            "badge_error": "Error",
+            "system_user": "System",
+            "unknown_user": "Unknown user",
+            "audit_actions": {
+                "process_created": "Process created",
+                "workflow_started": "Workflow started",
+                "workflow_resumed": "Workflow resumed",
+                "workflow_completed": "Workflow completed",
+                "workflow_failed": "Workflow error",
+                "workflow_retried": "Workflow retried",
+                "status_change": "Status change",
+                "status_archived": "Process archived",
+                "status_declined": "Process declined",
+                "status_reverted": "Archive reverted",
+                "email_sent": "Email sent",
+                "document_generated": "Documents generated",
+                "document_preview_generated": "Drafts generated",
+                "document_preview_updated": "Draft updated",
+                "payment_confirmed": "Payment confirmed",
+                "workflow_notification": "Notification sent",
+                "default": "Event"
+            },
+            "node_types": {
+                "start": "Start",
+                "end": "End",
+                "status_update": "Status update",
+                "send_email": "Send email",
+                "client_form": "Client form",
+                "notify_lawyer": "Lawyer notification",
+                "manual_action": "Manual action",
+                "generate_document": "Generate document",
+                "send_documents": "Send documents"
+            },
+            "meta": {
+                "type": "Type: {value}",
+                "client": "Client: {value}",
+                "to": "To: {value}",
+                "attachments": "{count} attachment(s)",
+                "documents": "{count} document(s)",
+                "waiting_form": "Waiting for client form submission",
+                "from_node": "From: {value}",
+                "node": "Node: {value}",
+                "manual": "(manual)",
+                "finished_at": "Finished: {date}"
+            }
+        },
+        "document_previews": {
+            "section_preliminary": "Preliminary documents",
+            "section_final": "Final documents",
+            "document_fallback": "Document",
+            "document_count": "{count} {count, plural, one {document} other {documents}}",
+            "thumbnail_expand_aria": "Expand {name}",
+            "thumbnail_expand_label": "Expand",
+            "no_preview_content": "No preview content available",
+            "card_footer_label": "Preview",
+            "btn_view": "View",
+            "btn_edit": "Edit",
+            "btn_edit_document": "Edit this document",
+            "btn_close": "Close",
+            "btn_cancel": "Cancel",
+            "btn_save": "Save changes",
+            "btn_saving": "Saving…",
+            "badge_draft": "Draft",
+            "edit_title_fallback": "Edit document",
+            "save_success": "Document updated",
+            "save_error_fallback": "Error saving document"
         }
     },
     "clients": {
@@ -305,6 +408,7 @@
             "LAWYER_DOCUMENT_TYPE": "Lawyer Document Type",
             "LAWYER_DOCUMENT_NAME": "Lawyer Document Name",
             "LAWYER_DOCUMENT_NUMBER": "Lawyer Document Number",
+            "LAWYER_SIGNATURE": "Lawyer Signature",
             "ORG_REP_FIRST_NAME": "Representative First Name",
             "ORG_REP_LAST_NAME": "Representative Last Name",
             "ORG_REP_DOCUMENT_TYPE": "Representative Document Type",

@@ -1,11 +1,8 @@
-import { Plus, Workflow, Trash2 } from 'lucide-react'
+import { Plus, Workflow } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Link } from '@/i18n/routing'
-import { getGlobalWorkflows, deleteGlobalWorkflow } from './actions'
-import { formatDistanceToNow } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { getGlobalWorkflows } from './actions'
+import { WorkflowCard } from './_components/workflow-card'
 
 export default async function AdminWorkflowsPage() {
   const workflows = await getGlobalWorkflows()
@@ -36,55 +33,7 @@ export default async function AdminWorkflowsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {workflows.map((wf) => (
-            <Card key={wf.id} className="group flex flex-col">
-              <CardHeader className="flex-1 pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="truncate text-base">{wf.name}</CardTitle>
-                    {wf.description && (
-                      <CardDescription className="mt-1 line-clamp-2 text-xs">
-                        {wf.description}
-                      </CardDescription>
-                    )}
-                  </div>
-                  {wf.is_default && (
-                    <Badge variant="secondary" className="shrink-0 text-xs">
-                      Por defecto
-                    </Badge>
-                  )}
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Creado{' '}
-                  {formatDistanceToNow(new Date(wf.created_at), {
-                    addSuffix: true,
-                    locale: es,
-                  })}
-                </p>
-              </CardHeader>
-              <CardContent className="flex gap-2 pt-0">
-                <Button variant="outline" size="sm" className="flex-1" asChild>
-                  <Link href={`/admin/workflows/${wf.id}/builder`}>
-                    <Workflow className="mr-2 h-3.5 w-3.5" />
-                    Abrir editor
-                  </Link>
-                </Button>
-                <form
-                  action={async () => {
-                    'use server'
-                    await deleteGlobalWorkflow(wf.id)
-                  }}
-                >
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <WorkflowCard key={wf.id} wf={wf} />
           ))}
         </div>
       )}

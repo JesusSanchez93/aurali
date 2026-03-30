@@ -94,17 +94,19 @@ export default function Step2Form() {
   }
 
   return (
-    <div className="w-full max-w-screen-sm space-y-4">
+    <div className="w-full max-w-screen-sm animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
       <ViewTransition name="onboarding-form-header">
-        <div className="mb-12">
-          <span className="text-2xl">
-            {t('title')}
-          </span>
+        <div className="mb-8">
+          <p className="mb-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Paso 2 · Empresa
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         </div>
       </ViewTransition>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <FormInput
               control={form.control}
               name="name"
@@ -178,30 +180,28 @@ export default function Step2Form() {
             />
           </div>
           <ViewTransition name="onboarding-form-footer">
-            <div className="mt-6">
-              <div className="mt-6 flex justify-between">
-                <Button
-                  type="button"
-                  disabled={isPending}
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full"
-                  asChild
-                >
-                  <Link href="/onboarding/step1">
-                    <ArrowLeft />
-                  </Link>
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isPending}
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full"
-                >
-                  {!isPending ? <ArrowRight /> : <Spinner />}
-                </Button>
-              </div>
+            <div className="sticky bottom-0 z-10 mt-8 flex justify-between bg-background/80 py-4 backdrop-blur-sm">
+              <Button
+                type="button"
+                disabled={isPending}
+                variant="outline"
+                size="icon"
+                className="rounded-full"
+                asChild
+              >
+                <Link href="/onboarding/step1">
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                variant="outline"
+                size="icon"
+                className="rounded-full"
+              >
+                {isPending ? <Spinner /> : <ArrowRight className="h-4 w-4" />}
+              </Button>
             </div>
           </ViewTransition>
         </form>

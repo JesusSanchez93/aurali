@@ -9,6 +9,7 @@ export async function updateProfileAction(values: {
   phone: string;
   document_type?: string;
   document_number?: string;
+  professional_card_number?: string;
   onboarding_status: string;
 }) {
   const supabase = await createClient();
@@ -31,6 +32,7 @@ export async function updateProfileAction(values: {
       phone: values.phone,
       document_type: values.document_type,
       document_number: values.document_number,
+      professional_card_number: values.professional_card_number ?? null,
       onboarding_status: values.onboarding_status,
     })
     .eq('id', user.id);

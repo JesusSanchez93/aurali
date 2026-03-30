@@ -19,7 +19,7 @@ export async function getGlobalWorkflows() {
 
   const { data, error } = await db
     .from('workflow_templates')
-    .select('id, name, description, is_default, created_at')
+    .select('id, name, description, is_default, icon_svg, created_at')
     .is('organization_id', null)
     .order('created_at', { ascending: false })
 
@@ -29,6 +29,7 @@ export async function getGlobalWorkflows() {
     name: string
     description: string | null
     is_default: boolean
+    icon_svg: string | null
     created_at: string
   }>
 }
@@ -53,6 +54,34 @@ export async function createGlobalWorkflow(name: string, description?: string) {
 
   revalidatePath('/admin/workflows')
   return data as { id: string }
+}
+
+/**
+ * Updates name, description, and icon_svg of a global workflow template.
+ * SUPERADMIN only.
+ */
+export async function updateGlobalWorkflow(
+  id: string,
+  values: { name: string; description?: string | null; icon_svg?: string | null },
+) {
+  await requireSuperAdmin()
+
+  const supabase = await createClient()
+  const db = supabase as Supabase
+
+  const { error } = await db
+    .from('workflow_templates')
+    .update({
+      name: values.name,
+      description: values.description ?? null,
+      icon_svg: values.icon_svg ?? null,
+    })
+    .eq('id', id)
+    .is('organization_id', null)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/admin/workflows')
 }
 
 /**

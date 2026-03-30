@@ -65,6 +65,9 @@ export function wrapWithPageLayout(bodyHtml: string, title = 'Documento Legal'):
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(title)}</title>
   <style>
+    /* ── Fonts ──────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
+
     /* ── Reset ─────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -78,9 +81,9 @@ export function wrapWithPageLayout(bodyHtml: string, title = 'Documento Legal'):
       width: 21cm;
       background: #ffffff;
       color: #1a1a1a;
-      font-family: 'Times New Roman', Times, serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       font-size: 11pt;
-      line-height: 1.9;
+      line-height: 1.75;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -218,6 +221,12 @@ export function wrapWithPageLayout(bodyHtml: string, title = 'Documento Legal'):
       margin-top: 2px;
     }
 
+    /* Signature image (pre-uploaded by the lawyer) */
+    .sig-space img {
+      display: block;
+      margin: 0 auto;
+    }
+
     /* ── Footer ──────────────────────────────────────── */
     .doc-footer {
       margin-top: 48px;
@@ -237,18 +246,21 @@ export function wrapWithPageLayout(bodyHtml: string, title = 'Documento Legal'):
     em     { font-style: italic; }
 
     /* ── TipTap-generated elements ───────────────────── */
-    .document h1 { font-size: 18pt; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; text-align: center; margin: 1.2em 0 0.6em; }
-    .document h2 { font-size: 14pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 1em 0 0.5em; }
-    .document h3 { font-size: 12pt; font-weight: bold; margin: 0.9em 0 0.4em; }
-    .document h4 { font-size: 11pt; font-weight: bold; margin: 0.8em 0 0.4em; }
-    .document h5, .document h6 { font-size: 10.5pt; font-weight: bold; margin: 0.7em 0 0.3em; }
+    /* Heading scale: base 11pt → same em ratios used in the editor (base 16px) */
+    .document h1 { font-size: 1.636em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; text-align: center; margin: 1.2em 0 0.6em; line-height: 1.3; }
+    .document h2 { font-size: 1.273em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin: 1em 0 0.5em; line-height: 1.35; }
+    .document h3 { font-size: 1.091em; font-weight: 600; margin: 0.9em 0 0.4em; line-height: 1.4; }
+    .document h4 { font-size: 1em;     font-weight: 600; margin: 0.8em 0 0.4em; }
+    .document h5, .document h6 { font-size: 0.955em; font-weight: 600; margin: 0.7em 0 0.3em; }
 
-    .document p { margin-bottom: 0.75em; line-height: 1.9; text-align: justify; }
+    .document p { margin-bottom: 0.75em; line-height: 1.75; text-align: justify; }
+    .document p:empty,
+    .document p:has(> br:only-child) { min-height: 1.75em; margin-bottom: 0; }
 
     .document ul, .document ol { margin: 0.5em 0 0.75em 2em; padding: 0; }
     .document ul { list-style-type: disc; }
     .document ol { list-style-type: decimal; }
-    .document li { margin-bottom: 0.3em; line-height: 1.7; }
+    .document li { margin-bottom: 0.3em; line-height: 1.65; }
 
     .document blockquote {
       border-left: 3px solid #555;

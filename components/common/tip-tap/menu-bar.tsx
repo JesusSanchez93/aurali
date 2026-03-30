@@ -36,8 +36,11 @@ import {
   PanelBottom,
   PanelLeft,
   PanelRight,
+  LayoutTemplate,
+  Image as ImageIcon,
+  Upload,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 // ─── Table header helpers ─────────────────────────────────────────────────────
 function getTableInfo(editor: Editor) {
@@ -319,11 +322,105 @@ function TableMenu({ editor }: { editor: Editor }) {
   );
 }
 
+// ─── Image insertion menu ─────────────────────────────────────────────────────
+function ImageMenu({ editor }: { editor: Editor }) {
+  const [url, setUrl] = useState('');
+  const [open, setOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function insertImageNode(src: string) {
+    editor.chain().focus().insertContent({
+      type: 'image',
+      attrs: { src, width: 50, align: 'block' },
+    }).run();
+  }
+
+  function handleInsertUrl() {
+    if (!url.trim()) return;
+    insertImageNode(url.trim());
+    setUrl('');
+    setOpen(false);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const src = ev.target?.result as string;
+      if (src) {
+        insertImageNode(src);
+        setOpen(false);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  return (
+    <>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" type="button" title="Insertar imagen">
+            <ImageIcon className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64">
+          <div className="space-y-2 p-2">
+            <p className="text-[11px] font-medium text-muted-foreground">Insertar imagen</p>
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                placeholder="https://..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleInsertUrl(); }}
+                className="h-8 flex-1 rounded-md border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={handleInsertUrl}
+                disabled={!url.trim()}
+              >
+                OK
+              </Button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-[10px] text-muted-foreground">o</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 w-full text-xs"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              Subir desde archivo
+            </Button>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </>
+  );
+}
+
 // ─── Main menu bar ────────────────────────────────────────────────────────────
 interface PageSizeOption { value: string; label: string; }
 interface PageSizeProps { value: string; options: PageSizeOption[]; onChange: (v: string) => void; }
 
-function MenuBar({ editor, pageSizeProps }: { editor: Editor; pageSizeProps?: PageSizeProps }) {
+function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSizeProps?: PageSizeProps; stickyTop?: string }) {
   const editorState = useEditorState({
     editor,
     selector: (ctx) => ({
@@ -348,7 +445,10 @@ function MenuBar({ editor, pageSizeProps }: { editor: Editor; pageSizeProps?: Pa
   });
 
   return (
-    <div className="sticky top-[var(--header-height)] z-10 rounded-t-md border-b bg-background/80 p-1 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div
+      className="sticky z-10 rounded-t-md border-b bg-background/80 p-1 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      style={{ top: stickyTop ?? 'var(--header-height)' }}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1">
         {/* Text formatting */}
@@ -422,6 +522,41 @@ function MenuBar({ editor, pageSizeProps }: { editor: Editor; pageSizeProps?: Pa
           onClick={() => editor.chain().focus().setTextAlign('right').run()}>
           <AlignRight />
         </Button>
+
+        {/* Image */}
+        <ImageMenu editor={editor} />
+
+        {/* Column layout picker */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" type="button" className="h-8 gap-1 px-2" title="Insertar columnas">
+              <LayoutTemplate className="h-4 w-4" />
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-auto">
+            <div className="p-2">
+              <p className="mb-2 text-[11px] font-medium text-muted-foreground">Columnas</p>
+              <div className="flex gap-1.5">
+                {[2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className="flex h-12 w-10 flex-col items-center justify-center gap-1 rounded-md border bg-muted/40 text-xs font-medium transition-colors hover:border-primary hover:bg-primary/10"
+                    onClick={() => editor.chain().focus().insertColumnLayout(n).run()}
+                  >
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: n }).map((_, i) => (
+                        <div key={i} className="h-5 w-2 rounded-sm bg-foreground/30" />
+                      ))}
+                    </div>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Table */}
         <TableMenu editor={editor} />

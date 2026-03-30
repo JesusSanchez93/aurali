@@ -16,7 +16,7 @@ export default function ClientSearch() {
     const [, startTransition] = useTransition();
 
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-    const debouncedSearchTerm = useDebounce(searchTerm, 300);
+    const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
     useEffect(() => {
         const query = searchParams.get('search') || '';

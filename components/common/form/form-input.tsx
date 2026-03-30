@@ -54,6 +54,7 @@ export function FormInput<T extends FieldValues>({
               {type === 'phone' ? (
                 <PhoneInput
                   international
+                  defaultCountry="CO"
                   {...field}
                   disabled={disabled}
                   aria-invalid={fieldState.error ? true : undefined}

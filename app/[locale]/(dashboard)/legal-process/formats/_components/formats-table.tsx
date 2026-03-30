@@ -70,7 +70,7 @@ export default function FormatsTable({ templates }: Props) {
                                 <td className="px-4 py-3 font-medium">{template.name ?? '—'}</td>
                                 <td className="px-4 py-3 text-muted-foreground">v{template.version ?? 1}</td>
                                 <td className="px-4 py-3 text-muted-foreground">
-                                    {new Date(template.created_at).toLocaleDateString()}
+                                    {new Date(template.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                 </td>
                                 <td className="px-4 py-3">
                                     <div className="flex items-center justify-end gap-2">

@@ -32,6 +32,8 @@ export default async function AccountPage() {
           phone: profile?.phone ?? '',
           document_type: profile?.document_type ?? '',
           document_number: profile?.document_number ?? '',
+          professional_card_number: profile?.professional_card_number ?? null,
+          signature_url: profile?.signature_url ?? null,
         }}
         documentTypeOptions={documentTypeOptions}
         memberships={orgMemberships}

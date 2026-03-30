@@ -1,6 +1,7 @@
 'use client';
 
 import { Home, Scale, Settings, Users, ShieldCheck, BookOpen, FileText } from 'lucide-react';
+import { Logo } from '@/components/common/logo';
 
 import {
   Sidebar,
@@ -60,7 +61,9 @@ export function AppSidebar() {
     <Sidebar variant="inset">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Aurali.app</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            <Logo size={22} />
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {

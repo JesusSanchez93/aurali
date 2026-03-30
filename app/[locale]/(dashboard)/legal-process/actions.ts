@@ -11,7 +11,7 @@ type LocalizedString = {
   en?: string;
 };
 
-export async function getLegalProcesses(page: number = 1, pageSize: number = 10, search?: string, status?: string) {
+export async function getLegalProcesses(page: number = 1, pageSize: number = 10, search?: string, status?: string | string[]) {
   const supabase = await createClient();
 
   const {
@@ -42,11 +42,36 @@ export async function getLegalProcesses(page: number = 1, pageSize: number = 10,
 
 
   if (search) {
-    query = query.or(`legal_process_clients.first_name.ilike.%${search}%,legal_process_clients.last_name.ilike.%${search}%,legal_process_clients.email.ilike.%${search}%,legal_process_clients.document_number.ilike.%${search}%`);
+    // Strip leading "#" if present, then check if the remainder is purely numeric.
+    // Both "#0003" and "0003" and "3" are treated as consecutive-number lookups.
+    const rawSearch = search.startsWith('#') ? search.slice(1) : search;
+    const isNumeric = /^\d+$/.test(rawSearch.trim());
+
+    if (isNumeric) {
+      const processNum = parseInt(rawSearch.trim(), 10);
+      query = Number.isFinite(processNum)
+        ? query.eq('process_number', processNum)
+        : query.eq('process_number', -1);
+    } else {
+      // Text search on client fields (joined table)
+      query = query.or(
+        `legal_process_clients.first_name.ilike.%${search}%,` +
+        `legal_process_clients.last_name.ilike.%${search}%,` +
+        `legal_process_clients.email.ilike.%${search}%,` +
+        `legal_process_clients.document_number.ilike.%${search}%`,
+      );
+    }
   }
 
   if (status) {
-    query = query.eq('status', status);
+    const statuses = Array.isArray(status)
+      ? status
+      : status.split(',').map((s) => s.trim()).filter(Boolean);
+    if (statuses.length === 1) {
+      query = query.eq('status', statuses[0]);
+    } else if (statuses.length > 1) {
+      query = query.in('status', statuses);
+    }
   }
 
   const { data: legalProcesses, count } = await query
@@ -406,6 +431,134 @@ export async function updateLegalProcessStatus(legalProcessId: string, newStatus
   revalidatePath('/legal-process');
 }
 
+/** Statuses that block archiving */
+const ARCHIVE_BLOCKED_STATUSES = new Set(['finished', 'archived', 'declined']);
+/** Statuses that block declining */
+const DECLINE_BLOCKED_STATUSES = new Set(['finished', 'declined']);
+
+/**
+ * Archives a legal process. Can be called at any point before 'finished'.
+ * Saves current status to previous_status so the action can be reverted.
+ */
+export async function archiveLegalProcess(legalProcessId: string, note?: string) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: process } = await supabase
+    .from('legal_processes')
+    .select('status, organization_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!process) throw new Error('Proceso no encontrado');
+  if (ARCHIVE_BLOCKED_STATUSES.has(process.status ?? '')) {
+    throw new Error('Este proceso ya está en un estado que no permite archivarlo');
+  }
+
+  const { error } = await (supabase as any)
+    .from('legal_processes')
+    .update({ status: 'archived', previous_status: process.status, status_note: note ?? null })
+    .eq('id', legalProcessId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('audit_logs').insert({
+    organization_id: process.organization_id,
+    user_id: user.id,
+    action: 'status_change',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { previous_status: process.status, new_status: 'archived', source: 'manual', note: note || null },
+  });
+
+  revalidatePath('/legal-process');
+}
+
+/**
+ * Reverts an archived process back to the status it had before being archived.
+ */
+export async function revertArchivedProcess(legalProcessId: string) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: process } = await (supabase as any)
+    .from('legal_processes')
+    .select('status, previous_status, organization_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!process) throw new Error('Proceso no encontrado');
+  if (process.status !== 'archived') {
+    throw new Error('Solo se pueden revertir procesos en estado archivado');
+  }
+
+  const restoredStatus = process.previous_status ?? 'draft';
+
+  const { error } = await (supabase as any)
+    .from('legal_processes')
+    .update({ status: restoredStatus, previous_status: null, status_note: null })
+    .eq('id', legalProcessId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('audit_logs').insert({
+    organization_id: process.organization_id,
+    user_id: user.id,
+    action: 'status_change',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: {
+      previous_status: 'archived',
+      new_status: restoredStatus,
+      source: 'manual',
+      reverted: true,
+    },
+  });
+
+  revalidatePath('/legal-process');
+}
+
+/**
+ * Declines a legal process. Can be called at any point before 'finished'.
+ * Does NOT cancel the workflow run; the process simply becomes read-only.
+ */
+export async function declineLegalProcess(legalProcessId: string, note?: string) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: process } = await supabase
+    .from('legal_processes')
+    .select('status, organization_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!process) throw new Error('Proceso no encontrado');
+  if (DECLINE_BLOCKED_STATUSES.has(process.status ?? '')) {
+    throw new Error('Este proceso ya está en un estado que no permite declinarlo');
+  }
+
+  const { error } = await supabase
+    .from('legal_processes')
+    .update({ status: 'declined', status_note: note ?? null } as never)
+    .eq('id', legalProcessId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('audit_logs').insert({
+    organization_id: process.organization_id,
+    user_id: user.id,
+    action: 'status_change',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { previous_status: process.status, new_status: 'declined', source: 'manual', note: note || null },
+  });
+
+  revalidatePath('/legal-process');
+}
+
 export type PendingWorkflowAction =
   | { kind: 'manual_action';    workflowRunId: string; nodeTitle: string; instructions: string | null }
   | { kind: 'failed';           workflowRunId: string; nodeTitle: string; error: string | null }
@@ -736,7 +889,7 @@ export interface AuditLogEntry {
 
 /**
  * Returns all audit_logs entries for a given legal process.
- * Only accessible by SUPERADMIN and ORG_ADMIN.
+ * Accessible by any active member of the organization that owns the process.
  */
 export async function getProcessAuditLogs(legalProcessId: string): Promise<AuditLogEntry[]> {
   const supabase = await createClient();
@@ -762,7 +915,7 @@ export async function getProcessAuditLogs(legalProcessId: string): Promise<Audit
       .eq('active', true)
       .maybeSingle();
 
-    if (membership?.role !== 'ORG_ADMIN') {
+    if (!membership) {
       throw new Error('Forbidden');
     }
   }
@@ -772,7 +925,7 @@ export async function getProcessAuditLogs(legalProcessId: string): Promise<Audit
     .select('id, action, entity, entity_id, metadata, created_at, user_id')
     .eq('entity', 'legal_process')
     .eq('entity_id', legalProcessId)
-    .order('created_at', { ascending: true }) as {
+    .order('created_at', { ascending: false }) as {
       data: { id: string; action: string; entity: string; entity_id: string; metadata: Record<string, unknown>; created_at: string; user_id: string | null }[] | null;
       error: { message: string } | null;
     };

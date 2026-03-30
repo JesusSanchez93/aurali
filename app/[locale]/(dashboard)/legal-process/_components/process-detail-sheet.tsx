@@ -3,14 +3,30 @@
 import Sheet from '@/components/common/sheet';
 import { Database } from '@/types/database.types';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { ActionReasonDialog } from '@/components/common/action-reason-dialog';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getLegalProcessDetail } from '@/app/[locale]/(dashboard)/legal-process/actions';
+import { toast } from 'sonner';
+import {
+    getLegalProcessDetail,
+    archiveLegalProcess,
+    declineLegalProcess,
+    revertArchivedProcess,
+} from '@/app/[locale]/(dashboard)/legal-process/actions';
 import { WorkflowActionButton } from '@/app/[locale]/(dashboard)/legal-process/_components/workflow-action-button';
 import { DocumentPreviews } from '@/app/[locale]/(dashboard)/legal-process/_components/document-previews';
-import { X } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Archive, MoreHorizontal, RotateCcw, X, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
     Carousel,
@@ -49,12 +65,15 @@ function Field({ label, value }: { label: string; value?: string | boolean | nul
 }
 
 export default function ProcessDetailSheet({ processId, open, onOpenChange }: Props) {
-    const t = useTranslations();
     const commonT = useTranslations('common');
     const processT = useTranslations('process');
 
     const [loading, setLoading] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [archiveConfirming, setArchiveConfirming] = useState(false);
+    const [declineConfirming, setDeclineConfirming] = useState(false);
+    const [revertConfirming, setRevertConfirming] = useState(false);
+    const [actioning, setActioning] = useState(false);
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [carouselApi, setCarouselApi] = useState<CarouselApi>();
@@ -97,12 +116,57 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         loadData(processId);
     }, [open, processId]);
 
+    const handleArchive = async (note: string) => {
+        if (!processId) return;
+        setActioning(true);
+        try {
+            await archiveLegalProcess(processId, note || undefined);
+            toast.success(processT('archive.success'));
+            loadData(processId);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : commonT('error'));
+        } finally {
+            setActioning(false);
+        }
+    };
+
+    const handleDecline = async (note: string) => {
+        if (!processId) return;
+        setActioning(true);
+        try {
+            await declineLegalProcess(processId, note || undefined);
+            toast.success(processT('decline.success'));
+            loadData(processId);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : commonT('error'));
+        } finally {
+            setActioning(false);
+        }
+    };
+
+    const handleRevert = async () => {
+        if (!processId) return;
+        setActioning(true);
+        try {
+            await revertArchivedProcess(processId);
+            toast.success(processT('archive.revert_success'));
+            loadData(processId);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : commonT('error'));
+        } finally {
+            setActioning(false);
+        }
+    };
+
     const client = data?.client;
     const banking = data?.banking;
     const process = data?.process;
 
-    console.log({processId});
-    
+    const isArchived = process?.status === 'archived';
+    /** Truly terminal: no actions possible */
+    const isTerminal = process?.status === 'finished' || process?.status === 'declined';
+    /** Show dropdown for active and archived processes */
+    const showDropdown = !isTerminal && process?.status !== undefined;
 
     return (
         <>
@@ -127,6 +191,18 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                         </div>
                     ) : (
                         <div className="space-y-6 p-4 pt-0 overflow-y-auto max-h-[calc(100vh-0rem)]">
+                            {/* Status note banner */}
+                            {(process as { status_note?: string | null })?.status_note && (
+                                <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30 px-4 py-3">
+                                    <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">
+                                        {processT(isArchived ? 'archive.note_label' : 'decline.note_label')}
+                                    </p>
+                                    <p className="text-sm text-amber-900 dark:text-amber-200 whitespace-pre-wrap">
+                                        {(process as { status_note?: string | null }).status_note}
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Status */}
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -143,12 +219,59 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    {processId && (
+                                    {!isArchived && processId && !isTerminal && (
                                         <WorkflowActionButton
                                             legalProcessId={processId}
                                             refreshKey={refreshKey}
                                             onSuccess={() => loadData(processId)}
                                         />
+                                    )}
+                                    {showDropdown && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-7 w-7 p-0"
+                                                    disabled={actioning}
+                                                >
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48">
+                                                {isArchived && (
+                                                    <>
+                                                        <DropdownMenuItem
+                                                            onClick={() => setRevertConfirming(true)}
+                                                            className="gap-2"
+                                                        >
+                                                            <RotateCcw className="h-4 w-4" />
+                                                            {processT('archive.revert_trigger')}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                    </>
+                                                )}
+                                                {!isArchived && (
+                                                    <>
+                                                        <DropdownMenuItem
+                                                            onClick={() => setArchiveConfirming(true)}
+                                                            className="gap-2"
+                                                        >
+                                                            <Archive className="h-4 w-4" />
+                                                            {processT('archive.trigger')}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                    </>
+                                                )}
+                                                <DropdownMenuItem
+                                                    onClick={() => setDeclineConfirming(true)}
+                                                    className="gap-2 text-destructive focus:text-destructive"
+                                                >
+                                                    <XCircle className="h-4 w-4" />
+                                                    {processT('decline.trigger')}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     )}
                                 </div>
                             </div>
@@ -256,6 +379,37 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                         </div>
                     )
                 }
+            />
+
+            {/* Archive / Decline confirmation dialogs */}
+            <ConfirmDialog
+                isOpen={archiveConfirming}
+                onClose={() => setArchiveConfirming(false)}
+                onConfirm={handleArchive}
+                title={processT('archive.confirm_title')}
+                description={processT('archive.confirm_description')}
+                confirmLabel={processT('archive.confirm_button')}
+                cancelLabel={processT('archive.cancel_button')}
+            />
+            <ConfirmDialog
+                isOpen={declineConfirming}
+                onClose={() => setDeclineConfirming(false)}
+                onConfirm={handleDecline}
+                title={processT('decline.confirm_title')}
+                description={processT('decline.confirm_description')}
+                confirmLabel={processT('decline.confirm_button')}
+                cancelLabel={processT('decline.cancel_button')}
+                variant="destructive"
+            />
+
+            <ConfirmDialog
+                isOpen={revertConfirming}
+                onClose={() => setRevertConfirming(false)}
+                onConfirm={handleRevert}
+                title={processT('archive.revert_confirm_title')}
+                description={processT('archive.revert_confirm_description')}
+                confirmLabel={processT('archive.revert_confirm_button')}
+                cancelLabel={processT('archive.cancel_button')}
             />
 
             {/* Lightbox */}

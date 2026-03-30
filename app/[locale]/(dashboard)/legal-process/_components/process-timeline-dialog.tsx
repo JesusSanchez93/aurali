@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,8 @@ import {
   Workflow,
   SkipForward,
   Loader2,
+  Archive,
+  XCircle,
 } from 'lucide-react';
 import {
   getProcessAuditLogs,
@@ -39,6 +42,7 @@ import {
 interface Props {
   legalProcessId: string;
   clientEmail?: string | null;
+  className?: string;
 }
 
 // ─── Unified timeline entry ───────────────────────────────────────────────────
@@ -47,31 +51,40 @@ type TimelineEntry =
   | { kind: 'audit';    timestamp: string; data: AuditLogEntry }
   | { kind: 'workflow'; timestamp: string; data: WorkflowStepEntry };
 
-// ─── Audit action config ──────────────────────────────────────────────────────
+// ─── Audit action icon + dot (static, no labels) ─────────────────────────────
 
-type ActionConfig = { label: string; icon: React.ReactNode; dot: string };
+type ActionConfig = { icon: React.ReactNode; dot: string };
 
 const AUDIT_CONFIG: Record<string, ActionConfig> = {
-  process_created:            { label: 'Proceso creado',         icon: <Plus className="h-3 w-3" />,           dot: 'bg-blue-500' },
-  workflow_started:           { label: 'Flujo iniciado',         icon: <Play className="h-3 w-3" />,           dot: 'bg-blue-400' },
-  workflow_resumed:           { label: 'Flujo reanudado',        icon: <Play className="h-3 w-3" />,           dot: 'bg-blue-400' },
-  workflow_completed:         { label: 'Flujo completado',       icon: <CheckCircle2 className="h-3 w-3" />,   dot: 'bg-green-500' },
-  workflow_failed:            { label: 'Error en el flujo',      icon: <AlertCircle className="h-3 w-3" />,    dot: 'bg-red-500' },
-  workflow_retried:           { label: 'Flujo reintentado',      icon: <RotateCcw className="h-3 w-3" />,      dot: 'bg-orange-400' },
-  status_change:              { label: 'Cambio de estado',       icon: <ArrowRightLeft className="h-3 w-3" />, dot: 'bg-violet-500' },
-  email_sent:                 { label: 'Email enviado',          icon: <Mail className="h-3 w-3" />,           dot: 'bg-sky-500' },
-  document_generated:         { label: 'Documentos generados',   icon: <FileText className="h-3 w-3" />,       dot: 'bg-teal-500' },
-  document_preview_generated: { label: 'Borradores generados',   icon: <FilePlus2 className="h-3 w-3" />,      dot: 'bg-teal-400' },
-  document_preview_updated:   { label: 'Borrador actualizado',   icon: <FilePlus2 className="h-3 w-3" />,      dot: 'bg-teal-400' },
-  payment_confirmed:          { label: 'Pago confirmado',        icon: <CreditCard className="h-3 w-3" />,     dot: 'bg-green-600' },
-  workflow_notification:      { label: 'Notificación enviada',   icon: <Bell className="h-3 w-3" />,           dot: 'bg-yellow-500' },
+  process_created:            { icon: <Plus className="h-3 w-3" />,           dot: 'bg-blue-500' },
+  workflow_started:           { icon: <Play className="h-3 w-3" />,           dot: 'bg-blue-400' },
+  workflow_resumed:           { icon: <Play className="h-3 w-3" />,           dot: 'bg-blue-400' },
+  workflow_completed:         { icon: <CheckCircle2 className="h-3 w-3" />,   dot: 'bg-green-500' },
+  workflow_failed:            { icon: <AlertCircle className="h-3 w-3" />,    dot: 'bg-red-500' },
+  workflow_retried:           { icon: <RotateCcw className="h-3 w-3" />,      dot: 'bg-orange-400' },
+  status_change:              { icon: <ArrowRightLeft className="h-3 w-3" />, dot: 'bg-violet-500' },
+  email_sent:                 { icon: <Mail className="h-3 w-3" />,           dot: 'bg-sky-500' },
+  document_generated:         { icon: <FileText className="h-3 w-3" />,       dot: 'bg-teal-500' },
+  document_preview_generated: { icon: <FilePlus2 className="h-3 w-3" />,      dot: 'bg-teal-400' },
+  document_preview_updated:   { icon: <FilePlus2 className="h-3 w-3" />,      dot: 'bg-teal-400' },
+  payment_confirmed:          { icon: <CreditCard className="h-3 w-3" />,     dot: 'bg-green-600' },
+  workflow_notification:      { icon: <Bell className="h-3 w-3" />,           dot: 'bg-yellow-500' },
 };
 
 const DEFAULT_AUDIT_CONFIG: ActionConfig = {
-  label: 'Evento',
   icon: <Clock className="h-3 w-3" />,
   dot: 'bg-muted-foreground',
 };
+
+/** Resolves icon+dot for an audit entry, with special handling for status_change → archived/declined. */
+function resolveAuditConfig(entry: AuditLogEntry): ActionConfig {
+  if (entry.action === 'status_change') {
+    const newStatus = (entry.metadata as Record<string, unknown>)?.new_status;
+    if (newStatus === 'archived') return { icon: <Archive className="h-3 w-3" />, dot: 'bg-zinc-500' };
+    if (newStatus === 'declined') return { icon: <XCircle className="h-3 w-3" />, dot: 'bg-red-500' };
+  }
+  return AUDIT_CONFIG[entry.action] ?? DEFAULT_AUDIT_CONFIG;
+}
 
 // ─── Workflow step config ─────────────────────────────────────────────────────
 
@@ -83,46 +96,50 @@ const STEP_STATUS_CONFIG: Record<string, { icon: React.ReactNode; dot: string }>
   pending:   { icon: <Clock className="h-3 w-3" />,        dot: 'bg-gray-300' },
 };
 
-const NODE_TYPE_LABEL: Record<string, string> = {
-  start:             'Inicio',
-  end:               'Fin',
-  status_update:     'Actualización de estado',
-  send_email:        'Envío de email',
-  client_form:       'Formulario del cliente',
-  notify_lawyer:     'Notificación al abogado',
-  manual_action:     'Acción manual',
-  generate_document: 'Generación de documento',
-  send_documents:    'Envío de documentos',
-};
-
 // ─── Metadata formatters ──────────────────────────────────────────────────────
 
-function formatAuditMeta(entry: AuditLogEntry): string | null {
+type TFn = ReturnType<typeof useTranslations<'process.timeline'>>;
+type TStatusFn = ReturnType<typeof useTranslations<'process.status'>>;
+
+/** Translates a raw status key, falling back to the key itself if unknown. */
+function tStatus(tS: TStatusFn, key: string): string {
+  try { return tS(key as never); } catch { return key; }
+}
+
+function formatAuditMeta(entry: AuditLogEntry, t: TFn, tS: TStatusFn): string | null {
   const m = entry.metadata ?? {};
   switch (entry.action) {
     case 'status_change': {
       const parts: string[] = [];
-      if (m.previous_status && m.new_status) parts.push(`${m.previous_status} → ${m.new_status}`);
-      if (m.source === 'manual') parts.push('(manual)');
+      if (m.new_status) {
+        if (!m.previous_status || m.previous_status === m.new_status) {
+          parts.push(tStatus(tS, String(m.new_status)));
+        } else {
+          parts.push(`${tStatus(tS, String(m.previous_status))} → ${tStatus(tS, String(m.new_status))}`);
+        }
+      }
+      if (m.source === 'manual') parts.push(t('meta.manual'));
       return parts.join(' ') || null;
     }
     case 'process_created':
       return [
-        m.document_slug ? `Tipo: ${m.document_slug}` : null,
-        m.client_email  ? `Cliente: ${m.client_email}` : null,
+        m.document_slug ? t('meta.type', { value: String(m.document_slug) }) : null,
+        m.client_email  ? t('meta.client', { value: String(m.client_email) }) : null,
       ].filter(Boolean).join(' · ') || null;
     case 'email_sent':
       return [
-        m.to      ? `Para: ${m.to}` : null,
+        m.to      ? t('meta.to', { value: String(m.to) }) : null,
         m.subject ? `"${m.subject}"` : null,
-        m.attachments_count && Number(m.attachments_count) > 0 ? `${m.attachments_count} adjunto(s)` : null,
+        m.attachments_count && Number(m.attachments_count) > 0
+          ? t('meta.attachments', { count: Number(m.attachments_count) })
+          : null,
       ].filter(Boolean).join(' · ') || null;
     case 'document_generated':
     case 'document_preview_generated': {
       const names = m.document_names as string[] | undefined;
       if (names?.length) return names.join(', ');
       const count = m.documents_count ?? m.preview_count;
-      return count != null ? `${count} documento(s)` : null;
+      return count != null ? t('meta.documents', { count: Number(count) }) : null;
     }
     case 'document_preview_updated':
       return m.document_name ? String(m.document_name) : null;
@@ -133,40 +150,49 @@ function formatAuditMeta(entry: AuditLogEntry): string | null {
         ? `${m.node_title ?? m.node_id ?? ''}: ${String(m.error).slice(0, 100)}`
         : (m.node_title ? String(m.node_title) : null);
     case 'workflow_resumed':
-      return m.resumed_from_node ? `Desde: ${m.resumed_from_node}` : null;
+      return m.resumed_from_node ? t('meta.from_node', { value: String(m.resumed_from_node) }) : null;
     case 'workflow_retried':
       return [
-        m.retried_from_node ? `Nodo: ${m.retried_from_node}` : null,
-        m.source === 'manual' ? '(manual)' : null,
+        m.retried_from_node ? t('meta.node', { value: String(m.retried_from_node) }) : null,
+        m.source === 'manual' ? t('meta.manual') : null,
       ].filter(Boolean).join(' ') || null;
     default:
       return null;
   }
 }
 
-function formatStepMeta(step: WorkflowStepEntry): string | null {
+function formatStepMeta(step: WorkflowStepEntry, t: TFn): string | null {
   const out = step.output ?? {};
   switch (step.node_type) {
-    case 'status_update':
-      return out.previous_status && out.new_status
-        ? `${out.previous_status} → ${out.new_status}`
-        : null;
+    case 'status_update': {
+      if (!out.new_status) return null;
+      if (!out.previous_status || out.previous_status === out.new_status) {
+        return String(out.new_status);
+      }
+      return `${out.previous_status} → ${out.new_status}`;
+    }
     case 'send_email':
     case 'send_documents':
-      return out.sent_to ? `Para: ${out.sent_to}` : null;
+      return out.sent_to ? t('meta.to', { value: String(out.sent_to) }) : null;
     case 'generate_document': {
       const docs = out.documents as { document_name: string }[] | undefined;
       if (docs?.length) return docs.map((d) => d.document_name).join(', ');
       return null;
     }
     case 'client_form':
-      return out.waiting_for === 'client_form_submission' ? 'Esperando formulario del cliente' : null;
+      return out.waiting_for === 'client_form_submission' ? t('meta.waiting_form') : null;
     case 'manual_action':
       return out.waiting_for === 'manual_action' && out.instructions
         ? String(out.instructions).slice(0, 100)
         : null;
     case 'end':
-      return out.ended_at ? `Finalizado: ${new Date(String(out.ended_at)).toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}` : null;
+      return out.ended_at
+        ? t('meta.finished_at', {
+            date: new Date(String(out.ended_at)).toLocaleString('es', {
+              day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+            }),
+          })
+        : null;
     case 'failed':
       return out.error ? String(out.error).slice(0, 120) : null;
     default:
@@ -174,11 +200,11 @@ function formatStepMeta(step: WorkflowStepEntry): string | null {
   }
 }
 
-function userName(entry: AuditLogEntry): string {
-  if (!entry.user) return 'Sistema';
+function userName(entry: AuditLogEntry, t: TFn): string {
+  if (!entry.user) return t('system_user');
   const { firstname, lastname, email } = entry.user;
   if (firstname || lastname) return [firstname, lastname].filter(Boolean).join(' ');
-  return email ?? 'Usuario desconocido';
+  return email ?? t('unknown_user');
 }
 
 function formatTs(ts: string): string {
@@ -190,7 +216,9 @@ function formatTs(ts: string): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
+export function ProcessTimelineButton({ legalProcessId, clientEmail, className }: Props) {
+  const t  = useTranslations('process.timeline');
+  const tS = useTranslations('process.status');
   const [open, setOpen]       = useState(false);
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -215,13 +243,13 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
           data: d,
         }));
         const merged = [...auditEntries, ...stepEntries].sort(
-          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+          (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         );
         setEntries(merged);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar el historial'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('error_loading')))
       .finally(() => setLoading(false));
-  }, [legalProcessId]);
+  }, [legalProcessId, t]);
 
   const handleOpen = () => { setOpen(true); load(); };
 
@@ -230,11 +258,11 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
       <Button
         size="sm"
         variant="outline"
-        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+        className={`h-7 gap-1.5 px-2 text-xs border-transparent ${className ?? 'text-muted-foreground'}`}
         onClick={(e) => { e.stopPropagation(); handleOpen(); }}
       >
         <History className="h-3.5 w-3.5" />
-        Historial
+        {t('button')}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -242,7 +270,7 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
           <DialogHeader className='p-6 pb-0'>
             <DialogTitle className="flex items-center gap-2 text-base">
               <History className="h-4 w-4" />
-              Historial del proceso
+              {t('title')}
             </DialogTitle>
             {clientEmail && (
               <p className="text-xs text-muted-foreground">{clientEmail}</p>
@@ -262,7 +290,7 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
 
             {!loading && !error && entries.length === 0 && (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Sin eventos registrados para este proceso.
+                {t('empty')}
               </p>
             )}
 
@@ -270,8 +298,21 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
               <ol className="relative ml-3 border-l border-border">
                 {entries.map((entry) => {
                   if (entry.kind === 'audit') {
-                    const cfg  = AUDIT_CONFIG[entry.data.action] ?? { ...DEFAULT_AUDIT_CONFIG, label: entry.data.action };
-                    const meta = formatAuditMeta(entry.data);
+                    const cfg   = resolveAuditConfig(entry.data);
+                    const auditMeta = entry.data.metadata as Record<string, unknown> | undefined;
+                    const specificKey = entry.data.action === 'status_change'
+                      ? auditMeta?.reverted
+                        ? 'audit_actions.status_reverted'
+                        : auditMeta?.new_status === 'archived'
+                          ? 'audit_actions.status_archived'
+                          : auditMeta?.new_status === 'declined'
+                            ? 'audit_actions.status_declined'
+                            : null
+                      : null;
+                    const label = specificKey
+                      ? t(specificKey as never, undefined as never)
+                      : t(`audit_actions.${entry.data.action}` as never, undefined as never) ?? t('audit_actions.default');
+                    const meta  = formatAuditMeta(entry.data, t, tS);
                     return (
                       <li key={`a-${entry.data.id}`} className="mb-5 ml-5 last:mb-0">
                         <span className={`absolute -left-[9px] flex h-[18px] w-[18px] items-center justify-center rounded-full text-white ${cfg.dot}`}>
@@ -279,17 +320,17 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
                         </span>
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium leading-none">{cfg.label}</p>
+                            <p className="text-sm font-medium leading-none">{label}</p>
                             <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
                               <User className="mr-0.5 h-2.5 w-2.5" />
-                              auditoría
+                              {t('badge_audit')}
                             </Badge>
                           </div>
                           {meta && <p className="text-xs leading-snug text-muted-foreground break-words">{meta}</p>}
                           <div className="flex items-center gap-1.5 pt-0.5">
                             <time className="text-[11px] text-muted-foreground">{formatTs(entry.timestamp)}</time>
                             <span className="text-[11px] text-muted-foreground">·</span>
-                            <span className="text-[11px] text-muted-foreground">{userName(entry.data)}</span>
+                            <span className="text-[11px] text-muted-foreground">{userName(entry.data, t)}</span>
                           </div>
                         </div>
                       </li>
@@ -297,10 +338,10 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
                   }
 
                   // workflow step
-                  const step    = entry.data;
-                  const sCfg    = STEP_STATUS_CONFIG[step.status] ?? STEP_STATUS_CONFIG.pending;
-                  const meta    = formatStepMeta(step);
-                  const label   = NODE_TYPE_LABEL[step.node_type] ?? step.node_title;
+                  const step     = entry.data;
+                  const sCfg     = STEP_STATUS_CONFIG[step.status] ?? STEP_STATUS_CONFIG.pending;
+                  const meta     = formatStepMeta(step, t);
+                  const label    = t(`node_types.${step.node_type}` as never, undefined as never) ?? step.node_title;
                   const isFailed = step.status === 'failed';
                   return (
                     <li key={`w-${step.id}`} className="mb-5 ml-5 last:mb-0">
@@ -312,10 +353,10 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail }: Props) {
                           <p className="text-sm font-medium leading-none">{label}</p>
                           <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
                             <Workflow className="mr-0.5 h-2.5 w-2.5" />
-                            flujo
+                            {t('badge_workflow')}
                           </Badge>
                           {isFailed && (
-                            <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">Error</Badge>
+                            <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{t('badge_error')}</Badge>
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground">{step.node_title}</p>

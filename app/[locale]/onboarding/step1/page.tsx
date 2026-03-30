@@ -18,7 +18,7 @@ export default async function Step1Page() {
   const [{ data: profile }, { data: catalogDocuments }] = await Promise.all([
     db
       .from('profiles')
-      .select('firstname, lastname, email, phone, document_type, document_number, current_organization_id')
+      .select('firstname, lastname, email, phone, document_type, document_number, professional_card_number, current_organization_id')
       .eq('id', user.id)
       .single(),
     db
@@ -55,6 +55,7 @@ export default async function Step1Page() {
         phone: profile?.phone ?? '',
         document_type: profile?.document_type ?? '',
         document_number: profile?.document_number ?? '',
+        professional_card_number: profile?.professional_card_number ?? null,
       }}
     />
   );

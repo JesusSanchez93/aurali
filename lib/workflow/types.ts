@@ -40,7 +40,9 @@ export type LegalProcessStatus =
   | 'documents_approved'
   | 'documents_sent'
   | 'documents_received'
-  | 'finished';
+  | 'finished'
+  | 'archived'
+  | 'declined';
 
 // ─── Database rows ─────────────────────────────────────────────────────────────
 
@@ -125,6 +127,7 @@ export interface ProfileRow {
   lastname: string | null;
   document_type: string | null;
   document_number: string | null;
+  signature_url?: string | null;
 }
 
 // ─── Execution types ───────────────────────────────────────────────────────────

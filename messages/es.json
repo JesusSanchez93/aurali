@@ -87,7 +87,9 @@
             "documents_approved": "Documentos aprobados",
             "documents_sent": "Documentos enviados",
             "documents_received": "Documentos recibidos",
-            "finished": "Finalizado"
+            "finished": "Finalizado",
+            "archived": "Archivado",
+            "declined": "Declinado"
         },
         "sections": {
             "personal_data": "Datos Personales",
@@ -102,6 +104,7 @@
             "phone": "Teléfono",
             "document_type": "Tipo de documento",
             "document_number": "Número de documento",
+            "professional_card_number": "Número de tarjeta profesional",
             "document_front": "Frente",
             "document_back": "Reverso",
             "bank_name": "Banco",
@@ -125,10 +128,11 @@
         },
         "filter": {
             "all": "Todos",
-            "placeholder": "Filtrar por estado"
+            "placeholder": "Filtrar por estado",
+            "selected_count": "{count} estados"
         },
         "search": {
-            "placeholder": "Buscar por cliente o documento...",
+            "placeholder": "Buscar por cliente, documento... o #0001",
             "clear": "Limpiar búsqueda"
         },
         "form": {
@@ -142,6 +146,31 @@
             "success_desc": "El proceso ha sido creado exitosamente.",
             "error_toast": "Error"
         },
+        "archive": {
+            "trigger": "Archivar proceso",
+            "confirm_title": "Archivar proceso",
+            "confirm_description": "¿Estás seguro de que deseas archivar este proceso? El proceso quedará inactivo pero sus datos serán conservados. Podrás revertir esta acción más adelante.",
+            "confirm_button": "Archivar",
+            "cancel_button": "Cancelar",
+            "success": "Proceso archivado",
+            "revert_trigger": "Revertir archivo",
+            "revert_confirm_title": "Revertir archivo",
+            "revert_confirm_description": "¿Deseas restaurar este proceso a su estado anterior? El proceso volverá al estado en que se encontraba antes de ser archivado.",
+            "revert_confirm_button": "Restaurar",
+            "revert_success": "Proceso restaurado",
+            "note_label": "Nota",
+            "note_placeholder": "Agrega una nota opcional..."
+        },
+        "decline": {
+            "trigger": "Declinar proceso",
+            "confirm_title": "Declinar proceso",
+            "confirm_description": "¿Estás seguro de que deseas declinar este proceso? Esto indica que el proceso fue rechazado y no continuará. Esta acción no se puede deshacer.",
+            "confirm_button": "Declinar",
+            "cancel_button": "Cancelar",
+            "success": "Proceso declinado",
+            "note_label": "Nota",
+            "note_placeholder": "Agrega una nota opcional..."
+        },
         "payment": {
             "mark_as_paid": "Marcar como pagado",
             "revert_payment": "Revertir pago",
@@ -152,6 +181,80 @@
             "confirm_revert_desc": "¿Está seguro que desea revertir el pago? El estado regresará a 'En proceso'.",
             "confirm_button": "Confirmar",
             "cancel_button": "Cancelar"
+        },
+        "timeline": {
+            "button": "Historial",
+            "title": "Historial del proceso",
+            "empty": "Sin eventos registrados para este proceso.",
+            "error_loading": "Error al cargar el historial",
+            "badge_audit": "auditoría",
+            "badge_workflow": "flujo",
+            "badge_error": "Error",
+            "system_user": "Sistema",
+            "unknown_user": "Usuario desconocido",
+            "audit_actions": {
+                "process_created": "Proceso creado",
+                "workflow_started": "Flujo iniciado",
+                "workflow_resumed": "Flujo reanudado",
+                "workflow_completed": "Flujo completado",
+                "workflow_failed": "Error en el flujo",
+                "workflow_retried": "Flujo reintentado",
+                "status_change": "Cambio de estado",
+                "status_archived": "Proceso archivado",
+                "status_declined": "Proceso declinado",
+                "status_reverted": "Archivo revertido",
+                "email_sent": "Email enviado",
+                "document_generated": "Documentos generados",
+                "document_preview_generated": "Borradores generados",
+                "document_preview_updated": "Borrador actualizado",
+                "payment_confirmed": "Pago confirmado",
+                "workflow_notification": "Notificación enviada",
+                "default": "Evento"
+            },
+            "node_types": {
+                "start": "Inicio",
+                "end": "Fin",
+                "status_update": "Actualización de estado",
+                "send_email": "Envío de email",
+                "client_form": "Formulario del cliente",
+                "notify_lawyer": "Notificación al abogado",
+                "manual_action": "Acción manual",
+                "generate_document": "Generación de documento",
+                "send_documents": "Envío de documentos"
+            },
+            "meta": {
+                "type": "Tipo: {value}",
+                "client": "Cliente: {value}",
+                "to": "Para: {value}",
+                "attachments": "{count} adjunto(s)",
+                "documents": "{count} documento(s)",
+                "waiting_form": "Esperando formulario del cliente",
+                "from_node": "Desde: {value}",
+                "node": "Nodo: {value}",
+                "manual": "(manual)",
+                "finished_at": "Finalizado: {date}"
+            }
+        },
+        "document_previews": {
+            "section_preliminary": "Documentos preliminares",
+            "section_final": "Documentos finales",
+            "document_fallback": "Documento",
+            "document_count": "{count} {count, plural, one {documento} other {documentos}}",
+            "thumbnail_expand_aria": "Ampliar {name}",
+            "thumbnail_expand_label": "Ampliar",
+            "no_preview_content": "Sin contenido de vista previa",
+            "card_footer_label": "Vista previa",
+            "btn_view": "Ver",
+            "btn_edit": "Editar",
+            "btn_edit_document": "Editar este documento",
+            "btn_close": "Cerrar",
+            "btn_cancel": "Cancelar",
+            "btn_save": "Guardar cambios",
+            "btn_saving": "Guardando…",
+            "badge_draft": "Borrador",
+            "edit_title_fallback": "Editar documento",
+            "save_success": "Documento actualizado",
+            "save_error_fallback": "Error al guardar el documento"
         }
     },
     "clients": {
@@ -305,6 +408,7 @@
             "LAWYER_DOCUMENT_TYPE": "Tipo de Documento del Abogado",
             "LAWYER_DOCUMENT_NAME": "Nombre del Documento del Abogado",
             "LAWYER_DOCUMENT_NUMBER": "Número de Documento del Abogado",
+            "LAWYER_SIGNATURE": "Firma del Abogado",
             "ORG_REP_FIRST_NAME": "Nombre del Representante",
             "ORG_REP_LAST_NAME": "Apellido del Representante",
             "ORG_REP_DOCUMENT_TYPE": "Tipo de Documento del Representante",

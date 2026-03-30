@@ -1,28 +1,7 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-
-async function getOrgAndUser() {
-    const supabase = await createClient();
-
-    const {
-        data: { user },
-        error: authError,
-    } = await supabase.auth.getUser();
-
-    if (!user || authError) throw new Error('Unauthorized');
-
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('current_organization_id')
-        .eq('id', user.id)
-        .single();
-
-    if (!profile?.current_organization_id) throw new Error('Organization not found');
-
-    return { supabase, userId: user.id, organizationId: profile.current_organization_id };
-}
+import { getOrgAndUser } from '@/lib/server/get-org-user';
 
 export async function getTemplates() {
     const { supabase, organizationId } = await getOrgAndUser();

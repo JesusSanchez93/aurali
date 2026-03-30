@@ -1,5 +1,6 @@
 import { SignUpForm } from '@/components/auth/sign-up-form';
 import { createClient } from '@/lib/supabase/server';
+import { ThemeSwitcher } from '@/components/app/theme-switcher';
 
 interface Props {
   searchParams: Promise<{ token?: string }>;
@@ -31,10 +32,11 @@ export default async function SignUpPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+    <div className="flex min-h-svh w-full flex-col items-center justify-center gap-4 p-6 md:p-10">
       <div className="w-full max-w-sm">
         <SignUpForm invitedEmail={invitedEmail} orgName={orgName} />
       </div>
+      <ThemeSwitcher />
     </div>
   );
 }

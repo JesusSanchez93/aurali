@@ -8,7 +8,7 @@ import { Trash2 } from 'lucide-react';
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
         twoColumn: {
-            insertTwoColumn: () => ReturnType;
+            insertColumnLayout: (count: number) => ReturnType;
         };
     }
 }
@@ -17,7 +17,7 @@ declare module '@tiptap/core' {
 function TwoColumnComponent({ deleteNode }: { deleteNode: () => void }) {
     return (
         <NodeViewWrapper>
-            <div className="group relative my-4 rounded-lg border border-dashed border-border p-3">
+            <div className="group relative my-2 rounded-lg border border-dashed border-border p-1.5">
                 {/* Delete button */}
                 <button
                     type="button"
@@ -67,7 +67,7 @@ export const ColumnExtension = Node.create({
 export const TwoColumnExtension = Node.create({
     name: 'twoColumn',
     group: 'block',
-    content: 'column{2}',
+    content: 'column{2,5}',
 
     parseHTML() {
         return [{ tag: 'div[data-type="two-column"]' }];
@@ -78,7 +78,7 @@ export const TwoColumnExtension = Node.create({
             'div',
             mergeAttributes(HTMLAttributes, {
                 'data-type': 'two-column',
-                style: 'display:flex;gap:20px;position:relative;margin-top:1.5em;margin-bottom:1.5em;',
+                style: 'display:flex;gap:12px;position:relative;margin-top:1em;margin-bottom:1em;',
             }),
             0,
         ];
@@ -91,15 +91,16 @@ export const TwoColumnExtension = Node.create({
 
     addCommands() {
         return {
-            insertTwoColumn:
-                () =>
+            insertColumnLayout:
+                (count: number) =>
                 ({ commands }) => {
+                    const cols = Math.min(5, Math.max(2, count));
                     return commands.insertContent({
                         type: 'twoColumn',
-                        content: [
-                            { type: 'column', content: [{ type: 'paragraph' }] },
-                            { type: 'column', content: [{ type: 'paragraph' }] },
-                        ],
+                        content: Array.from({ length: cols }, () => ({
+                            type: 'column',
+                            content: [{ type: 'paragraph' }],
+                        })),
                     });
                 },
         };
