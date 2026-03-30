@@ -45,7 +45,26 @@ const SignatureExtensionServer = Node.create({
   },
   parseHTML() { return [{ tag: 'div[data-type="signature"]' }]; },
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'signature' })];
+    const nameStr = typeof HTMLAttributes.name === 'string' ? HTMLAttributes.name : '';
+    const roleStr = typeof HTMLAttributes.role === 'string' ? HTMLAttributes.role : '';
+    // Only render the image when src looks like a real URL or data URI
+    const imgSrc  = typeof HTMLAttributes.image === 'string' &&
+      (HTMLAttributes.image.startsWith('http') || HTMLAttributes.image.startsWith('data:'))
+        ? HTMLAttributes.image
+        : null;
+
+    const sigArea = imgSrc
+      ? ['div', { class: 'sig-space', style: 'text-align:center;' },
+          ['img', { src: imgSrc, alt: 'Firma', style: 'max-height:56px;max-width:100%;object-fit:contain;' }],
+        ]
+      : ['div', { class: 'sig-space' }];
+
+    return ['div', { class: 'signature-block', 'data-type': 'signature' },
+      sigArea,
+      ['div', { class: 'sig-line' }],
+      ['p', { class: 'sig-name' }, nameStr],
+      ['p', { class: 'sig-label' }, roleStr],
+    ];
   },
 });
 
@@ -55,7 +74,7 @@ const SignatureRowExtensionServer = Node.create({
   content: 'signature{2}',
   parseHTML() { return [{ tag: 'div[data-type="signature-row"]' }]; },
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'signature-row' }), 0];
+    return ['div', mergeAttributes(HTMLAttributes, { class: 'signatures', 'data-type': 'signature-row' }), 0];
   },
 });
 
@@ -80,6 +99,21 @@ const TwoColumnExtensionServer = Node.create({
   },
 });
 
+// Renders VariableNode chips as {VARIABLE} text — substituteVars() in step 4 replaces them.
+const VariableNodeServer = Node.create({
+  name: 'variable',
+  group: 'inline',
+  inline: true,
+  atom: true,
+  addAttributes() {
+    return { variable: { default: '' } };
+  },
+  parseHTML() { return [{ tag: 'span[data-variable]' }]; },
+  renderHTML({ node }: { node: { attrs: { variable: string } } }) {
+    return ['span', { 'data-variable': node.attrs.variable }, `{${node.attrs.variable}}`];
+  },
+});
+
 const TIPTAP_EXTENSIONS = [
   StarterKit,
   TextStyle,
@@ -88,6 +122,7 @@ const TIPTAP_EXTENSIONS = [
   SignatureRowExtensionServer,
   ColumnExtensionServer,
   TwoColumnExtensionServer,
+  VariableNodeServer,
   Table.configure({ resizable: false }),
   TableRow,
   TableCell,

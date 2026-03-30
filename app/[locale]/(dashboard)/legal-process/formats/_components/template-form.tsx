@@ -23,6 +23,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { SignatureExtension } from '@/components/common/tip-tap/extensions/signature-node';
 import { SignatureRowExtension } from '@/components/common/tip-tap/extensions/signature-row-node';
 import { ColumnExtension, TwoColumnExtension } from '@/components/common/tip-tap/extensions/two-column-node';
+import { VariableNode } from '@/components/common/tip-tap/extensions/variable-node';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -67,6 +68,7 @@ const tiptapExtensions = [
     SignatureRowExtension,
     ColumnExtension,
     TwoColumnExtension,
+    VariableNode,
     Table.configure({ resizable: false }),
     TableRow,
     TableCell,
@@ -239,9 +241,17 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
     const onSubmit = (values: FormValues) => {
         startTransition(async () => {
             try {
+                // Read content directly from the editor ref to ensure we always
+                // get the latest state (including text alignment, colors, etc.)
+                // regardless of any react-hook-form tracking quirks with complex objects.
+                // Deep-clone via JSON round-trip to break ProseMirror's shared attrs
+                // object references — Next.js RSC deduplicates by identity, which
+                // would otherwise collapse distinct paragraph attrs into stale references.
+                const rawContent = tiptapRef.current?.getContent() ?? values.content ?? '';
+                const editorContent = JSON.parse(JSON.stringify(rawContent));
                 const payload = {
                     ...values,
-                    content: values.content ?? '',
+                    content: editorContent,
                     header_id: values.header_id === '__none__' ? null : values.header_id,
                     footer_id: values.footer_id === '__none__' ? null : values.footer_id,
                 };
@@ -365,8 +375,7 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
 
                         {/* Variables panel */}
                         <VariablesPanel
-                            onInsert={(variable) => tiptapRef.current?.insertText(variable)}
-                            onInsertTwoColumn={() => tiptapRef.current?.insertTwoColumn()}
+                            onInsert={(variable) => tiptapRef.current?.insertVariable(variable)}
                         />
                     </div>
                 </form>

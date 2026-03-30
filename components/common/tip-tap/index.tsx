@@ -11,6 +11,9 @@ import { SignatureRowExtension } from './extensions/signature-row-node';
 import { ColumnExtension, TwoColumnExtension } from './extensions/two-column-node';
 import { PercentTable, PercentTableCell, PercentTableHeader } from './extensions/table-node';
 import { TableRow } from '@tiptap/extension-table';
+import { ImageExtension } from './extensions/image-node';
+import { VariableNode } from './extensions/variable-node';
+import { VariableSuggestionExtension, VariableSuggestionDropdown } from './extensions/variable-suggestion';
 const extensions = [
     TextStyleKit,
     StarterKit,
@@ -26,6 +29,9 @@ const extensions = [
     TableRow,
     PercentTableCell,
     PercentTableHeader,
+    ImageExtension,
+    VariableNode,
+    VariableSuggestionExtension,
 ];
 // ─── Page sizes ──────────────────────────────────────────────────────────────
 const PAGE_SIZES = {
@@ -36,15 +42,18 @@ type PageSize = keyof typeof PAGE_SIZES;
 
 export interface TiptapHandle {
     insertText: (text: string) => void;
+    insertVariable: (variable: string) => void;
     insertBlock: (content: unknown[]) => void;
-    insertSignatureRow: () => void;
-    insertTwoColumn: () => void;
+    insertColumnLayout: (count: number) => void;
+    getContent: () => unknown;
 }
 
 interface Props {
     value?: any;
     onChange: (value: any) => void;
     mode?: 'default' | 'document';
+    /** Overrides the sticky top offset of the menu bar (default: var(--header-height)). Use '0px' inside modals. */
+    menuBarStickyTop?: string;
 }
 
 // ─── Gap between pages (px) ──────────────────────────────────────────────────
@@ -143,15 +152,20 @@ function DocumentCanvas({ children, pageSize }: { children: React.ReactNode; pag
     );
 }
 
-const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'default' }, ref) => {
+const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'default', menuBarStickyTop }, ref) => {
     const [pageSize, setPageSize] = useState<PageSize>('A4');
     const isDocument = mode === 'document';
+    // Always holds the latest serialized content so getContent() never reads
+    // a stale closure — updated on every editor transaction via onUpdate.
+    const latestContentRef = useRef<unknown>(value ?? null);
 
     const editor = useEditor({
         extensions,
         content: value,
         onUpdate({ editor }) {
-            onChange(editor.getJSON());
+            const json = editor.getJSON();
+            latestContentRef.current = json;
+            onChange(json);
         },
         immediatelyRender: false,
         editorProps: {
@@ -169,16 +183,17 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
             insertText: (text: string) => {
                 editor?.chain().focus().insertContent(text).run();
             },
+            insertVariable: (variable: string) => {
+                editor?.chain().focus().insertVariable(variable).run();
+            },
             insertBlock: (content: unknown[]) => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 editor?.chain().focus().insertContent(content as any).run();
             },
-            insertSignatureRow: () => {
-                editor?.chain().focus().insertSignatureRow().run();
+            insertColumnLayout: (count: number) => {
+                editor?.chain().focus().insertColumnLayout(count).run();
             },
-            insertTwoColumn: () => {
-                editor?.chain().focus().insertTwoColumn().run();
-            },
+            getContent: () => latestContentRef.current,
         }),
         [editor],
     );
@@ -252,20 +267,22 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
     if (isDocument) {
         return (
             <div className="flex flex-col rounded-md border border-input bg-background text-sm">
-                {editor && <MenuBar editor={editor} pageSizeProps={pageSizeProps} />}
+                {editor && <MenuBar editor={editor} pageSizeProps={pageSizeProps} stickyTop={menuBarStickyTop} />}
                 <DocumentCanvas pageSize={pageSize}>
                     <EditorContent editor={editor} />
                 </DocumentCanvas>
+                {editor && <VariableSuggestionDropdown editor={editor} />}
             </div>
         );
     }
 
     return (
         <div className="flex flex-col gap-2 rounded-md border border-input bg-background text-sm">
-            {editor && <MenuBar editor={editor} />}
+            {editor && <MenuBar editor={editor} stickyTop={menuBarStickyTop} />}
             <div>
                 <EditorContent editor={editor} />
             </div>
+            {editor && <VariableSuggestionDropdown editor={editor} />}
         </div>
     );
 });
