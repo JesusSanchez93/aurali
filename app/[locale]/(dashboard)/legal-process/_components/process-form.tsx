@@ -5,7 +5,6 @@ import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { useTransition, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useProfile } from '@/components/providers/profile-provider';
 import { toast } from 'sonner';
 import { FormSelect } from '@/components/common/form/form-select';
 import { useTranslations } from 'next-intl';
@@ -30,7 +29,6 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
   const processT = useTranslations('process');
   const validationT = useTranslations('common.validation');
 
-  const { current_organization_id } = useProfile();
   const [isPending, startTransition] = useTransition();
 
   const formSchema = useMemo(() => z.object({
@@ -71,7 +69,6 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
           ...values,
           document_type: label ?? '',
           document_slug: key ?? '',
-          current_organization_id,
         });
         form.reset();
         toast.success(processT('form.success_toast'), {

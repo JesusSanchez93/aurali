@@ -14,6 +14,12 @@ type LocalizedString = {
   en?: string;
 };
 
+function revalidateLegalProcessPaths() {
+  revalidatePath('/legal-process');
+  revalidatePath('/es/legal-process');
+  revalidatePath('/en/legal-process');
+}
+
 export async function getLegalProcesses(page: number = 1, pageSize: number = 10, search?: string, status?: string | string[]) {
   const supabase = await createClient();
 
@@ -158,7 +164,6 @@ export async function createLegalProcessDraft(values: {
   document_number: string;
   email: string;
   assigned_to: string;
-  current_organization_id: string;
 }) {
   const supabase = await createClient();
 
@@ -171,12 +176,24 @@ export async function createLegalProcessDraft(values: {
     throw new Error('Unauthorized');
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('current_organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.current_organization_id) {
+    throw new Error('Organization not found');
+  }
+
+  const organizationId = profile.current_organization_id;
+
   // Look up existing client scoped to this org to avoid cross-org matches
   const { data: client } = await supabase
     .from('clients')
     .select('id')
     .eq('email', values.email)
-    .eq('organization_id', values.current_organization_id)
+    .eq('organization_id', organizationId)
     .maybeSingle();
 
   let clientId = client?.id;
@@ -190,7 +207,7 @@ export async function createLegalProcessDraft(values: {
         document_number: values.document_number,
         email: values.email,
         created_by: user.id,
-        organization_id: values.current_organization_id,
+        organization_id: organizationId,
       })
       .select()
       .single();
@@ -202,7 +219,7 @@ export async function createLegalProcessDraft(values: {
           .from('clients')
           .select('id')
           .eq('email', values.email)
-          .eq('organization_id', values.current_organization_id)
+          .eq('organization_id', organizationId)
           .single();
         clientId = existingClient?.id;
       } else {
@@ -220,7 +237,7 @@ export async function createLegalProcessDraft(values: {
     .from('legal_processes')
     .insert({
       status: 'draft',
-      organization_id: values.current_organization_id,
+      organization_id: organizationId,
       lawyer_id: values.assigned_to,
       assigned_to: values.assigned_to,
       access_token: publicToken,
@@ -239,7 +256,7 @@ export async function createLegalProcessDraft(values: {
       .from('legal_process_clients')
       .insert({
         legal_process_id: newLegalProcess.id,
-        organization_id: values.current_organization_id,
+        organization_id: organizationId,
         document_id: values.document_id,
         document_slug: values.document_slug,
         document_number: values.document_number,
@@ -258,7 +275,7 @@ export async function createLegalProcessDraft(values: {
       .from('legal_process_banks')
       .insert({
         legal_process_id: newLegalProcess.id,
-        organization_id: values.current_organization_id,
+        organization_id: organizationId,
         created_by: user.id,
       });
 
@@ -272,7 +289,7 @@ export async function createLegalProcessDraft(values: {
   const { data: orgWorkflow } = await supabase
     .from('organization_workflows')
     .select('workflow_template_id')
-    .eq('organization_id', values.current_organization_id)
+    .eq('organization_id', organizationId)
     .eq('is_active', true)
     .single();
 
@@ -286,7 +303,7 @@ export async function createLegalProcessDraft(values: {
 
   // Audit: process created
   void supabase.from('audit_logs').insert({
-    organization_id: values.current_organization_id,
+    organization_id: organizationId,
     user_id: user.id,
     action: 'process_created',
     entity: 'legal_process',
@@ -298,7 +315,7 @@ export async function createLegalProcessDraft(values: {
     },
   });
 
-  revalidatePath('/legal-process');
+  revalidateLegalProcessPaths();
 }
 
 export async function getLegalProcessDetail(legalProcessId: string) {
