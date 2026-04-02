@@ -147,7 +147,8 @@ export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
     const t = useTranslations('formats.variables');
 
     useEffect(() => {
-        const storage = editor.storage.variableSuggestion;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const storage = (editor.storage as any).variableSuggestion;
         if (!storage) return;
         storage._onStateChange = () => setTick((n) => n + 1);
         return () => {
@@ -155,7 +156,8 @@ export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
         };
     }, [editor]);
 
-    const storage = editor.storage.variableSuggestion;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const storage = (editor.storage as any).variableSuggestion;
     if (!storage?.active) return null;
 
     const rawQuery = storage.query as string;

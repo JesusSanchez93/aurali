@@ -503,7 +503,7 @@ export async function updateInfoAboutEventsAction(
 
     const { data: legalProcess, error: processError } = await supabase
         .from('legal_processes')
-        .select('id, status')
+        .select('id, organization_id, status')
         .eq('id', legalProcessId)
         .single();
 
@@ -540,6 +540,7 @@ export async function updateInfoAboutEventsAction(
         lost_card,
         fraud_incident_summary,
         legal_process_id: legalProcessId,
+        organization_id: legalProcess.organization_id!,
     };
 
     if (existingBank) {

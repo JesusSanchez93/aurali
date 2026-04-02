@@ -1,5 +1,3 @@
- WARN  Unsupported engine: wanted: {"node":">=24"} (current: {"node":"v18.20.8","pnpm":"10.33.0"})
-Connecting to db 5432
 export type Json =
   | string
   | number
@@ -745,7 +743,7 @@ export type Database = {
           id?: string
           lawyer_id?: string | null
           organization_id?: string | null
-          process_number: number
+          process_number?: number
           status?: string
           workflow_run_id?: string | null
         }
@@ -1081,8 +1079,11 @@ export type Database = {
           lastname: string | null
           onboarding_status: string | null
           phone: string | null
+          professional_card_number: string | null
+          signature_url: string | null
           system_role: string
           updated_at: string
+          workflow_guide_seen: boolean | null
         }
         Insert: {
           created_at?: string
@@ -1095,8 +1096,11 @@ export type Database = {
           lastname?: string | null
           onboarding_status?: string | null
           phone?: string | null
+          professional_card_number?: string | null
+          signature_url?: string | null
           system_role?: string
           updated_at?: string
+          workflow_guide_seen?: boolean | null
         }
         Update: {
           created_at?: string
@@ -1109,8 +1113,11 @@ export type Database = {
           lastname?: string | null
           onboarding_status?: string | null
           phone?: string | null
+          professional_card_number?: string | null
+          signature_url?: string | null
           system_role?: string
           updated_at?: string
+          workflow_guide_seen?: boolean | null
         }
         Relationships: []
       }
@@ -1677,6 +1684,3 @@ export const Constants = {
     },
   },
 } as const
-
-A new version of Supabase CLI is available: v2.84.2 (currently installed v2.72.7)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

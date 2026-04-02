@@ -7,7 +7,7 @@ import { startWorkflow, resumeWorkflow, retryWorkflow } from '@/lib/workflow/wor
 import { autoAdvanceWorkflow } from '@/lib/workflow/autoAdvance';
 import { buildDocumentTemplateData } from '@/lib/workflow/nodeExecutors';
 import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
-import { substituteVars, wrapWithPageLayout } from '@/lib/documents/htmlRenderer';
+import { substituteVars, wrapWithPageLayout, renderHeaderFooterHtml } from '@/lib/documents/htmlRenderer';
 
 type LocalizedString = {
   es?: string;

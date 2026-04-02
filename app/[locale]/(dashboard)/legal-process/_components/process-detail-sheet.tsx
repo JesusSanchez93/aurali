@@ -116,7 +116,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         loadData(processId);
     }, [open, processId]);
 
-    const handleArchive = async (note: string) => {
+    const handleArchive = async (note?: string) => {
         if (!processId) return;
         setActioning(true);
         try {
@@ -130,7 +130,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         }
     };
 
-    const handleDecline = async (note: string) => {
+    const handleDecline = async (note?: string) => {
         if (!processId) return;
         setActioning(true);
         try {

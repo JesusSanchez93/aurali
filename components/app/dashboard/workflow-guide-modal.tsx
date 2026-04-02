@@ -333,7 +333,7 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
             </p>
 
             {/* Requirements list (step 0) */}
-            {'requirements' in content && (
+            {'requirements' in content && content.requirements && (
               <ul className="mt-5 space-y-2.5">
                 {content.requirements.map((req) => (
                   <li key={req} className="flex items-start gap-3 text-sm">

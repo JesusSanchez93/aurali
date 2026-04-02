@@ -46,7 +46,8 @@ import { useRef, useState } from 'react';
 function getTableInfo(editor: Editor) {
   const { state } = editor;
   const { schema } = state;
-  let tableNode: Node | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let tableNode: any = null;
   let tablePos = -1;
 
   state.doc.descendants((node, pos) => {
@@ -57,7 +58,7 @@ function getTableInfo(editor: Editor) {
     }
   });
 
-  return { tableNode, tablePos, schema };
+  return { tableNode: tableNode as Node | null, tablePos, schema };
 }
 
 function isFirstRowHeader(editor: Editor): boolean {

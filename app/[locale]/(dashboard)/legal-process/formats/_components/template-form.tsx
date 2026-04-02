@@ -78,7 +78,8 @@ const tiptapExtensions = [
 function tiptapToHtml(content: unknown): string {
     if (!content || typeof content !== 'object') return '';
     try {
-        const html = generateHTML(content as Parameters<typeof generateHTML>[0], tiptapExtensions);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const html = generateHTML(content as Parameters<typeof generateHTML>[0], tiptapExtensions as any);
         // ProseMirror adds a <br> placeholder to empty paragraphs in the editor,
         // but generateHTML omits it. Use &nbsp; (more reliable than <br>) so the
         // paragraph gets full line-height and prose margins in the preview.

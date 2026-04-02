@@ -92,8 +92,8 @@ const VariableNodeServer = Node.create({
     return { variable: { default: '' } };
   },
   parseHTML() { return [{ tag: 'span[data-variable]' }]; },
-  renderHTML({ node }: { node: { attrs: { variable: string } } }) {
-    return ['span', { 'data-variable': node.attrs.variable }, `{${node.attrs.variable}}`];
+  renderHTML({ node }) {
+    return ['span', { 'data-variable': node.attrs['variable'] }, `{${node.attrs['variable']}}`];
   },
 });
 
