@@ -63,7 +63,25 @@
       "Bash(ls /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(dashboard\\\\\\)/actions/)",
       "Bash(ls /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(dashboard\\\\\\)/admin/workflows/_components/)",
       "Bash(ls \"/Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\(dashboard\\)/actions/\")",
-      "Bash(ls \"/Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\(dashboard\\)/admin/workflows/_components/\")"
+      "Bash(ls \"/Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\(dashboard\\)/admin/workflows/_components/\")",
+      "Bash(git checkout:*)",
+      "Bash(grep:*)",
+      "Bash(npx skills:*)",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py 'legal SaaS document editor settings panel' --design-system)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''exports'''', {}\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''exports'''', {}\\).get\\(''''.'''', {}\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\(''''/Users/jsanchez/Documents/GitHubPersonal/aurali/messages/es.json''''\\)\\); print\\(json.dumps\\(d.get\\(''''formats'''', {}\\).get\\(''''variables'''', {}\\), indent=2, ensure_ascii=False\\)\\)\")",
+      "Bash(find /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(public\\\\\\)/legal-process -type f -name \"*.tsx\" -o -name \"*.ts\" -o -name \"*.css\")",
+      "Bash(find /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(public\\\\\\) -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" -o -name \"*.css\" \\\\\\))",
+      "Bash(find /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(public\\\\\\) -maxdepth 2 -name \"*.tsx\" -o -name \"*.ts\")",
+      "Skill(claude-api)",
+      "Bash(find /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(dashboard\\\\\\)/legal-process -type f -name \"*.tsx\" -o -name \"*.ts\")",
+      "Bash(find /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(dashboard\\\\\\)/legal-process -type f \\\\\\( -name \"page.tsx\" -o -name \"layout.tsx\" \\\\\\))",
+      "Bash(find \"/Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\(dashboard\\)/legal-process\" -name \"*.tsx\")",
+      "Bash(supabase status:*)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/jsanchez/.local/bin/**)",
+      "Bash(export SUPABASE_ACCESS_TOKEN=sbp_b404f94db6c0293ac0bb6e272d702e5b3d2c50bc)"
     ]
   }
 }
