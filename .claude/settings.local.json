@@ -81,7 +81,15 @@
       "Bash(supabase status:*)",
       "Read(//usr/local/bin/**)",
       "Read(//Users/jsanchez/.local/bin/**)",
-      "Bash(export SUPABASE_ACCESS_TOKEN=sbp_b404f94db6c0293ac0bb6e272d702e5b3d2c50bc)"
+      "Bash(export SUPABASE_ACCESS_TOKEN=sbp_b404f94db6c0293ac0bb6e272d702e5b3d2c50bc)",
+      "Bash(git config:*)",
+      "Bash(xxd)",
+      "Bash(grep -n \"renderHeaderFooterHtml\\\\|process_number\\\\|processNumber\" /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(dashboard\\\\\\)/legal-process/actions.ts)",
+      "Bash(grep -n \"renderHeaderFooterHtml\" /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(dashboard\\\\\\)/legal-process/actions.ts)",
+      "Bash(grep -n \"handleArchive\\\\|handleDecline\\\\|ConfirmDialog\" /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(dashboard\\\\\\)/legal-process/_components/process-detail-sheet.tsx)",
+      "Bash(grep -n \"updateData\\\\s*=\" /Users/jsanchez/Documents/GitHubPersonal/aurali/app/[locale]/\\\\\\(public\\\\\\)/legal-process/client-side/[id]/[step]/actions.ts)",
+      "Bash(git:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }
