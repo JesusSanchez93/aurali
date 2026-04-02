@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { getAccountProfile } from './actions';
 import AccountProfileSection from '@/components/app/settings/account-profile-section';
 import { getLocale } from 'next-intl/server';
