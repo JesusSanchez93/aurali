@@ -326,7 +326,9 @@
             "submit": "Iniciar Sesión",
             "forgot_password": "¿Olvidaste tu contraseña?",
             "no_account": "¿No tienes una cuenta?",
-            "sign_up": "Regístrate"
+            "sign_up": "Regístrate",
+            "already_have_account": "¿Ya tienes una cuenta?",
+            "login": "Inicia Sesión"
         },
         "signUp": {
             "title": "Crear Cuenta",
