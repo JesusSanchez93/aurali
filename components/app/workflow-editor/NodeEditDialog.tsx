@@ -165,8 +165,8 @@ export function NodeEditDialog({
 
   return (
     <Dialog open={!!node} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-2xl p-0">
+        <DialogHeader className='p-6'>
           <DialogTitle>
             {isGenerateDoc ? 'Configurar documentos — ' : 'Editar correo — '}
             {node?.data.title}
@@ -174,7 +174,7 @@ export function NodeEditDialog({
         </DialogHeader>
 
         <FormProvider {...form}>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto py-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
 
           {/* ── generate_document: only template selector ── */}
           {isGenerateDoc && (
@@ -198,7 +198,7 @@ export function NodeEditDialog({
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium">Cuerpo del correo</span>
-                <Tiptap key={node?.id} value={bodyContent} onChange={setBodyContent} />
+                <Tiptap key={node?.id} value={bodyContent} onChange={setBodyContent} menuBarStickyTop='-1px' />
                 <div className="flex flex-wrap gap-1 pt-1">
                   {VARIABLES.map((v) => (
                     <code

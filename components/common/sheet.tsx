@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { ReactNode } from 'react';
 
 interface Props {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   title: ReactNode;
   description?: string;
   className?: string;
@@ -33,8 +33,8 @@ export default function Sheet({
 }: Props) {
   return (
     <SheetUI open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetOverlay className="bg-background/5 backdrop-blur-[3px] transition-all duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+      {trigger && <SheetTrigger asChild>{trigger}</SheetTrigger>}
+      <SheetOverlay className="bg-black/40 backdrop-blur-[2px] transition-all duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <SheetContent size={size} className='p-0'>
         <SheetHeader className='p-4 pb-0'>
           <SheetTitle>{title}</SheetTitle>

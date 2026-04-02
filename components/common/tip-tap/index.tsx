@@ -46,6 +46,7 @@ export interface TiptapHandle {
     insertBlock: (content: unknown[]) => void;
     insertColumnLayout: (count: number) => void;
     getContent: () => unknown;
+    setContent: (content: unknown) => void;
 }
 
 interface Props {
@@ -122,7 +123,7 @@ function DocumentCanvas({ children, pageSize }: { children: React.ReactNode; pag
                 ))}
 
                 {/* ── Editor content (above page sheets, below gap overlays) ── */}
-                <div ref={contentWrapRef} className="relative z-5" style={{ clipPath:'' }}>
+                <div ref={contentWrapRef} className="relative z-5">
                     {children}
                 </div>
 
@@ -135,17 +136,7 @@ function DocumentCanvas({ children, pageSize }: { children: React.ReactNode; pag
                             top: (i + 1) * minHeight + i * PAGE_GAP,
                             height: PAGE_GAP,
                         }}
-                    >
-                        <div
-                            className="h-full"
-                            style={{
-                                // backgroundColor: 'hsl(var(--background))',
-                                // ...DOT_GRID,
-                                // Inset shadows simulate bottom/top page edges
-                                //boxShadow: 'inset 0 6px 10px -4px rgba(0,0,0,0.25), inset 0 -6px 10px -4px rgba(0,0,0,0.25)',
-                            }}
-                        />
-                    </div>
+                    />
                 ))}
             </div>
         </div>
@@ -194,6 +185,12 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
                 editor?.chain().focus().insertColumnLayout(count).run();
             },
             getContent: () => latestContentRef.current,
+            setContent: (content: unknown) => {
+                if (!editor) return;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                editor.commands.setContent(content as any);
+                latestContentRef.current = content;
+            },
         }),
         [editor],
     );

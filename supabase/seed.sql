@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- =============================================================================
 -- Seed: Superadmin user
 -- Email:    jdavidsanchez1993@gmail.com
@@ -36,7 +38,7 @@ BEGIN
     'authenticated',
     'authenticated',
     'jdavidsanchez1993@gmail.com',
-    crypt('aJdsan123.*', gen_salt('bf')),
+    extensions.crypt('aJdsan123.*', extensions.gen_salt('bf')),
     now(),
     now(),
     now(),

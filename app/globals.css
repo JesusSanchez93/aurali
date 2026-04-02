@@ -119,8 +119,7 @@
  * scopes the flex rule to only the twoColumn node.
  */
 [data-two-col-inner] > [data-node-view-content-react] {
-    display: flex;
-    gap: 8px;
+    display: contents;
 }
 
 /* ── TipTap editor typography — mirrors PDF output (htmlRenderer.ts) ────────

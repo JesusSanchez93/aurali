@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { FileText, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-import Tiptap from '@/components/common/tip-tap';
+import Tiptap, { type TiptapHandle } from '@/components/common/tip-tap';
+import VariablesPanel from '@/app/[locale]/(dashboard)/legal-process/formats/_components/variables-panel';
 import {
   getDocumentPreviews,
   getFinalDocuments,
@@ -74,6 +75,7 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
   const [editingDoc, setEditingDoc]   = useState<PreviewDoc | null>(null);
   const [editContent, setEditContent] = useState<unknown>(null);
   const [saving, setSaving]           = useState(false);
+  const tiptapRef                     = useRef<TiptapHandle>(null);
   // view state (preview modal — used in both modes)
   const [viewingDoc, setViewingDoc]   = useState<PreviewDoc | null>(null);
 
@@ -97,7 +99,14 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
     if (!editingDoc) return;
     setSaving(true);
     try {
-      await updateDocumentPreviewContent(editingDoc.id, editContent);
+      // Deep-clone via JSON round-trip to break ProseMirror's shared attrs object
+      // references — Next.js RSC deduplicates by identity, which otherwise collapses
+      // distinct node attrs (e.g. variable chips) into stale references.
+      // Same pattern as template-form.tsx onSubmit.
+      const rawContent = tiptapRef.current?.getContent() ?? editContent;
+      const content = JSON.parse(JSON.stringify(rawContent));
+      // HTML is regenerated server-side so header/footer from the template are preserved.
+      await updateDocumentPreviewContent(editingDoc.id, content);
       load();
       setEditingDoc(null);
       toast.success(t('save_success'));
@@ -269,7 +278,7 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
           open={!!editingDoc}
           onOpenChange={(open) => { if (!open) setEditingDoc(null); }}
         >
-          <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-0 p-0">
+          <DialogContent className="flex h-[92vh] max-w-6xl flex-col gap-0 p-0">
             <DialogHeader className="shrink-0 border-b px-6 py-4">
               <div className="flex items-center gap-2">
                 <DialogTitle className="text-base">
@@ -286,14 +295,26 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
               )}
             </DialogHeader>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-10">
-              {editingDoc && (
-                <Tiptap
-                  value={editContent}
-                  onChange={setEditContent}
-                  menuBarStickyTop="0px"
+            {/* ── Body: variables panel + editor ─────────────────────────── */}
+            <div className="flex min-h-0 flex-1 overflow-hidden gap-4 p-4">
+              {/* Left: TipTap editor */}
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {editingDoc && (
+                  <Tiptap
+                    ref={tiptapRef}
+                    value={editContent}
+                    onChange={setEditContent}
+                    menuBarStickyTop="0px"
+                  />
+                )}
+              </div>
+
+              {/* Right: variables panel */}
+              <div className="w-[260px] shrink-0 overflow-y-auto rounded-lg border">
+                <VariablesPanel
+                  onInsert={(variable) => tiptapRef.current?.insertVariable(variable)}
                 />
-              )}
+              </div>
             </div>
 
             <DialogFooter className="shrink-0 border-t px-6 py-4">

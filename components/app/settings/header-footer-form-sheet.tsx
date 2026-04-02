@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { AlignLeft, AlignCenter, AlignRight, ImagePlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import Sheet from '@/components/common/sheet';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { FormInput } from '@/components/common/form/form-input';
@@ -55,20 +55,22 @@ export function parseContent(raw: unknown): { imageUrl: string; imageAlignment: 
 // ─── Alignment picker ─────────────────────────────────────────────────────────
 
 function AlignPicker({ value, onChange }: { value: Alignment; onChange: (v: Alignment) => void }) {
-  const options: { val: Alignment; icon: React.ReactNode }[] = [
-    { val: 'left',   icon: <AlignLeft  className="h-4 w-4" /> },
-    { val: 'center', icon: <AlignCenter className="h-4 w-4" /> },
-    { val: 'right',  icon: <AlignRight className="h-4 w-4" /> },
+  const options: { val: Alignment; icon: React.ReactNode; label: string }[] = [
+    { val: 'left',   icon: <AlignLeft  className="h-4 w-4" />, label: 'Alinear a la izquierda' },
+    { val: 'center', icon: <AlignCenter className="h-4 w-4" />, label: 'Centrar' },
+    { val: 'right',  icon: <AlignRight className="h-4 w-4" />, label: 'Alinear a la derecha' },
   ];
   return (
     <div className="flex gap-1">
-      {options.map(({ val, icon }) => (
+      {options.map(({ val, icon, label }) => (
         <button
           key={val}
           type="button"
+          aria-label={label}
+          aria-pressed={value === val}
           onClick={() => onChange(val)}
           className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-md border transition-colors',
+            'flex h-9 w-9 items-center justify-center rounded-md border transition-colors',
             value === val
               ? 'bg-foreground text-background border-foreground'
               : 'bg-background text-muted-foreground hover:bg-muted',
@@ -108,8 +110,9 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (url: strin
         <img src={value} alt="Vista previa" className="max-h-24 rounded-md border object-contain" />
         <button
           type="button"
+          aria-label="Quitar imagen"
           onClick={() => onChange('')}
-          className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
+          className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
         >
           <X className="h-3 w-3" />
         </button>
@@ -195,95 +198,97 @@ export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, 
     });
   }
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-        </SheetHeader>
-        <div className="mt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-              <FormInput control={form.control} name="name" label="Nombre" required />
+  const formBody = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <FormInput control={form.control} name="name" label="Nombre" required />
 
-              {/* Image section */}
-              <div className="space-y-3 rounded-lg border p-4">
-                <p className="text-sm font-medium">Imagen</p>
-                <FormField
-                  control={form.control}
-                  name="image_url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <ImagePicker value={field.value ?? ''} onChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                {form.watch('image_url') && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground">Posición:</span>
-                    <FormField
-                      control={form.control}
-                      name="image_alignment"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <AlignPicker
-                              value={field.value as Alignment}
-                              onChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Text section */}
-              <div className="space-y-3 rounded-lg border p-4">
-                <p className="text-sm font-medium">Texto</p>
-                <FormField
-                  control={form.control}
-                  name="text_content"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Tiptap ref={tiptapRef} value={field.value} onChange={field.onChange} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Default toggle */}
+        {/* Image section */}
+        <div className="space-y-3 rounded-lg border p-4">
+          <span className="text-sm font-medium">Imagen</span>
+          <FormField
+            control={form.control}
+            name="image_url"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <ImagePicker value={field.value ?? ''} onChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          {form.watch('image_url') && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Posición:</span>
               <FormField
                 control={form.control}
-                name="is_default"
+                name="image_alignment"
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center gap-2">
-                      <Switch id="is_default" checked={field.value} onCheckedChange={field.onChange} />
-                      <Label htmlFor="is_default">Usar como default</Label>
-                    </div>
+                    <FormControl>
+                      <AlignPicker
+                        value={field.value as Alignment}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? 'Guardando…' : 'Guardar'}
-                </Button>
-              </div>
-            </form>
-          </Form>
+            </div>
+          )}
         </div>
-      </SheetContent>
-    </Sheet>
+
+        {/* Text section */}
+        <div className="space-y-3 rounded-lg border p-4">
+          <span className="text-sm font-medium">Texto</span>
+          <FormField
+            control={form.control}
+            name="text_content"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Tiptap ref={tiptapRef} value={field.value} onChange={field.onChange} menuBarStickyTop="0px"/>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Default toggle */}
+        <FormField
+          control={form.control}
+          name="is_default"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center gap-2">
+                <Switch id="is_default" checked={field.value} onCheckedChange={field.onChange} />
+                <Label htmlFor="is_default">Usar como default</Label>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Guardando…' : 'Guardar'}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      size="2xl"
+      className="flex-col p-4"
+      body={formBody}
+    />
   );
 }

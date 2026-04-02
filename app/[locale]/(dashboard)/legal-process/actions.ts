@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
 import { startWorkflow, resumeWorkflow, retryWorkflow } from '@/lib/workflow/workflowRunner';
 import { autoAdvanceWorkflow } from '@/lib/workflow/autoAdvance';
+import { buildDocumentTemplateData } from '@/lib/workflow/nodeExecutors';
+import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
+import { substituteVars, wrapWithPageLayout } from '@/lib/documents/htmlRenderer';
 
 type LocalizedString = {
   es?: string;
@@ -815,18 +818,32 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
     ? cfg.template_ids
     : cfg.template_id ? [cfg.template_id] : [];
 
-  // ── 3. Generate final PDFs ────────────────────────────────────────────────
+  // ── 3. Generate final PDFs (using lawyer-edited preview content when available) ──
   if (ids.length > 0) {
     const { buildDocumentTemplateData } = await import('@/lib/workflow/nodeExecutors');
     const { generateDocument } = await import('@/lib/documents/generateDocument');
     const { templateData, organizationId } = await buildDocumentTemplateData(legalProcessId, supabase);
 
+    // Fetch preview records so we can honour any edits the lawyer made
+    const { data: previewDocs } = await db
+      .from('generated_documents')
+      .select('template_id, tiptap_content')
+      .eq('legal_process_id', legalProcessId)
+      .eq('is_preview', true) as {
+        data: { template_id: string; tiptap_content: unknown }[] | null;
+      };
+
+    const editedByTemplate = new Map(
+      (previewDocs ?? []).map((d) => [d.template_id, d.tiptap_content]),
+    );
+
     for (const tid of ids) {
       await generateDocument({
-        templateId:     tid,
-        data:           templateData,
+        templateId:          tid,
+        data:                templateData,
         legalProcessId,
-        organizationId: organizationId ?? undefined,
+        organizationId:      organizationId ?? undefined,
+        editedTiptapContent: editedByTemplate.get(tid),
       });
     }
   }
@@ -959,32 +976,76 @@ export async function updateDocumentPreviewContent(
   tiptapContent: unknown,
 ): Promise<void> {
   const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
   if (!tiptapContent) throw new Error('Contenido vacío');
 
-  const { data: doc, error: docErr } = await (supabase as any)
+  const { data: doc, error: docErr } = await db
     .from('generated_documents')
-    .select('document_name, legal_process_id')
+    .select('document_name, legal_process_id, template_id')
     .eq('id', documentId)
-    .single() as { data: { document_name: string | null; legal_process_id: string | null } | null; error: { message: string } | null };
+    .single() as { data: { document_name: string | null; legal_process_id: string | null; template_id: string | null } | null; error: { message: string } | null };
 
   if (docErr) throw new Error(`Documento no encontrado: ${docErr.message}`);
 
-  let html: string;
-  try {
-    const { tiptapJsonToHtml } = await import('@/lib/documents/generateDocument');
-    html = tiptapJsonToHtml(tiptapContent, doc?.document_name ?? 'Documento Legal');
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error('[updateDocumentPreviewContent] tiptapJsonToHtml falló:', msg);
-    throw new Error(`Error al convertir el documento a HTML: ${msg}`);
+  // ── Regenerate HTML server-side so header/footer are preserved ────────────
+  let headerHtml = '';
+  let footerHtml = '';
+
+  if (doc?.template_id) {
+    const { data: tpl } = await db
+      .from('legal_templates')
+      .select('header_id, footer_id')
+      .eq('id', doc.template_id)
+      .single() as { data: { header_id: string | null; footer_id: string | null } | null };
+
+    type SideRow = { content: { image?: { url: string; alignment: string } | null; text?: unknown } | null };
+    const renderSide = (raw: unknown, position: 'header' | 'footer') => {
+      const c = raw as SideRow['content'];
+      if (!c) return '';
+      let textHtml = '';
+      if (c.text) {
+        try { textHtml = tiptapJsonToBodyHtml(c.text); } catch { /* skip */ }
+      }
+      return renderHeaderFooterHtml(c, position, textHtml);
+    };
+
+    if (tpl?.header_id) {
+      const { data: hRow } = await db
+        .from('document_headers')
+        .select('content')
+        .eq('id', tpl.header_id)
+        .single() as { data: SideRow | null };
+      if (hRow?.content) headerHtml = renderSide(hRow.content, 'header');
+    }
+    if (tpl?.footer_id) {
+      const { data: fRow } = await db
+        .from('document_footers')
+        .select('content')
+        .eq('id', tpl.footer_id)
+        .single() as { data: SideRow | null };
+      if (fRow?.content) footerHtml = renderSide(fRow.content, 'footer');
+    }
   }
 
-  const { error: updateErr } = await (supabase as any)
+  // Substitute process variables and wrap with layout
+  const variableData = doc?.legal_process_id
+    ? (await buildDocumentTemplateData(doc.legal_process_id, supabase)).templateData
+    : {};
+  const bodyHtml = tiptapJsonToBodyHtml(tiptapContent);
+  const substitutedBody = substituteVars(bodyHtml, variableData);
+  const htmlContent = wrapWithPageLayout(
+    substitutedBody,
+    doc?.document_name ?? 'Documento Legal',
+    { headerHtml, footerHtml },
+  );
+
+  const { error: updateErr } = await db
     .from('generated_documents')
-    .update({ tiptap_content: tiptapContent, html_content: html })
+    .update({ tiptap_content: tiptapContent, html_content: htmlContent })
     .eq('id', documentId) as { error: { message: string } | null };
 
   if (updateErr) {
@@ -1001,4 +1062,19 @@ export async function updateDocumentPreviewContent(
       metadata: { document_id: documentId, document_name: doc.document_name },
     });
   }
+}
+
+/**
+ * Returns the full variable data map for a legal process (client, lawyer, bank,
+ * org-rep, etc.) so the client can substitute variables before saving the HTML
+ * preview without running TipTap on the server.
+ */
+export async function getProcessTemplateData(
+  legalProcessId: string,
+): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+  const { templateData } = await buildDocumentTemplateData(legalProcessId, supabase);
+  return templateData;
 }

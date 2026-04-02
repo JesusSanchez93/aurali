@@ -13,6 +13,18 @@ export interface PdfOptions {
   format?: 'A4' | 'Letter' | 'Legal';
   /** Whether to include CSS backgrounds. Default: true */
   printBackground?: boolean;
+  /**
+   * Self-contained HTML (with embedded <style>) rendered as a running header
+   * on every PDF page. When provided, Puppeteer's displayHeaderFooter is
+   * enabled and the header renders inside the top @page margin area.
+   */
+  headerTemplate?: string;
+  /**
+   * Self-contained HTML (with embedded <style>) rendered as a running footer
+   * on every PDF page. When provided, Puppeteer's displayHeaderFooter is
+   * enabled and the footer renders inside the bottom @page margin area.
+   */
+  footerTemplate?: string;
 }
 
 /**
@@ -21,7 +33,8 @@ export interface PdfOptions {
  * The browser is always closed after generation, even on error.
  */
 export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise<Buffer> {
-  const { format = 'A4', printBackground = true } = options;
+  const { format = 'A4', printBackground = true, headerTemplate, footerTemplate } = options;
+  const hasHeaderFooter = !!(headerTemplate || footerTemplate);
 
   const browser = await getBrowser();
 
@@ -41,6 +54,14 @@ export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise
       // These margins are already defined by @page CSS inside the template,
       // so we set them to zero here to avoid double-margin.
       margin: { top: '0', right: '0', bottom: '0', left: '0' },
+      // When header/footer templates are provided, Puppeteer renders them on
+      // every page inside the @page margin areas. An empty <span> placeholder
+      // is required for the absent slot so Puppeteer doesn't inject defaults.
+      displayHeaderFooter: hasHeaderFooter,
+      ...(hasHeaderFooter && {
+        headerTemplate: headerTemplate ?? '<span></span>',
+        footerTemplate: footerTemplate ?? '<span></span>',
+      }),
     });
 
     return Buffer.from(pdfBytes);

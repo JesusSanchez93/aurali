@@ -635,6 +635,9 @@ export type Database = {
           legal_process_id: string | null
           organization_id: string | null
           phone: string | null
+          doc_validation_status: string | null
+          doc_validation_details: Json | null
+          doc_validated_at: string | null
         }
         Insert: {
           address?: string | null
@@ -654,6 +657,9 @@ export type Database = {
           legal_process_id?: string | null
           organization_id?: string | null
           phone?: string | null
+          doc_validation_status?: string | null
+          doc_validation_details?: Json | null
+          doc_validated_at?: string | null
         }
         Update: {
           address?: string | null
@@ -673,6 +679,9 @@ export type Database = {
           legal_process_id?: string | null
           organization_id?: string | null
           phone?: string | null
+          doc_validation_status?: string | null
+          doc_validation_details?: Json | null
+          doc_validated_at?: string | null
         }
         Relationships: [
           {

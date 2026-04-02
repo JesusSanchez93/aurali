@@ -4,11 +4,22 @@ import { createClient } from '@/lib/supabase/server';
 import { Tables } from '@/types/database.types';
 import { revalidatePath } from 'next/cache';
 import { resumeWorkflow } from '@/lib/workflow/workflowRunner';
+import { validateDocumentImages } from '@/lib/anthropic/validateDocument';
+
+type PersonalDataActionResult =
+    | { success: true }
+    | {
+          success: false;
+          validationError: {
+              errors: string[];
+              extractedData?: { fullName?: string | null; documentNumber?: string | null };
+          };
+      };
 
 export async function updatePersonalDataAction(
     legalProcessId: string,
     formData: FormData
-) {
+): Promise<PersonalDataActionResult> {
     const supabase = await createClient();
 
     // Extract form data
@@ -157,6 +168,52 @@ export async function updatePersonalDataAction(
         }
     } else {
         throw new Error('No se encontró el registro de cliente para este proceso');
+    }
+
+    // Document validation with Claude (only when both images exist)
+    if (frontPath && backPath) {
+        const { data: frontSigned } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(frontPath, 60);
+        const { data: backSigned } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(backPath, 60);
+
+        if (frontSigned?.signedUrl && backSigned?.signedUrl) {
+            console.log('[updatePersonalDataAction] Calling validateDocumentImages with paths:', { frontPath, backPath });
+            const validation = await validateDocumentImages({
+                firstName: firstname,
+                lastName: lastname,
+                documentNumber: document_number,
+                frontImageUrl: frontSigned.signedUrl,
+                backImageUrl: backSigned.signedUrl,
+            });
+            console.log('[updatePersonalDataAction] Validation result:', validation);
+
+            // Persist result for lawyer audit (always, even on error)
+            await supabase
+                .from('legal_process_clients')
+                .update({
+                    doc_validation_status: validation.status,
+                    doc_validation_details: {
+                        errors: validation.errors,
+                        extractedData: validation.extractedData,
+                    },
+                    doc_validated_at: new Date().toISOString(),
+                })
+                .eq('id', existingClient.id);
+
+            // Block only on invalid — error degrades gracefully (user advances)
+            if (validation.status === 'invalid') {
+                return {
+                    success: false,
+                    validationError: {
+                        errors: validation.errors,
+                        extractedData: validation.extractedData,
+                    },
+                };
+            }
+        }
     }
 
     return { success: true };

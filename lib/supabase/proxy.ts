@@ -48,7 +48,9 @@ export async function updateSession(request: NextRequest, response?: NextRespons
     pathWithoutLocale.startsWith('/login') ||
     pathWithoutLocale.startsWith('/auth') ||
     pathWithoutLocale.startsWith('/legal-process/validate-token') ||
-    pathWithoutLocale.startsWith('/legal-process/client-side');
+    pathWithoutLocale.startsWith('/legal-process/client-side') ||
+    pathWithoutLocale.startsWith('/legal-process/form-unavailable') ||
+    pathWithoutLocale === '/link-expired';
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();

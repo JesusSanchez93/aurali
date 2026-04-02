@@ -22,8 +22,20 @@ export function substituteVars(
   data: Record<string, string>,
 ): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) => {
-    return Object.prototype.hasOwnProperty.call(data, key) ? (data[key] ?? '') : match;
+    if (!Object.prototype.hasOwnProperty.call(data, key)) return match;
+    const value = data[key] ?? '';
+    if (isImageUrl(value)) {
+      return `<img src="${value}" alt="" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;display:inline-block;" />`;
+    }
+    return value;
   });
+}
+
+function isImageUrl(value: string): boolean {
+  if (!value) return false;
+  if (value.startsWith('data:image')) return true;
+  return (value.startsWith('http') || value.startsWith('/')) &&
+    /\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(value);
 }
 
 /**
@@ -53,11 +65,114 @@ export function validateRequiredVars(
 
 // ─── HTML page wrapper ─────────────────────────────────────────────────────────
 
+// ─── Header / Footer content rendering ────────────────────────────────────────
+
+interface SideContent {
+  image?: { url: string; alignment: 'left' | 'center' | 'right' } | null;
+  text?: unknown; // TipTap JSON — rendered by caller if needed
+}
+
+/**
+ * Converts the `content` JSON from a document_headers / document_footers row
+ * to a plain HTML fragment (no page wrapper, no TipTap text rendering).
+ *
+ * The `text` field (TipTap JSON) is intentionally excluded here because
+ * converting it requires @tiptap/html which must not be imported in this module
+ * (it would pull TipTap into every client bundle that imports htmlRenderer).
+ * Pass pre-rendered `textHtml` via the options parameter instead.
+ */
+export function renderHeaderFooterHtml(
+  content: unknown,
+  position: 'header' | 'footer',
+  textHtml = '',
+): string {
+  const c = content as SideContent | null;
+  const prefix = `template-${position}`;
+  const parts: string[] = [];
+
+  const imageHtml = c?.image?.url
+    ? `<div class="${prefix}-img-${c.image.alignment ?? 'left'}">` +
+      `<img src="${c.image.url}" alt="" /></div>`
+    : '';
+
+  const textBlock = textHtml ? `<div class="${prefix}-text">${textHtml}</div>` : '';
+
+  if (position === 'header') {
+    if (imageHtml) parts.push(imageHtml);
+    if (textBlock) parts.push(textBlock);
+  } else {
+    if (textBlock) parts.push(textBlock);
+    if (imageHtml) parts.push(imageHtml);
+  }
+
+  return parts.join('\n');
+}
+
+// ─── Puppeteer header / footer templates ──────────────────────────────────────
+
+/**
+ * CSS embedded in Puppeteer header/footer templates.
+ * These templates are rendered in an isolated frame — no external stylesheets apply,
+ * so all styles must be inlined here. Padding matches the document's @page margins.
+ */
+const PUPPETEER_HF_CSS = `
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-size: 0; }
+  .hf-wrap {
+    display: block;
+    width: 100%;
+    padding: 4px 3cm;
+    font-size: 9pt;
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    color: #444;
+    line-height: 1.4;
+  }
+  .hf-wrap.hf-header { }
+  .hf-wrap.hf-footer { }
+  .template-header-img-left,  .template-footer-img-left  { text-align: left;   margin-bottom: 3px; }
+  .template-header-img-center,.template-footer-img-center { text-align: center; margin-bottom: 3px; }
+  .template-header-img-right, .template-footer-img-right  { text-align: right;  margin-bottom: 3px; }
+  img { max-height: 36px; max-width: 160px; object-fit: contain; display: inline-block; }
+  p { margin-bottom: 0.15em; font-size: 8.5pt; }
+  strong { font-weight: bold; }
+  em { font-style: italic; }
+`;
+
+/**
+ * Wraps the pre-rendered header HTML fragment in a self-contained Puppeteer
+ * headerTemplate (with embedded CSS). The template is rendered in an isolated
+ * frame on every PDF page — within the top @page margin area.
+ */
+export function buildPuppeteerHeaderTemplate(headerHtml: string): string {
+  return `<style>${PUPPETEER_HF_CSS}</style><div class="hf-wrap hf-header">${headerHtml}</div>`;
+}
+
+/**
+ * Wraps the pre-rendered footer HTML fragment in a self-contained Puppeteer
+ * footerTemplate (with embedded CSS). The template is rendered in an isolated
+ * frame on every PDF page — within the bottom @page margin area.
+ */
+export function buildPuppeteerFooterTemplate(footerHtml: string): string {
+  return `<style>${PUPPETEER_HF_CSS}</style><div class="hf-wrap hf-footer">${footerHtml}</div>`;
+}
+
+export interface PageLayoutOptions {
+  /** Pre-rendered HTML for the document header (from document_headers table) */
+  headerHtml?: string;
+  /** Pre-rendered HTML for the document footer (from document_footers table) */
+  footerHtml?: string;
+}
+
 /**
  * Wraps a template body fragment in a complete HTML document with embedded
  * legal-document CSS optimised for A4 PDF output (Puppeteer + @page rules).
  */
-export function wrapWithPageLayout(bodyHtml: string, title = 'Documento Legal'): string {
+export function wrapWithPageLayout(
+  bodyHtml: string,
+  title = 'Documento Legal',
+  options: PageLayoutOptions = {},
+): string {
+  const { headerHtml, footerHtml } = options;
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -95,38 +210,36 @@ export function wrapWithPageLayout(bodyHtml: string, title = 'Documento Legal'):
       padding: 0;
     }
 
-    /* ── Header ─────────────────────────────────────── */
-    .doc-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      border-bottom: 2.5px solid #1a1a1a;
+    /* ── Template header / footer ────────────────────── */
+    .template-header {
+      margin-bottom: 24px;
       padding-bottom: 14px;
-      margin-bottom: 28px;
-      gap: 20px;
     }
 
-    .firm-name {
-      font-size: 15pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      line-height: 1.3;
+    .template-header-img-left  { text-align: left;   margin-bottom: 8px; }
+    .template-header-img-center { text-align: center; margin-bottom: 8px; }
+    .template-header-img-right { text-align: right;  margin-bottom: 8px; }
+
+    .template-header img,
+    .template-footer img {
+      max-height: 64px;
+      max-width: 240px;
+      object-fit: contain;
     }
 
-    .firm-subtitle {
-      font-size: 9.5pt;
-      color: #444;
-      margin-top: 3px;
-      font-style: italic;
+    .template-header-text p,
+    .template-footer-text p { margin-bottom: 0.25em; font-size: 9.5pt; color: #444; }
+
+    .template-footer {
+      margin-top: 40px;
+      padding-top: 10px;
+      font-size: 9pt;
+      color: #666;
     }
 
-    .doc-meta {
-      text-align: right;
-      font-size: 9.5pt;
-      color: #555;
-      white-space: nowrap;
-    }
+    .template-footer-img-left  { text-align: left;   margin-top: 8px; }
+    .template-footer-img-center { text-align: center; margin-top: 8px; }
+    .template-footer-img-right { text-align: right;  margin-top: 8px; }
 
     /* ── Title ──────────────────────────────────────── */
     .document-title {
@@ -319,7 +432,9 @@ export function wrapWithPageLayout(bodyHtml: string, title = 'Documento Legal'):
 </head>
 <body>
   <div class="document">
+    ${headerHtml ? `<div class="template-header">${headerHtml}</div>` : ''}
     ${bodyHtml}
+    ${footerHtml ? `<div class="template-footer">${footerHtml}</div>` : ''}
   </div>
 </body>
 </html>`;

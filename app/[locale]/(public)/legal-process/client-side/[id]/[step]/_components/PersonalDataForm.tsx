@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
 import { Spinner } from '@/components/ui/spinner';
-import { ArrowRight } from 'lucide-react';
+import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { ViewTransition } from 'react';
 import { deleteImageAction, updatePersonalDataAction } from '../actions';
 import { useParams, useRouter } from 'next/navigation';
@@ -55,6 +55,10 @@ export default function PersonalDataForm() {
   const [isPending, startTransition] = useTransition();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [fieldToDelete, setFieldToDelete] = useState<'document_front_image' | 'document_back_image' | null>(null);
+  const [validationError, setValidationError] = useState<{
+    errors: string[];
+    extractedData?: { fullName?: string | null; documentNumber?: string | null };
+  } | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -82,7 +86,14 @@ export default function PersonalDataForm() {
       document_front_image: initialData.document_front_image || undefined,
       document_back_image: initialData.document_back_image || undefined,
     });
-  }, [initialData, form]); // form.formState.isDirty is not strictly needed in the dep array if we check it inside, but it helps. Actually form is stable, but initialData changes.
+  }, [initialData, form]);
+
+  // Clear validation error when the user edits name or document number fields
+  const watchedFields = form.watch(['firstname', 'lastname', 'document_number']);
+  useEffect(() => {
+    if (validationError) setValidationError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedFields[0], watchedFields[1], watchedFields[2]]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const formData = new FormData();
@@ -106,9 +117,14 @@ export default function PersonalDataForm() {
     }
 
     startTransition(async () => {
-      await updatePersonalDataAction(id, formData);
+      const result = await updatePersonalDataAction(id, formData);
+      if (!result.success && result.validationError) {
+        setValidationError(result.validationError);
+        return;
+      }
+      setValidationError(null);
       router.refresh();
-      form.reset(values); // Mark as not dirty to allow next context sync
+      form.reset(values);
       router.push(`/legal-process/client-side/${id}/back-information`);
     });
   }
@@ -207,6 +223,29 @@ export default function PersonalDataForm() {
               size='xl'
             />
           </div>
+          {validationError && (
+            <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                    Los datos no coinciden con el documento
+                  </p>
+                  <ul className="space-y-1">
+                    {validationError.errors.map((error, i) => (
+                      <li key={i} className="text-sm text-amber-700 dark:text-amber-300">
+                        {error}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Verifica que las fotos sean claras y que los datos sean correctos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <ViewTransition name="onboarding-form-footer">
             <div className="mt-6 flex justify-end">
               <Button

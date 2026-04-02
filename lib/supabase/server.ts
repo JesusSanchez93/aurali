@@ -4,19 +4,26 @@ import type { Database } from '@/types/database.types'
 
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 /**
  * Especially important if using Fluid compute: Don't put this client in a
  * global variable. Always create a new client within each function when using
  * it.
+ *
+ * Pass `{ admin: true }` to use the service role key (bypasses RLS).
+ * Only use server-side for privileged operations (e.g. workflow engine).
  */
-export async function createClient() {
+export async function createClient(options?: { admin?: boolean }) {
+  const supabaseKey = options?.admin
+    ? (process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY)!
+    : supabaseAnonKey!;
+
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
     supabaseUrl!,
-    supabaseKey!,
+    supabaseKey,
     {
       cookies: {
         getAll() {

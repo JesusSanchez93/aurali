@@ -16,10 +16,16 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { substituteVars, wrapWithPageLayout } from './htmlRenderer';
+import {
+  substituteVars,
+  wrapWithPageLayout,
+  renderHeaderFooterHtml,
+  buildPuppeteerHeaderTemplate,
+  buildPuppeteerFooterTemplate,
+} from './htmlRenderer';
 import { htmlToPdf } from './pdfGenerator';
 import { DEFAULT_TEMPLATES } from './templates/index';
-import { generateHTML } from '@tiptap/html';
+import { generateHTML } from '@tiptap/html/server';
 import { Node, mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -143,6 +149,13 @@ export interface GenerateDocumentInput {
   legalProcessId?: string;
   /** Required for the storage path. Derived from the process when omitted. */
   organizationId?: string;
+  /**
+   * Lawyer-edited TipTap JSON from a preview record.
+   * When provided, skips substituting vars into the template content and uses
+   * this content directly — preserving manual edits. Variable chips still
+   * render as {VAR} tokens via renderHTML and are resolved by substituteVars.
+   */
+  editedTiptapContent?: unknown;
 }
 
 export interface GenerateDocumentResult {
@@ -164,6 +177,70 @@ interface LegalTemplateRow {
   name: string;
   content: unknown;         // TipTap JSON
   organization_id: string;
+  header_id: string | null;
+  footer_id: string | null;
+}
+
+// Content shape stored in document_headers / document_footers
+interface HeaderFooterContent {
+  image?: { url: string; alignment: 'left' | 'center' | 'right' } | null;
+  text?: unknown; // TipTap JSON
+}
+
+// Raw DB row shape for document_headers / document_footers
+interface HeaderFooterRow {
+  id: string;
+  content: HeaderFooterContent;
+}
+
+// ─── Header / Footer rendering ────────────────────────────────────────────────
+
+/**
+ * Fetches header and/or footer records by ID and returns their HTML.
+ * Returns empty strings when IDs are null or records are not found.
+ */
+async function loadHeaderFooterHtml(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  headerId: string | null,
+  footerId: string | null,
+): Promise<{ headerHtml: string; footerHtml: string }> {
+  let headerHtml = '';
+  let footerHtml = '';
+
+  const renderText = (content: HeaderFooterContent): string => {
+    if (!content.text) return '';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return generateHTML(content.text as any, TIPTAP_EXTENSIONS as any);
+    } catch {
+      return '';
+    }
+  };
+
+  if (headerId) {
+    const { data: hRow } = await db
+      .from('document_headers')
+      .select('id, content')
+      .eq('id', headerId)
+      .single() as { data: HeaderFooterRow | null };
+    if (hRow?.content) {
+      headerHtml = renderHeaderFooterHtml(hRow.content, 'header', renderText(hRow.content));
+    }
+  }
+
+  if (footerId) {
+    const { data: fRow } = await db
+      .from('document_footers')
+      .select('id, content')
+      .eq('id', footerId)
+      .single() as { data: HeaderFooterRow | null };
+    if (fRow?.content) {
+      footerHtml = renderHeaderFooterHtml(fRow.content, 'footer', renderText(fRow.content));
+    }
+  }
+
+  return { headerHtml, footerHtml };
 }
 
 // ─── Main function ─────────────────────────────────────────────────────────────
@@ -171,7 +248,7 @@ interface LegalTemplateRow {
 export async function generateDocument(
   input: GenerateDocumentInput,
 ): Promise<GenerateDocumentResult> {
-  const { templateId, data, legalProcessId, organizationId } = input;
+  const { templateId, data, legalProcessId, organizationId, editedTiptapContent } = input;
   const supabase = await createClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
@@ -179,7 +256,7 @@ export async function generateDocument(
   // ── 1. Load template from legal_templates ────────────────────────────────
   const { data: template, error: tplErr } = await db
     .from('legal_templates')
-    .select('id, name, content, organization_id')
+    .select('id, name, content, organization_id, header_id, footer_id')
     .eq('id', templateId)
     .single() as { data: LegalTemplateRow | null; error: { message: string } | null };
 
@@ -187,12 +264,18 @@ export async function generateDocument(
     throw new Error(tplErr?.message ?? `Plantilla "${templateId}" no encontrada`);
   }
 
-  if (!template.content) {
+  if (!template.content && editedTiptapContent === undefined) {
     throw new Error(`La plantilla "${template.name}" no tiene contenido definido.`);
   }
 
-  // ── 2. Substitute variables in TipTap JSON (preserves structure for editor) ─
-  const tiptapContent = substituteVarsInJson(template.content, data);
+  // ── 2. Resolve TipTap content ─────────────────────────────────────────────
+  // When editedTiptapContent is provided (lawyer edited the preview), use it
+  // directly. Variable chips render as {VAR} tokens via renderHTML and are
+  // resolved by substituteVars in step 4. Otherwise substitute vars into the
+  // original template JSON as usual.
+  const tiptapContent = editedTiptapContent !== undefined
+    ? editedTiptapContent
+    : substituteVarsInJson(template.content, data);
 
   // ── 3. Convert substituted TipTap JSON → HTML ────────────────────────────
   let bodyHtml: string;
@@ -206,11 +289,19 @@ export async function generateDocument(
   // ── 4. Substitute any remaining tokens in HTML (edge cases) ───────────────
   const resolvedBody = substituteVars(bodyHtml, data);
 
-  // ── 5. Wrap in page layout ────────────────────────────────────────────────
+  // ── 5. Load header/footer and wrap in page layout ────────────────────────
+  // Header/footer are NOT embedded in the body HTML here — they are passed as
+  // Puppeteer headerTemplate / footerTemplate so Puppeteer renders them on
+  // every page (inside the @page margin areas) rather than only on the first
+  // and last pages.
+  const { headerHtml, footerHtml } = await loadHeaderFooterHtml(db, template.header_id, template.footer_id);
   const fullHtml = wrapWithPageLayout(resolvedBody, template.name);
 
   // ── 6. Generate PDF ───────────────────────────────────────────────────────
-  const buffer = await htmlToPdf(fullHtml);
+  const buffer = await htmlToPdf(fullHtml, {
+    headerTemplate: headerHtml ? buildPuppeteerHeaderTemplate(headerHtml) : undefined,
+    footerTemplate: footerHtml ? buildPuppeteerFooterTemplate(footerHtml) : undefined,
+  });
 
   // Normalise a string to ASCII-safe slug (for storage keys)
   const toSlug = (s: string) =>
@@ -341,7 +432,7 @@ export async function generatePreviewHtml(
   // ── 1. Load template ──────────────────────────────────────────────────────
   const { data: template, error: tplErr } = await db
     .from('legal_templates')
-    .select('id, name, content, organization_id')
+    .select('id, name, content, organization_id, header_id, footer_id')
     .eq('id', templateId)
     .single() as { data: LegalTemplateRow | null; error: { message: string } | null };
 
@@ -368,8 +459,9 @@ export async function generatePreviewHtml(
   // ── 4. Substitute any remaining {{VAR}} tokens in HTML (edge cases) ───────
   const resolvedBody = substituteVars(bodyHtml, data);
 
-  // ── 5. Wrap in page layout ────────────────────────────────────────────────
-  const html = wrapWithPageLayout(resolvedBody, template.name);
+  // ── 5. Load header/footer and wrap in page layout ────────────────────────
+  const { headerHtml, footerHtml } = await loadHeaderFooterHtml(db, template.header_id, template.footer_id);
+  const html = wrapWithPageLayout(resolvedBody, template.name, { headerHtml, footerHtml });
 
   return { html, name: template.name, tiptapContent };
 }

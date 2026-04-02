@@ -19,7 +19,7 @@ declare module '@tiptap/core' {
 type ImageAlign = 'block' | 'left' | 'right';
 
 // ─── NodeView component ───────────────────────────────────────────────────────
-function ImageComponent({ node, updateAttributes, deleteNode }: NodeViewProps) {
+function ImageComponent({ node, updateAttributes, deleteNode, selected }: NodeViewProps) {
     const [hovered, setHovered] = useState(false);
     const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -32,6 +32,9 @@ function ImageComponent({ node, updateAttributes, deleteNode }: NodeViewProps) {
         leaveTimer.current = setTimeout(() => setHovered(false), 120);
     }
 
+    // Show controls on hover (mouse) OR when the node is selected (keyboard/touch)
+    const showControls = hovered || selected;
+
     const { src, alt, width, align } = node.attrs as {
         src: string;
         alt: string;
@@ -39,58 +42,63 @@ function ImageComponent({ node, updateAttributes, deleteNode }: NodeViewProps) {
         align: ImageAlign;
     };
 
-    const imgStyle: React.CSSProperties = {
-        width: `${width}%`,
-        maxWidth: '100%',
-        borderRadius: '4px',
-        display: 'block',
-        ...(align === 'left'
-            ? { float: 'left', marginRight: '1em', marginBottom: '0.5em' }
+    // Float/block layout lives on the wrapper so text flows around the image correctly.
+    const wrapperStyle: React.CSSProperties =
+        align === 'left'
+            ? { float: 'left', width: `${width}%`, marginRight: '1em', marginBottom: '0.5em' }
             : align === 'right'
-              ? { float: 'right', marginLeft: '1em', marginBottom: '0.5em' }
-              : { margin: '0 auto' }),
-    };
+              ? { float: 'right', width: `${width}%`, marginLeft: '1em', marginBottom: '0.5em' }
+              : { display: 'block', width: `${width}%`, margin: '0.5em auto' };
 
     return (
-        <NodeViewWrapper as="span" style={{ display: 'inline-block', position: 'relative', maxWidth: '100%' }}>
-            <span
+        <NodeViewWrapper style={wrapperStyle}>
+            {/* Inner div provides the positioning context for the toolbar overlay */}
+            <div
                 contentEditable={false}
-                className="relative inline-block max-w-full select-none"
+                style={{ position: 'relative' }}
                 onMouseEnter={handleEnter}
                 onMouseLeave={handleLeave}
             >
-                <img src={src} alt={alt || ''} style={imgStyle} draggable={false} />
+                <img
+                    src={src}
+                    alt={alt || ''}
+                    style={{ width: '100%', maxWidth: '100%', display: 'block', borderRadius: '4px' }}
+                    draggable={false}
+                />
 
-                {/* ── Floating toolbar (above image) ── */}
-                {hovered && (
-                    <span
+                {/* ── Floating toolbar (below image) ── */}
+                {showControls && (
+                    <div
                         contentEditable={false}
                         onMouseEnter={handleEnter}
                         onMouseLeave={handleLeave}
-                        className="absolute bottom-[calc(100%+6px)] left-1/2 z-30 flex -translate-x-1/2 items-center gap-0.5 whitespace-nowrap rounded-md border bg-background px-1 py-0.5 shadow-md"
+                        className="absolute top-[calc(100%+6px)] left-0 z-30 flex items-center gap-0.5 whitespace-nowrap rounded-md border bg-background px-1 py-0.5 shadow-md"
                     >
                         {/* Alignment */}
                         <button
                             type="button"
+                            aria-label="Flotar a la izquierda"
+                            aria-pressed={align === 'left'}
                             onClick={() => updateAttributes({ align: 'left' })}
-                            className={cn('rounded p-1 transition-colors hover:bg-muted', align === 'left' && 'bg-muted')}
-                            title="Flotar a la izquierda"
+                            className={cn('rounded p-1.5 transition-colors hover:bg-muted', align === 'left' && 'bg-muted')}
                         >
                             <AlignLeft className="h-3.5 w-3.5" />
                         </button>
                         <button
                             type="button"
+                            aria-label="Centrar"
+                            aria-pressed={align === 'block'}
                             onClick={() => updateAttributes({ align: 'block' })}
-                            className={cn('rounded p-1 transition-colors hover:bg-muted', align === 'block' && 'bg-muted')}
-                            title="Bloque centrado"
+                            className={cn('rounded p-1.5 transition-colors hover:bg-muted', align === 'block' && 'bg-muted')}
                         >
                             <AlignCenter className="h-3.5 w-3.5" />
                         </button>
                         <button
                             type="button"
+                            aria-label="Flotar a la derecha"
+                            aria-pressed={align === 'right'}
                             onClick={() => updateAttributes({ align: 'right' })}
-                            className={cn('rounded p-1 transition-colors hover:bg-muted', align === 'right' && 'bg-muted')}
-                            title="Flotar a la derecha"
+                            className={cn('rounded p-1.5 transition-colors hover:bg-muted', align === 'right' && 'bg-muted')}
                         >
                             <AlignRight className="h-3.5 w-3.5" />
                         </button>
@@ -106,6 +114,7 @@ function ImageComponent({ node, updateAttributes, deleteNode }: NodeViewProps) {
                                 max={100}
                                 step={5}
                                 value={width}
+                                aria-label={`Ancho de imagen: ${width}%`}
                                 onChange={(e) => updateAttributes({ width: Number(e.target.value) })}
                                 className="h-1 w-20 cursor-pointer accent-foreground"
                             />
@@ -113,24 +122,24 @@ function ImageComponent({ node, updateAttributes, deleteNode }: NodeViewProps) {
                                 {width}%
                             </span>
                         </span>
-                    </span>
+                    </div>
                 )}
 
                 {/* ── Delete button (top-right) ── */}
-                {hovered && (
+                {showControls && (
                     <button
                         type="button"
+                        aria-label="Eliminar imagen"
                         contentEditable={false}
                         onClick={deleteNode}
                         onMouseEnter={handleEnter}
                         onMouseLeave={handleLeave}
-                        className="absolute -right-2 -top-2 z-30 flex h-5 w-5 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
-                        title="Eliminar imagen"
+                        className="absolute -right-2 -top-2 z-30 flex h-6 w-6 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
                     >
                         <Trash2 className="h-3 w-3" />
                     </button>
                 )}
-            </span>
+            </div>
         </NodeViewWrapper>
     );
 }
@@ -138,8 +147,8 @@ function ImageComponent({ node, updateAttributes, deleteNode }: NodeViewProps) {
 // ─── ImageExtension ───────────────────────────────────────────────────────────
 export const ImageExtension = Node.create({
     name: 'image',
-    inline: true,
-    group: 'inline',
+    inline: false,
+    group: 'block',
     atom: true,
 
     addAttributes() {
@@ -157,12 +166,19 @@ export const ImageExtension = Node.create({
 
     renderHTML({ HTMLAttributes }) {
         const { width = 50, align = 'block', ...rest } = HTMLAttributes;
-        const parts = [`width:${width}%`, 'max-width:100%', 'border-radius:4px', 'display:block'];
-        if (align === 'left')       parts.push('float:left', 'margin-right:1em', 'margin-bottom:0.5em');
-        else if (align === 'right') parts.push('float:right', 'margin-left:1em', 'margin-bottom:0.5em');
-        else                        parts.push('margin:0 auto');
 
-        return ['img', mergeAttributes(rest, { style: parts.join(';'), 'data-align': align })];
+        let wrapperStyle: string;
+        if (align === 'left') {
+            wrapperStyle = `float:left;width:${width}%;margin-right:1em;margin-bottom:0.5em`;
+        } else if (align === 'right') {
+            wrapperStyle = `float:right;width:${width}%;margin-left:1em;margin-bottom:0.5em`;
+        } else {
+            wrapperStyle = `display:block;width:${width}%;margin:0.5em auto`;
+        }
+
+        return ['div', { style: wrapperStyle, 'data-align': align },
+            ['img', mergeAttributes(rest, { style: 'width:100%;max-width:100%;border-radius:4px;display:block' })],
+        ];
     },
 
     addNodeView() {

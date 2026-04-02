@@ -49,7 +49,7 @@ export async function startWorkflow(
   templateId: string,
   legalProcessId: string,
 ): Promise<{ workflowRunId: string }> {
-  const supabase = await createClient();
+  const supabase = await createClient({ admin: true });
 
   // 1. Load the legal process
   const legalProcess = await fetchLegalProcess(legalProcessId, supabase);
@@ -121,7 +121,7 @@ export async function resumeWorkflow(
   workflowRunId: string,
   input: Record<string, unknown> = {},
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = await createClient({ admin: true });
   const db = supabase as unknown as Record<string, unknown> & SupabaseClient;
 
   // 1. Load the run
@@ -207,7 +207,7 @@ export async function resumeWorkflow(
 // -----------------------------------------------------------------------------
 
 export async function cancelWorkflow(workflowRunId: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = await createClient({ admin: true });
 
   await (supabase as unknown as Record<string, unknown> & SupabaseClient)
     .from('workflow_runs')
@@ -225,7 +225,7 @@ export async function cancelWorkflow(workflowRunId: string): Promise<void> {
  * error or after fixing a misconfiguration like missing template_ids).
  */
 export async function retryWorkflow(workflowRunId: string): Promise<void> {
-  const supabase = await createClient();
+  const supabase = await createClient({ admin: true });
   const db = supabase as unknown as Record<string, unknown> & SupabaseClient;
 
   const { data: run, error: runErr } = await db

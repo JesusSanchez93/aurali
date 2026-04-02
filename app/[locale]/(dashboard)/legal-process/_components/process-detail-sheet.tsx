@@ -26,7 +26,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Archive, MoreHorizontal, RotateCcw, X, XCircle } from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, MoreHorizontal, RotateCcw, ShieldQuestion, X, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
     Carousel,
@@ -323,6 +323,70 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                                 </div>
                                             )}
                                         </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* AI Document Validation */}
+                            {client?.doc_validation_status && (
+                                <>
+                                    <Separator />
+                                    <div>
+                                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                            Verificación IA del documento
+                                            {client.doc_validation_status === 'valid' && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                                                    <CheckCircle2 className="h-3 w-3" /> Válido
+                                                </span>
+                                            )}
+                                            {client.doc_validation_status === 'invalid' && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                                                    <XCircle className="h-3 w-3" /> No coincide
+                                                </span>
+                                            )}
+                                            {client.doc_validation_status === 'error' && (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                                                    <AlertTriangle className="h-3 w-3" /> Sin verificar
+                                                </span>
+                                            )}
+                                        </h4>
+                                        {client.doc_validation_status === 'invalid' && (() => {
+                                            const details = client.doc_validation_details as { errors?: string[]; extractedData?: { fullName?: string | null; documentNumber?: string | null } } | null;
+                                            return (
+                                                <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800/40 dark:bg-red-950/30">
+                                                    {details?.errors?.map((err: string, i: number) => (
+                                                        <p key={i} className="text-sm text-red-700 dark:text-red-300">{err}</p>
+                                                    ))}
+                                                    {details?.extractedData && (
+                                                        <div className="mt-2 grid grid-cols-2 gap-2 border-t border-red-200 pt-2 dark:border-red-800/40">
+                                                            {details.extractedData.fullName != null && (
+                                                                <div>
+                                                                    <p className="text-xs text-red-500 dark:text-red-400">Nombre en documento</p>
+                                                                    <p className="text-sm font-medium text-red-800 dark:text-red-200">{details.extractedData.fullName}</p>
+                                                                </div>
+                                                            )}
+                                                            {details.extractedData.documentNumber != null && (
+                                                                <div>
+                                                                    <p className="text-xs text-red-500 dark:text-red-400">Número en documento</p>
+                                                                    <p className="text-sm font-medium text-red-800 dark:text-red-200">{details.extractedData.documentNumber}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
+                                        {client.doc_validation_status === 'valid' && (
+                                            <p className="text-sm text-muted-foreground">El nombre y número de documento coinciden con el documento de identidad.</p>
+                                        )}
+                                        {client.doc_validation_status === 'error' && (
+                                            <p className="text-sm text-muted-foreground">No fue posible procesar las imágenes automáticamente. Verifica manualmente.</p>
+                                        )}
+                                        {client.doc_validated_at && (
+                                            <p className="mt-2 text-xs text-muted-foreground">
+                                                Verificado el {new Date(client.doc_validated_at).toLocaleString('es-CO')}
+                                            </p>
+                                        )}
                                     </div>
                                 </>
                             )}
