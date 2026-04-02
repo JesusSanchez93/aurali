@@ -83,9 +83,24 @@ export async function getLegalProcesses(page: number = 1, pageSize: number = 10,
     }
   }
 
-  const { data: legalProcesses, count } = await query
+  const { data: legalProcesses, count, error } = await query
     .order('created_at', { ascending: false })
     .range(from, to);
+
+  if (error) {
+    console.error('[legal-process/getLegalProcesses] query failed', {
+      page,
+      pageSize,
+      search: search ?? null,
+      status: status ?? null,
+      organizationId: profile.current_organization_id,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw new Error('No se pudieron cargar los procesos legales');
+  }
 
   const mappedProcesses = legalProcesses?.map(({ legal_process_clients, ...e }) => ({
     ...e,
@@ -116,10 +131,21 @@ export async function getDocuments() {
   if (!profile?.current_organization_id)
     throw new Error('Organization not found');
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('documents')
     .select('id, name, slug')
     .eq('organization_id', profile?.current_organization_id);
+
+  if (error) {
+    console.error('[legal-process/getDocuments] query failed', {
+      organizationId: profile.current_organization_id,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw new Error('No se pudieron cargar los documentos');
+  }
 
   return (data || [])?.map((e) => ({
     ...e,
@@ -165,157 +191,174 @@ export async function createLegalProcessDraft(values: {
   email: string;
   assigned_to: string;
 }) {
+  const traceId = randomUUID();
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-  if (!user || authError) {
-    throw new Error('Unauthorized');
-  }
+    if (!user || authError) {
+      throw new Error('Unauthorized');
+    }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('current_organization_id')
-    .eq('id', user.id)
-    .single();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('current_organization_id')
+      .eq('id', user.id)
+      .single();
 
-  if (!profile?.current_organization_id) {
-    throw new Error('Organization not found');
-  }
+    if (!profile?.current_organization_id) {
+      throw new Error('Organization not found');
+    }
 
-  const organizationId = profile.current_organization_id;
+    const organizationId = profile.current_organization_id;
 
   // Look up existing client scoped to this org to avoid cross-org matches
-  const { data: client } = await supabase
-    .from('clients')
-    .select('id')
-    .eq('email', values.email)
-    .eq('organization_id', organizationId)
-    .maybeSingle();
-
-  let clientId = client?.id;
-
-  if (!client) {
-    const { data: newClient, error } = await supabase
+    const { data: client } = await supabase
       .from('clients')
+      .select('id')
+      .eq('email', values.email)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    let clientId = client?.id;
+
+    if (!client) {
+      const { data: newClient, error } = await supabase
+        .from('clients')
+        .insert({
+          status: 'draft',
+          document_id: values.document_id,
+          document_number: values.document_number,
+          email: values.email,
+          created_by: user.id,
+          organization_id: organizationId,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Unique constraint violation: another request created the client concurrently — re-fetch
+        if (error.code === '23505') {
+          const { data: existingClient } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('email', values.email)
+            .eq('organization_id', organizationId)
+            .single();
+          clientId = existingClient?.id;
+        } else {
+          console.error(error);
+          throw new Error(error.message);
+        }
+      } else {
+        clientId = newClient.id;
+      }
+    }
+
+    const publicToken = randomUUID();
+
+    const { data: newLegalProcess, error: legalProcessError } = await supabase
+      .from('legal_processes')
       .insert({
         status: 'draft',
-        document_id: values.document_id,
-        document_number: values.document_number,
-        email: values.email,
-        created_by: user.id,
         organization_id: organizationId,
+        lawyer_id: values.assigned_to,
+        assigned_to: values.assigned_to,
+        access_token: publicToken,
+        access_token_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString(), // 72 hours
+        created_by: user.id,
       })
       .select()
       .single();
 
-    if (error) {
-      // Unique constraint violation: another request created the client concurrently — re-fetch
-      if (error.code === '23505') {
-        const { data: existingClient } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('email', values.email)
-          .eq('organization_id', organizationId)
-          .single();
-        clientId = existingClient?.id;
-      } else {
-        console.error(error);
-        throw new Error(error.message);
+    if (legalProcessError) {
+      throw new Error(legalProcessError.message);
+    }
+
+    if (newLegalProcess?.id) {
+      const { error: errorLegalProcessClients } = await supabase
+        .from('legal_process_clients')
+        .insert({
+          legal_process_id: newLegalProcess.id,
+          organization_id: organizationId,
+          document_id: values.document_id,
+          document_slug: values.document_slug,
+          document_number: values.document_number,
+          client_id: clientId,
+          email: values.email,
+          created_by: user.id,
+        });
+
+      if (errorLegalProcessClients) {
+        // Rollback: remove the legal_process to avoid orphan record
+        await supabase.from('legal_processes').delete().eq('id', newLegalProcess.id);
+        throw new Error(errorLegalProcessClients.message);
       }
-    } else {
-      clientId = newClient.id;
+
+      const { error: errorLegalProcessBanks } = await supabase
+        .from('legal_process_banks')
+        .insert({
+          legal_process_id: newLegalProcess.id,
+          organization_id: organizationId,
+          created_by: user.id,
+        });
+
+      if (errorLegalProcessBanks) {
+        // Rollback: cascade delete will also remove legal_process_clients
+        await supabase.from('legal_processes').delete().eq('id', newLegalProcess.id);
+        throw new Error(errorLegalProcessBanks.message);
+      }
     }
-  }
+    // Get the active workflow template for this org
+    const { data: orgWorkflow } = await supabase
+      .from('organization_workflows')
+      .select('workflow_template_id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
 
-  const publicToken = randomUUID();
-
-  const { data: newLegalProcess, error: legalProcessError } = await supabase
-    .from('legal_processes')
-    .insert({
-      status: 'draft',
-      organization_id: organizationId,
-      lawyer_id: values.assigned_to,
-      assigned_to: values.assigned_to,
-      access_token: publicToken,
-      access_token_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString(), // 72 hours
-      created_by: user.id,
-    })
-    .select()
-    .single();
-
-  if (legalProcessError) {
-    throw new Error(legalProcessError.message);
-  }
-
-  if (newLegalProcess?.id) {
-    const { error: errorLegalProcessClients } = await supabase
-      .from('legal_process_clients')
-      .insert({
-        legal_process_id: newLegalProcess.id,
-        organization_id: organizationId,
-        document_id: values.document_id,
-        document_slug: values.document_slug,
-        document_number: values.document_number,
-        client_id: clientId,
-        email: values.email,
-        created_by: user.id,
-      });
-
-    if (errorLegalProcessClients) {
-      // Rollback: remove the legal_process to avoid orphan record
-      await supabase.from('legal_processes').delete().eq('id', newLegalProcess.id);
-      throw new Error(errorLegalProcessClients.message);
+    if (!orgWorkflow?.workflow_template_id) {
+      throw new Error('La organización no tiene un flujo de trabajo activo asignado');
     }
-
-    const { error: errorLegalProcessBanks } = await supabase
-      .from('legal_process_banks')
-      .insert({
-        legal_process_id: newLegalProcess.id,
-        organization_id: organizationId,
-        created_by: user.id,
-      });
-
-    if (errorLegalProcessBanks) {
-      // Rollback: cascade delete will also remove legal_process_clients
-      await supabase.from('legal_processes').delete().eq('id', newLegalProcess.id);
-      throw new Error(errorLegalProcessBanks.message);
-    }
-  }
-  // Get the active workflow template for this org
-  const { data: orgWorkflow } = await supabase
-    .from('organization_workflows')
-    .select('workflow_template_id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true)
-    .single();
-
-  if (!orgWorkflow?.workflow_template_id) {
-    throw new Error('La organización no tiene un flujo de trabajo activo asignado');
-  }
 
   // Start the workflow — it will send the invitation email automatically
   // via the send_email node configured with email_template: 'client_form_email'
-  await startWorkflow(orgWorkflow.workflow_template_id, newLegalProcess.id);
+    await startWorkflow(orgWorkflow.workflow_template_id, newLegalProcess.id);
 
   // Audit: process created
-  void supabase.from('audit_logs').insert({
-    organization_id: organizationId,
-    user_id: user.id,
-    action: 'process_created',
-    entity: 'legal_process',
-    entity_id: newLegalProcess.id,
-    metadata: {
-      document_slug: values.document_slug,
-      assigned_to: values.assigned_to,
-      client_email: values.email,
-    },
-  });
+    void supabase.from('audit_logs').insert({
+      organization_id: organizationId,
+      user_id: user.id,
+      action: 'process_created',
+      entity: 'legal_process',
+      entity_id: newLegalProcess.id,
+      metadata: {
+        document_slug: values.document_slug,
+        assigned_to: values.assigned_to,
+        client_email: values.email,
+        trace_id: traceId,
+      },
+    });
 
-  revalidateLegalProcessPaths();
+    revalidateLegalProcessPaths();
+  } catch (error) {
+    const e = error as Error & { digest?: string };
+    console.error('[legal-process/createLegalProcessDraft] failed', {
+      traceId,
+      documentId: values.document_id,
+      documentSlug: values.document_slug,
+      assignedTo: values.assigned_to,
+      email: values.email,
+      message: e?.message ?? String(error),
+      digest: e?.digest ?? null,
+      stack: e?.stack ?? null,
+    });
+    throw error;
+  }
 }
 
 export async function getLegalProcessDetail(legalProcessId: string) {

@@ -20,14 +20,41 @@ export default async function ProcessPage(props: {
   const search = typeof params.search === 'string' ? params.search : undefined;
   const status = typeof params.status === 'string' ? params.status : undefined;
   const pageSize = 10;
-
   const t = await getTranslations('common.pagination');
-  const [{ processes, count }, documents, lawyers, { profile }] = await Promise.all([
-    getLegalProcesses(page, pageSize, search, status),
-    getDocuments(),
-    getOrgLawyers(),
-    getSessionProfile(),
-  ]);
+
+  let processes: Awaited<ReturnType<typeof getLegalProcesses>>['processes'] = [];
+  let count = 0;
+  let documents: Awaited<ReturnType<typeof getDocuments>> = [];
+  let lawyers: Awaited<ReturnType<typeof getOrgLawyers>> = [];
+  let profile: Awaited<ReturnType<typeof getSessionProfile>>['profile'] = null;
+
+  try {
+    const [processesResult, documentsResult, lawyersResult, profileResult] = await Promise.all([
+      getLegalProcesses(page, pageSize, search, status),
+      getDocuments(),
+      getOrgLawyers(),
+      getSessionProfile(),
+    ]);
+
+    processes = processesResult.processes;
+    count = processesResult.count;
+    documents = documentsResult;
+    lawyers = lawyersResult;
+    profile = profileResult.profile;
+  } catch (error) {
+    const e = error as Error & { digest?: string };
+    console.error('[legal-process/page] render failed', {
+      locale,
+      page,
+      pageSize,
+      search: search ?? null,
+      status: status ?? null,
+      message: e?.message ?? String(error),
+      digest: e?.digest ?? null,
+      stack: e?.stack ?? null,
+    });
+    throw error;
+  }
   const totalPages = Math.ceil(count / pageSize);
 
   const options = (documents || [])?.map((e) => ({
