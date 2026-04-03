@@ -228,7 +228,7 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className={`h-11 w-11 p-0 border-transparent sm:h-7 sm:w-7 ${showDropdown ? statusStyle.badge : 'invisible'}`}
+                  className={`h-11 w-11 p-0 border-transparent sm:h-7 sm:w-7 ${statusStyle.badge}`}
                   disabled={actioning || !showDropdown}
                 >
                   <MoreHorizontal className="h-4 w-4" />
