@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { usePathname, useRouter } from '@/i18n/routing';
 import ClientDetailSheet from './client-detail-sheet';
 import { useTranslations } from 'next-intl';
+import { memo, useCallback } from 'react';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 
@@ -20,18 +21,18 @@ export default function ClientList({ data }: ClientListProps) {
 
     const selectedId = searchParams.get('id');
 
-    const handleOpen = (clientId: string) => {
+    const handleOpen = useCallback((clientId: string) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('id', clientId);
         router.push(`${pathname}?${params.toString()}`);
-    };
+    }, [searchParams, router, pathname]);
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         const params = new URLSearchParams(searchParams.toString());
         params.delete('id');
         const query = params.toString();
         router.push(query ? `${pathname}?${query}` : pathname);
-    };
+    }, [searchParams, router, pathname]);
 
     if (!data || data.length === 0) {
         return (

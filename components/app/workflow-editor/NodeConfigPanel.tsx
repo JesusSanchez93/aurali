@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
@@ -99,18 +99,24 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
 
   const cfg = NODE_TYPES_CONFIG[node.data.type as WorkflowNodeType];
 
-  const isFieldVisible = (field: { dependsOn?: { key: string; value: boolean } }): boolean => {
-    if (!field.dependsOn) return true;
-    return boolValues[field.dependsOn.key] === field.dependsOn.value;
-  };
+  const isFieldVisible = useCallback(
+    (field: { dependsOn?: { key: string; value: boolean } }): boolean => {
+      if (!field.dependsOn) return true;
+      return boolValues[field.dependsOn.key] === field.dependsOn.value;
+    },
+    [boolValues],
+  );
 
-  const visibleConfigFields = cfg.configSchema.filter((field) => {
-    if (!isFieldVisible(field)) return false;
-    if (field.type === 'template_multiselect' && documentTemplates === undefined) return false;
-    return true;
-  });
+  const visibleConfigFields = useMemo(
+    () => cfg.configSchema.filter((field) => {
+      if (!isFieldVisible(field)) return false;
+      if (field.type === 'template_multiselect' && documentTemplates === undefined) return false;
+      return true;
+    }),
+    [cfg.configSchema, isFieldVisible, documentTemplates],
+  );
 
-  const toggleTemplate = (fieldKey: string, templateId: string) => {
+  const toggleTemplate = useCallback((fieldKey: string, templateId: string) => {
     setTemplateMultiValues((prev) => {
       const current = prev[fieldKey] ?? [];
       const next = current.includes(templateId)
@@ -118,7 +124,15 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
         : [...current, templateId];
       return { ...prev, [fieldKey]: next };
     });
-  };
+  }, []);
+
+  const handleRichtextChange = useCallback((key: string, v: unknown) => {
+    setRichtextValues((prev) => ({ ...prev, [key]: v }));
+  }, []);
+
+  const handleSwitchChange = useCallback((key: string, checked: boolean) => {
+    setBoolValues((prev) => ({ ...prev, [key]: checked }));
+  }, []);
 
   const onSubmit = (values: FormValues) => {
     const { title, ...configValues } = values;
@@ -202,7 +216,7 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
                     </span>
                     <Tiptap
                       value={richtextValues[field.key]}
-                      onChange={(v) => setRichtextValues((prev) => ({ ...prev, [field.key]: v }))}
+                      onChange={(v) => handleRichtextChange(field.key, v)}
                     />
                   </div>
                 )}
@@ -223,9 +237,7 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
                     <Switch
                       size="sm"
                       checked={boolValues[field.key] ?? false}
-                      onCheckedChange={(checked) =>
-                        setBoolValues((prev) => ({ ...prev, [field.key]: checked }))
-                      }
+                      onCheckedChange={(checked) => handleSwitchChange(field.key, checked)}
                     />
                   </div>
                 )}

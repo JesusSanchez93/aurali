@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 
 const ProfileContext = createContext<any>(null);
 
@@ -11,8 +11,9 @@ export default function ProfileProvider({
   profile: any;
   children: React.ReactNode;
 }) {
+  const value = useMemo(() => profile, [profile]);
   return (
-    <ProfileContext.Provider value={profile}>
+    <ProfileContext.Provider value={value}>
       {children}
     </ProfileContext.Provider>
   );

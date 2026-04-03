@@ -244,12 +244,17 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
             });
         };
 
-        const schedule = () => requestAnimationFrame(applyPageBreaks);
+        let rafId: number | null = null;
+        const schedule = () => {
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(applyPageBreaks);
+        };
 
         setTimeout(schedule, 0);
         editor.on('update', schedule);
         return () => {
             editor.off('update', schedule);
+            if (rafId !== null) cancelAnimationFrame(rafId);
         };
     }, [editor, isDocument, pageSize]);
 

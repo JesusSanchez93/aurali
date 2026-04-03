@@ -80,12 +80,14 @@ export default async function ProcessPage(props: {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex-1 flex flex-row items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <ProcessSearch />
-            <ProcessStatusFilter />
-          </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+        <div className="w-full sm:flex-1">
+          <ProcessSearch />
+        </div>
+        <div className="w-full sm:w-auto">
+          <ProcessStatusFilter />
+        </div>
+        <div className="w-full sm:w-auto">
           <ProcessFormSheet
             documents={options}
             lawyers={lawyers}

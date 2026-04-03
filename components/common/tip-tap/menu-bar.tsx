@@ -442,6 +442,9 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
       isHeading6: ctx.editor.isActive('heading', { level: 6 }) ?? false,
       isBulletList: ctx.editor.isActive('bulletList') ?? false,
       isOrderedList: ctx.editor.isActive('orderedList') ?? false,
+      isAlignLeft: ctx.editor.isActive({ textAlign: 'left' }) ?? false,
+      isAlignCenter: ctx.editor.isActive({ textAlign: 'center' }) ?? false,
+      isAlignRight: ctx.editor.isActive({ textAlign: 'right' }) ?? false,
     }),
   });
 
@@ -511,15 +514,15 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
         </Button>
 
         {/* Alignment */}
-        <Button variant={editor.isActive({ textAlign: 'left' }) ? 'secondary' : 'ghost'} size="icon" type="button"
+        <Button variant={editorState.isAlignLeft ? 'secondary' : 'ghost'} size="icon" type="button"
           onClick={() => editor.chain().focus().setTextAlign('left').run()}>
           <AlignLeft />
         </Button>
-        <Button variant={editor.isActive({ textAlign: 'center' }) ? 'secondary' : 'ghost'} size="icon" type="button"
+        <Button variant={editorState.isAlignCenter ? 'secondary' : 'ghost'} size="icon" type="button"
           onClick={() => editor.chain().focus().setTextAlign('center').run()}>
           <AlignCenter />
         </Button>
-        <Button variant={editor.isActive({ textAlign: 'right' }) ? 'secondary' : 'ghost'} size="icon" type="button"
+        <Button variant={editorState.isAlignRight ? 'secondary' : 'ghost'} size="icon" type="button"
           onClick={() => editor.chain().focus().setTextAlign('right').run()}>
           <AlignRight />
         </Button>

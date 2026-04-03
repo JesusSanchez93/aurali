@@ -23,7 +23,7 @@ export default function ProcessFormSheet({
     <Sheet
       open={open}
       onOpenChange={setOpen}
-      trigger={<Button>{t('trigger')}</Button>}
+      trigger={<Button className="w-full sm:w-auto">{t('trigger')}</Button>}
       title={t('sheet_title')}
       description={t('description')}
       body={

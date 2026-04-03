@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlowProvider,
   addEdge,
@@ -147,6 +147,19 @@ function WorkflowEditorInner({
     [setNodes],
   );
 
+  const displayNodes = useMemo(
+    () => readOnly
+      ? nodes.map((n) => ({
+          ...n,
+          data: {
+            ...n.data,
+            dimmed: !EDITABLE_NODE_TYPES.includes(n.data.type as WorkflowNodeType),
+          },
+        }))
+      : nodes,
+    [nodes, readOnly],
+  );
+
   const onDragStart = useCallback((event: React.DragEvent, nodeType: WorkflowNodeType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
@@ -215,15 +228,7 @@ function WorkflowEditorInner({
 
         <main className="relative flex-1">
           <WorkflowCanvas
-            nodes={readOnly
-              ? nodes.map((n) => ({
-                  ...n,
-                  data: {
-                    ...n.data,
-                    dimmed: !EDITABLE_NODE_TYPES.includes(n.data.type as WorkflowNodeType),
-                  },
-                }))
-              : nodes}
+            nodes={displayNodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}

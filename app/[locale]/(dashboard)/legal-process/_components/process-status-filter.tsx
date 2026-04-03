@@ -78,7 +78,7 @@ export default function ProcessStatusFilter() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-[170px] justify-between font-normal">
+                <Button variant="outline" className="w-full sm:w-[170px] justify-between font-normal">
                     <span className="flex items-center gap-2 truncate">
                         <ListFilter className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <span className="truncate">{label}</span>
