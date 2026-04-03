@@ -216,7 +216,7 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1 items-end" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-row gap-1 items-center sm:flex-col sm:items-end" onClick={(e) => e.stopPropagation()}>
             <ProcessTimelineButton
               legalProcessId={process.id}
               clientEmail={process.client?.email}
