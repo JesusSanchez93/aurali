@@ -85,10 +85,29 @@
 @layer base {
   * {
     @apply border-border;
+    /* Remove tap flash on Android/iOS */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    /* Prevent iOS font size adjustment when rotating */
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Touch-action: manipulation removes the 300ms tap delay on mobile
+     without breaking scroll behavior */
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
   }
 }
 

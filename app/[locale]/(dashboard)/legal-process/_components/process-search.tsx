@@ -56,7 +56,7 @@ export default function ProcessSearch() {
             {searchTerm && (
                 <button
                     onClick={handleClear}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground transition-colors sm:right-1 sm:h-7 sm:w-7"
                     aria-label={t('clear')}
                 >
                     <X className="h-4 w-4" />

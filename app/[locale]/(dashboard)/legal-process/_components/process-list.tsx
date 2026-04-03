@@ -191,23 +191,23 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
               {clientName}
             </h3>
 
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pt-2">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-2">
               {process.client?.email && (
                 <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  <Mail className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
                   <span className="truncate">{process.client.email}</span>
                 </span>
               )}
               {process.client?.phone && (
                 <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Phone className="h-3.5 w-3.5 shrink-0" />
+                  <Phone className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
                   {process.client.phone}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
-              <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1.5">
+              <CalendarDays className="h-4 w-4 shrink-0 sm:h-3.5 sm:w-3.5" />
               {process.created_at
                 ? new Date(process.created_at).toLocaleDateString('es', {
                     day: '2-digit', month: 'short', year: 'numeric',
@@ -229,7 +229,7 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className={`h-7 w-7 p-0 border-transparent ${statusStyle.badge}`}
+                    className={`h-11 w-11 p-0 border-transparent sm:h-7 sm:w-7 ${statusStyle.badge}`}
                     disabled={actioning}
                   >
                     <MoreHorizontal className="h-4 w-4" />

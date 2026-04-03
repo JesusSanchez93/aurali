@@ -9,9 +9,9 @@ const Input = React.forwardRef<HTMLInputElement, Omit<React.ComponentProps<"inpu
         type={type}
         className={cn(
           "flex w-full rounded-md border border-input bg-white dark:bg-black px-3 py-1 shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-          size === 'sm' && 'h-8 text-sm',
-          size === 'md' && 'h-9 text-base',
-          size === 'lg' && 'h-10 text-lg',
+          size === 'sm' && 'h-11 text-base sm:h-8 sm:text-sm',
+          size === 'md' && 'h-11 text-base sm:h-9',
+          size === 'lg' && 'h-12 text-lg',
           size === 'xl' && 'h-12 text-xl',
           size === '2xl' && 'h-16 text-2xl',
           className
