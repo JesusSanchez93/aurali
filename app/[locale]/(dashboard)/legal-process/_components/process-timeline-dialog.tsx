@@ -258,7 +258,7 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail, className }
       <Button
         size="sm"
         variant="outline"
-        className={`h-7 gap-1.5 px-2 text-xs border-transparent ${className ?? 'text-muted-foreground'}`}
+        className={`h-11 gap-1.5 px-3 text-sm border-transparent sm:h-7 sm:px-2 sm:text-xs ${className ?? 'text-muted-foreground'}`}
         onClick={(e) => { e.stopPropagation(); handleOpen(); }}
       >
         <History className="h-3.5 w-3.5" />
