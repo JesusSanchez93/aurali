@@ -171,7 +171,7 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
         className={`group relative rounded-xl border bg-card text-card-foreground shadow transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards ${statusStyle.bg} ${statusStyle.border} ${statusStyle.shadow} ${!isDraft ? `cursor-pointer ${statusStyle.hover}` : ''}`}
         style={{ animationDelay: `${index * 100}ms` }}
       >
-        <div className="flex flex-row gap-3 p-5 relative flex-wrap">
+        <div className="flex flex-col gap-3 p-5 relative sm:flex-row">
           <div className="absolute top-[-11px] flex items-center gap-1.5">
             <Badge variant="outline" className="font-mono border-transparent bg-muted text-muted-foreground text-[10px] px-1.5">
               #{String(process.process_number).padStart(4, '0')}
