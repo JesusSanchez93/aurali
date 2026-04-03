@@ -223,18 +223,17 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
               className={statusStyle.badge}
             />
 
-            {showDropdown && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className={`h-11 w-11 p-0 border-transparent sm:h-7 sm:w-7 ${statusStyle.badge}`}
-                    disabled={actioning}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild disabled={!showDropdown}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={`h-11 w-11 p-0 border-transparent sm:h-7 sm:w-7 ${showDropdown ? statusStyle.badge : 'invisible'}`}
+                  disabled={actioning || !showDropdown}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   {isArchived ? (
                     <DropdownMenuItem
@@ -265,7 +264,6 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )}
           </div>
         </div>
       </div>
