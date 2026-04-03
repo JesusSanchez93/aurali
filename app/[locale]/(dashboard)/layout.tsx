@@ -6,6 +6,7 @@ import { CSSProperties, ReactNode } from 'react';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import ProfileProvider from '@/components/providers/profile-provider';
 import { WorkflowGuideModal } from '@/components/app/dashboard/workflow-guide-modal';
+import { SidebarSwipeHandler } from '@/components/dashboard/sidebar-swipe-handler';
 
 interface Props {
   children: ReactNode;
@@ -28,6 +29,7 @@ export default async function DashboardLayout({ children }: Props) {
           } as CSSProperties
         }
       >
+        <SidebarSwipeHandler />
         <ProfileProvider profile={profile}>
           {profile.onboarding_status === 'completed' &&
             !profile.workflow_guide_seen &&
