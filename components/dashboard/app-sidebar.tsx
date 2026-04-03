@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Link, usePathname } from '@/i18n/routing';
 import { NavUser } from './nav-user';
@@ -47,6 +48,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const t = useTranslations('common.nav');
   const profile = useProfile();
+  const { setOpenMobile, isMobile } = useSidebar();
 
   const isSuperAdmin = profile?.system_role === 'SUPERADMIN';
   const isImpersonating = isSuperAdmin && !!profile?.current_organization_id;
@@ -72,8 +74,15 @@ export function AppSidebar() {
 
                 return (
                   <SidebarMenuItem key={item.titleKey}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.url}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      size={isMobile ? 'lg' : 'default'}
+                    >
+                      <Link
+                        href={item.url}
+                        onClick={() => isMobile && setOpenMobile(false)}
+                      >
                         <item.icon />
                         <span>{t(item.titleKey)}</span>
                       </Link>
