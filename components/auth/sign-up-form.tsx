@@ -57,7 +57,7 @@ export function SignUpForm({
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -65,7 +65,22 @@ export function SignUpForm({
         },
       });
       if (error) throw error;
-      router.push('/onboarding');
+
+      let nextPath = '/onboarding';
+
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_status')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (profile?.onboarding_status === 'completed') {
+          nextPath = '/dashboard';
+        }
+      }
+
+      router.push(nextPath);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : commonT('error_fallback'));
     } finally {

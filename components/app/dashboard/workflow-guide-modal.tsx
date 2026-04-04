@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { motion } from 'framer-motion'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,10 @@ import {
   Link as LinkIcon,
   Clock,
   ChevronRight,
+  CalendarDays,
+  History,
+  MoreHorizontal,
+  Phone,
 } from 'lucide-react'
 
 // ─── Step definitions ────────────────────────────────────────────────────────
@@ -37,9 +42,9 @@ const STEPS = [
 
 function WelcomeIllustration() {
   return (
-    <div className="flex flex-col items-center justify-center gap-5">
-      <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-foreground text-background shadow-lg">
-        <CheckCircle2 className="h-9 w-9" />
+    <div className="flex flex-col items-center justify-center gap-4 sm:gap-5">
+      <div className="relative flex h-16 w-16 items-center justify-center rounded-3xl bg-foreground text-background shadow-lg sm:h-20 sm:w-20">
+        <CheckCircle2 className="h-7 w-7 sm:h-9 sm:w-9" />
         <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-background bg-foreground">
           <span className="h-2 w-2 rounded-full bg-background" />
         </span>
@@ -52,12 +57,12 @@ function WelcomeIllustration() {
         ].map(({ icon: Icon, label }) => (
           <div
             key={label}
-            className="flex flex-col items-center gap-2 rounded-xl border bg-background px-3 py-3 shadow-sm"
+            className="flex flex-col items-center gap-1.5 rounded-xl border bg-background px-2 py-2.5 shadow-sm sm:gap-2 sm:px-3 sm:py-3"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-              <Icon className="h-4 w-4 text-muted-foreground" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted sm:h-8 sm:w-8">
+              <Icon className="h-3.5 w-3.5 text-muted-foreground sm:h-4 sm:w-4" />
             </div>
-            <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+            <span className="text-[10px] font-medium text-muted-foreground sm:text-[11px]">{label}</span>
           </div>
         ))}
       </div>
@@ -68,7 +73,7 @@ function WelcomeIllustration() {
 function TemplatesIllustration() {
   const docs = ['Poder Notarial', 'Contrato de Servicios', 'Carta Autorización']
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full space-y-2 px-5">
       {docs.map((name, i) => (
         <div
           key={name}
@@ -101,7 +106,7 @@ function EmailNodesIllustration() {
     { label: 'Enviar documentos al cliente', configured: false },
   ]
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full space-y-2 px-5">
       {nodes.map(({ label, configured }) => (
         <div
           key={label}
@@ -130,7 +135,7 @@ function EmailNodesIllustration() {
 
 function DocNodesIllustration() {
   return (
-    <div className="w-full space-y-3">
+    <div className="w-full space-y-3 px-5">
       <div className="flex items-center gap-3 rounded-xl border bg-background px-3 py-2.5 shadow-sm">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dashed border-muted-foreground bg-muted/40">
           <FileText className="h-3.5 w-3.5 text-muted-foreground" />
@@ -169,29 +174,70 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 
 function ProcessPreviewIllustration() {
   const processes = [
-    { number: '0001', name: 'María García López',  doc: 'CC 1020304050', status: 'draft'          },
-    { number: '0002', name: 'Carlos Rodríguez P.', doc: 'CC 9988776655', status: 'completed'      },
-    { number: '0003', name: 'Ana Torres Martínez', doc: 'CC 987654321',  status: 'approved'       },
-    { number: '0004', name: 'Luis Gómez Vargas',   doc: 'CC 1122334455', status: 'documents_sent' },
+    { number: '0012', name: 'Proceso no iniciado', email: 'jdavidsanchez1993+client@gmail.com', phone: '',             date: '02 abr 2026', status: 'draft'          },
+    { number: '0011', name: 'Carlos Rodríguez P.', email: 'jdavidsanchez1993+client2@gmail.com', phone: '+573042455392', date: '02 abr 2026', status: 'completed'      },
+    { number: '0009', name: 'Luis Gómez Vargas',   email: 'jdavidsanchez1993+client4@gmail.com', phone: '+573042455392', date: '01 abr 2026', status: 'documents_sent' },
   ]
 
   return (
-    <div className="w-full space-y-1.5">
-      {processes.map((p) => {
+    <div className="w-full space-y-6">
+      {processes.map((p, index) => {
         const s = STATUS_CONFIG[p.status]
         return (
           <div
             key={p.number}
-            className="flex items-center gap-3 rounded-xl border bg-background px-3 py-2 shadow-sm"
+            className="relative"
           >
-            <span className="w-10 shrink-0 font-mono text-[10px] text-muted-foreground">#{p.number}</span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium leading-none">{p.name}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{p.doc}</p>
-            </div>
-            <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium', s.className)}>
-              {s.label}
-            </span>
+            <motion.div
+              className="flex w-[200%]"
+              initial={{ x: '0%' }}
+              animate={{ x: ['0%', '0%', '-50%', '-50%', '0%'] }}
+              transition={{
+                duration: 5.8,
+                times: [0, 0.18, 0.52, 0.82, 1],
+                delay: 0.15 + index * 0.2,
+                ease: 'easeInOut',
+                repeat: Infinity,
+                repeatDelay: 1.8,
+              }}
+              style={{ willChange: 'transform' }}
+            >
+              <div className="relative w-[calc(50%-2.50rem)] p-5 rounded-l-xl border bg-background shadow-sm ml-5 border-r-0">
+                <div className="top-[-11px] absolute mb-2 flex items-center gap-2">
+                  <span className=" rounded-md bg-muted px-2 py-1 font-mono text-[10px] font-semibold text-muted-foreground">
+                    #{p.number}
+                  </span>
+                  <span className={cn('rounded-md border px-2 py-1 text-[10px] font-medium', s.className)}>
+                    {s.label}
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  <p className="truncate text-sm font-semibold uppercase leading-none">{p.name}</p>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{p.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                    <span>{p.date}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-[calc(50%-2.50rem)] p-5 rounded-r-xl border bg-background shadow-sm mr-5 border-l-0 flex items-start justify-end gap-3">
+                
+
+                <div className="flex w-[88px] shrink-0 flex-col items-end gap-2">
+                  <div className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-50 px-2 py-2 text-[11px] font-medium text-blue-700">
+                    <History className="h-3.5 w-3.5" />
+                    Historial
+                  </div>
+                  <div className="inline-flex h-8 w-8 items-center justify-center self-end rounded-lg bg-muted text-muted-foreground">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         )
       })}
@@ -290,13 +336,13 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) dismiss() }}>
       <DialogContent
-        className="flex max-h-[88vh] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0 [&>button:last-child]:hidden"
+        className="flex max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-2xl flex-col gap-0 overflow-hidden p-0 sm:max-h-[88vh] [&>button:last-child]:hidden"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">{content.title}</DialogTitle>
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between border-b px-6 py-3.5">
+        <div className="flex items-center justify-between border-b px-4 py-3 sm:px-6 sm:py-3.5">
           <div className="flex items-center gap-3">
             <Stepper current={step} />
             <span className="text-xs font-medium text-muted-foreground">
@@ -313,22 +359,22 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
         </div>
 
         {/* ── Body: two-column ────────────────────────────────────────────── */}
-        <div className="grid flex-1 grid-cols-5 overflow-hidden">
+        <div className="grid flex-1 overflow-hidden sm:grid-cols-5">
 
           {/* Left — illustration */}
-          <div className="col-span-2 flex items-center justify-center border-r bg-muted/25 p-8">
+          <div className="flex items-center justify-center border-b bg-muted/25 py-5 sm:col-span-2 sm:border-b-0 sm:border-r sm:p-8">
             {content.illustration}
           </div>
 
           {/* Right — text content */}
-          <div className="col-span-3 overflow-y-auto px-8 py-7">
+          <div className="overflow-y-auto px-5 py-5 sm:col-span-3 sm:px-8 sm:py-7">
             <p className="mb-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
               Paso {step + 1} de {STEPS.length}
             </p>
-            <h2 className="mb-3 text-lg font-semibold leading-snug tracking-tight">
+            <h2 className="mb-3 text-base font-semibold leading-snug tracking-tight sm:text-lg">
               {content.title}
             </h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
+            <p className="text-sm leading-7 text-muted-foreground sm:leading-relaxed">
               {content.description}
             </p>
 
@@ -359,16 +405,16 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
         </div>
 
         {/* ── Footer navigation ────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between border-t bg-muted/10 px-6 py-3.5">
+        <div className="flex items-center justify-between border-t bg-muted/10 px-4 py-3 sm:px-6 sm:py-3.5">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setStep((s) => s - 1)}
             disabled={isFirst || isPending}
-            className="gap-1.5 text-muted-foreground hover:text-foreground"
+            className="gap-1.5 px-2 text-muted-foreground hover:text-foreground sm:px-3"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            Atrás
+            <span className="hidden sm:inline">Atrás</span>
           </Button>
 
           <span className="text-xs tabular-nums text-muted-foreground">
@@ -378,11 +424,11 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
           {isLast ? (
             <Button size="sm" onClick={dismiss} disabled={isPending} className="gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Finalizar
+              <span className="hidden sm:inline">Finalizar</span>
             </Button>
           ) : (
             <Button size="sm" onClick={() => setStep((s) => s + 1)} disabled={isPending} className="gap-1.5">
-              Siguiente
+              <span className="hidden sm:inline">Siguiente</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           )}

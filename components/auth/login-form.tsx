@@ -37,12 +37,27 @@ export function LoginForm({
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
-      router.push('/');
+
+      let nextPath = '/onboarding';
+
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_status')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (profile?.onboarding_status === 'completed') {
+          nextPath = '/dashboard';
+        }
+      }
+
+      router.push(nextPath);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : commonT('error_fallback'));
     } finally {

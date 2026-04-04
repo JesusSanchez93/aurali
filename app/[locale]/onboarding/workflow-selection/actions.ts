@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Supabase = any
@@ -77,4 +78,7 @@ export async function selectWorkflowForOrg(workflowTemplateId: string) {
     .from('profiles')
     .update({ onboarding_status: 'completed' })
     .eq('id', user.id)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/onboarding')
 }

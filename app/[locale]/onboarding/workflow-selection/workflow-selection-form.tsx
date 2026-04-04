@@ -33,7 +33,8 @@ export function WorkflowSelectionForm({ workflows }: Props) {
     startTransition(async () => {
       try {
         await selectWorkflowForOrg(selected)
-        router.push('/dashboard')
+        router.replace('/dashboard')
+        router.refresh()
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Error al seleccionar el flujo')
       }
