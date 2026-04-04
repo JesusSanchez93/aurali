@@ -5,6 +5,7 @@
     },
     "common": {
         "loading": "Cargando...",
+        "loading_description": "Estamos preparando tu experiencia en Aurali y conectando la información necesaria para mostrarte la interfaz correcta.",
         "error": "Ocurrió un error",
         "error_fallback": "Ocurrió un error inesperado",
         "save": "Guardar",
@@ -320,6 +321,28 @@
         }
     },
     "auth": {
+        "shell": {
+            "brandLine": "Operación legal inteligente",
+            "backHome": "Volver al inicio",
+            "eyebrow": "Acceso seguro a tu plataforma legal",
+            "loginTitle": "Vuelve a tu operación legal con todo en contexto",
+            "loginDescription": "Ingresa a Aurali para revisar procesos, documentos y automatizaciones desde un espacio diseñado para que tu equipo trabaje con claridad.",
+            "signUpTitle": "Empieza a operar tu bufete con menos fricción",
+            "signUpDescription": "Crea tu cuenta y comienza a organizar intake, generación documental y seguimiento desde una sola plataforma.",
+            "panelLabel": "Vista operativa",
+            "panelTitle": "Automatización en marcha",
+            "panelBadge": "Seguro",
+            "steps": {
+                "1": "Captura de cliente y validación inicial",
+                "2": "IA preparando documentos y tareas",
+                "3": "Equipo y cliente sincronizados"
+            },
+            "stats": {
+                "time": "menos tiempo en coordinación manual",
+                "capacity": "más capacidad operativa por abogado",
+                "documents": "documentos y flujos listos para revisión"
+            }
+        },
         "login": {
             "title": "Iniciar Sesión",
             "description": "Ingresa tu correo abajo para iniciar sesión en tu cuenta",
@@ -420,6 +443,180 @@
             "ORG_NAME": "Nombre del Bufete"
         }
     },
+    "landing": {
+        "nav": {
+            "features": "Características",
+            "benefits": "Beneficios",
+            "howItWorks": "Cómo funciona",
+            "pricing": "Precios",
+            "cta": "Solicitar acceso",
+            "platformCta": "Ir a la plataforma",
+            "mobileAria": "Abrir menú principal",
+            "language": "Cambiar idioma",
+            "languages": {
+                "es": "Español (ES)",
+                "en": "English (EN)"
+            }
+        },
+        "hero": {
+            "eyebrow": "Plataforma de automatización legal con IA",
+            "titleLine1": "La inteligencia que tu bufete",
+            "titleLine2": "necesitaba para crecer",
+            "subtitle": "Aurali automatiza tus procesos legales desde la captación del cliente hasta la generación de documentos para que tu equipo se enfoque en lo que importa: el criterio jurídico y la relación con tu cliente.",
+            "primaryCta": "Solicitar demo gratuita",
+            "secondaryCta": "Ver cómo funciona",
+            "visual": {
+                "label": "Vista operativa",
+                "title": "Motor visual de procesos legales",
+                "badge": "Flujo activo",
+                "steps": {
+                    "intake": "Registro del cliente y validación inicial",
+                    "generation": "IA redacta documentos con variables reales",
+                    "notification": "Cliente notificado automáticamente",
+                    "review": "Revisión final y cierre del expediente"
+                },
+                "floating": {
+                    "document": "Documento generado",
+                    "client": "Cliente notificado",
+                    "process": "Proceso automatizado"
+                }
+            }
+        },
+        "socialProof": {
+            "title": "Diseñado para abogados y bufetes en Latinoamérica",
+            "pills": {
+                "one": "100% digital",
+                "two": "Multiusuario",
+                "three": "Generación IA de documentos"
+            }
+        },
+        "problem": {
+            "eyebrow": "El problema que resolvemos",
+            "title": "Tu tiempo vale demasiado para gastarlo en papeleo",
+            "description": "Aurali elimina la coordinación manual y convierte cada proceso legal en una operación visible, medible y repetible.",
+            "cards": {
+                "manual": {
+                    "title": "Procesos manuales",
+                    "description": "Coordinación por WhatsApp, hojas de cálculo y correos sin control ni trazabilidad real."
+                },
+                "repetitive": {
+                    "title": "Documentos que se repiten",
+                    "description": "Cada demanda, poder o carta vuelve a redactarse desde cero aunque el proceso sea el mismo."
+                },
+                "visibility": {
+                    "title": "Sin visibilidad",
+                    "description": "No sabes en qué estado está cada caso en tiempo real ni qué tarea está frenando al equipo."
+                }
+            }
+        },
+        "features": {
+            "eyebrow": "Todo lo que necesitas, en un solo lugar",
+            "title": "Hecho para adaptarse a tu forma de trabajar",
+            "description": "Una sola plataforma para orquestar intake, automatización, documentos y seguimiento sin depender de herramientas desconectadas.",
+            "items": {
+                "workflows": {
+                    "title": "Flujos automáticos",
+                    "description": "Define una vez cómo funciona tu proceso. Aurali lo ejecuta solo."
+                },
+                "documents": {
+                    "title": "Documentos en segundos",
+                    "description": "Genera cartas, poderes y escritos con datos reales del cliente automáticamente."
+                },
+                "ai": {
+                    "title": "Inteligencia artificial",
+                    "description": "IA integrada para redactar, revisar y adaptar documentos a tu criterio."
+                },
+                "multiLawyer": {
+                    "title": "Multi-abogado",
+                    "description": "Asigna casos, controla permisos y colabora con tu equipo desde un mismo panel."
+                },
+                "notifications": {
+                    "title": "Notificaciones inteligentes",
+                    "description": "El cliente recibe actualizaciones automáticas en cada etapa del proceso."
+                },
+                "visibility": {
+                    "title": "Visibilidad total",
+                    "description": "Panel en tiempo real con el estado de cada proceso, cliente y abogado."
+                }
+            }
+        },
+        "howItWorks": {
+            "eyebrow": "Así de simple",
+            "title": "De la consulta al cierre, sin fricción",
+            "description": "Cada etapa se conecta con la siguiente para que tu operación avance con menos ruido y más control.",
+            "steps": {
+                "step1": {
+                    "title": "Crea el proceso",
+                    "description": "Registra al cliente y el tipo de caso en segundos con la información necesaria desde el inicio."
+                },
+                "step2": {
+                    "title": "El flujo hace el trabajo",
+                    "description": "Formularios, validaciones y comunicaciones se ejecutan automáticamente según tus reglas."
+                },
+                "step3": {
+                    "title": "La IA genera los documentos",
+                    "description": "Usa los datos reales del caso para producir borradores listos para revisión, sin copiar y pegar."
+                },
+                "step4": {
+                    "title": "Firma, entrega y cierra",
+                    "description": "Los documentos quedan listos para revisión, envío al cliente y cierre del expediente."
+                }
+            }
+        },
+        "benefits": {
+            "eyebrow": "¿Por qué Aurali?",
+            "title": "Más tiempo para lo que realmente importa",
+            "description": "Tu equipo gana capacidad operativa sin sacrificar control, trazabilidad ni calidad documental.",
+            "stats": {
+                "time": "menos tiempo en tareas administrativas",
+                "capacity": "más casos gestionados por abogado",
+                "manual": "documentos redactados manualmente"
+            },
+            "list": {
+                "one": "Se adapta a tu flujo, no al revés.",
+                "two": "Sin curva de aprendizaje: intuitivo desde el día 1.",
+                "three": "Seguro y confidencial: tus datos y tus procesos siguen bajo tu control.",
+                "four": "Actualizaciones continuas basadas en lo que realmente necesita tu operación."
+            }
+        },
+        "testimonials": {
+            "eyebrow": "Prueba social",
+            "title": "Abogados que quieren operar con menos fricción",
+            "description": "Referencias de muestra para visualizar cómo se vería la credibilidad comercial de Aurali en producción.",
+            "items": {
+                "one": {
+                    "quote": "Aurali nos dio una forma clara de estandarizar procesos sin perder criterio jurídico. Hoy el equipo sabe qué sigue en cada caso.",
+                    "author": "María Fernanda Rojas",
+                    "role": "Socia, Estudio Rojas Legal"
+                },
+                "two": {
+                    "quote": "La generación de documentos dejó de ser un cuello de botella. Ahora revisamos y aprobamos, en lugar de redactar desde cero.",
+                    "author": "Sebastián Mejía",
+                    "role": "Director jurídico, Lex Norte"
+                },
+                "three": {
+                    "quote": "Pasamos de coordinar por mensajes sueltos a trabajar con un flujo visible para todo el equipo y el cliente.",
+                    "author": "Valentina Pardo",
+                    "role": "Abogada independiente"
+                }
+            }
+        },
+        "finalCta": {
+            "badge": "Acceso anticipado",
+            "title": "Empieza a automatizar tu bufete hoy",
+            "description": "Sin tarjeta de crédito. Sin compromisos. Solo una forma más inteligente de operar tu práctica legal.",
+            "cta": "Solicitar acceso gratuito"
+        },
+        "footer": {
+            "tagline": "La empleada digital para abogados",
+            "links": {
+                "privacy": "Política de privacidad",
+                "terms": "Términos",
+                "contact": "Contacto"
+            },
+            "copy": "© 2025 Aurali. Todos los derechos reservados."
+        }
+    },
     "settings": {
         "workflows": {
             "title": "Configuración de Flujos",
@@ -427,27 +624,27 @@
             "new": "Nueva Plantilla",
             "save": "Guardar",
             "name": "Nombre de la plantilla",
-        "name_placeholder": "Ej: Tutela de Salud",
-        "steps": "Etapas del Flujo",
-        "add_step": "Agregar Etapa",
-        "step_title": "Título de la etapa",
-        "step_type": "Tipo de acción",
-        "order": "Orden",
-        "actions": "Notificaciones",
-        "save_success": "Flujo guardado correctamente",
-        "mobile_blocked_eyebrow": "Solo escritorio",
-        "mobile_blocked_title": "Esta vista no está disponible en teléfono",
-        "mobile_blocked_description": "Puedes revisar la configuración de flujos desde un computador o una pantalla más amplia.",
-        "mobile_blocked_hint_title": "Ábrela desde tu computador",
-        "mobile_blocked_hint_description": "El editor y la visualización completa del flujo requieren más espacio para navegar nodos, conexiones y configuraciones con comodidad.",
-        "no_active_organization": "No tienes una organización activa.",
-        "readonly_title": "Flujo de trabajo",
-        "readonly_description": "Vista del flujo activo de tu organización. Solo lectura.",
-        "types": {
-            "manual": "Manual",
-            "client_input": "Entrada de Cliente",
-            "payment": "Pago Inicial",
-            "ai_generation": "Generación IA",
+            "name_placeholder": "Ej: Tutela de Salud",
+            "steps": "Etapas del Flujo",
+            "add_step": "Agregar Etapa",
+            "step_title": "Título de la etapa",
+            "step_type": "Tipo de acción",
+            "order": "Orden",
+            "actions": "Notificaciones",
+            "save_success": "Flujo guardado correctamente",
+            "mobile_blocked_eyebrow": "Solo escritorio",
+            "mobile_blocked_title": "Esta vista no está disponible en teléfono",
+            "mobile_blocked_description": "Puedes revisar la configuración de flujos desde un computador o una pantalla más amplia.",
+            "mobile_blocked_hint_title": "Ábrela desde tu computador",
+            "mobile_blocked_hint_description": "El editor y la visualización completa del flujo requieren más espacio para navegar nodos, conexiones y configuraciones con comodidad.",
+            "no_active_organization": "No tienes una organización activa.",
+            "readonly_title": "Flujo de trabajo",
+            "readonly_description": "Vista del flujo activo de tu organización. Solo lectura.",
+            "types": {
+                "manual": "Manual",
+                "client_input": "Entrada de Cliente",
+                "payment": "Pago Inicial",
+                "ai_generation": "Generación IA",
                 "ai_wait": "Espera IA",
                 "internal_review": "Revisión Interna"
             }

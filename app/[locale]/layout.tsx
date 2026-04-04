@@ -7,6 +7,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
+import { AppLoadingFallback } from '@/components/common/app-loading-fallback';
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -45,9 +46,12 @@ export default async function RootLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const isValidLocale = routing.locales.includes(
+    locale as (typeof routing.locales)[number]
+  );
 
   // Ensure that the incoming `locale` is valid
-  if (!routing.locales.includes(locale as any)) {
+  if (!isValidLocale) {
     notFound();
   }
 
@@ -65,7 +69,14 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning>
       <body className={`${geistSans.className}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <Suspense fallback={t('loading')}>
+          <Suspense
+            fallback={
+              <AppLoadingFallback
+                label={t('loading')}
+                description={t('loading_description')}
+              />
+            }
+          >
             <ThemeProvider
               attribute="class"
               defaultTheme="system"

@@ -1,13 +1,10 @@
 import { LoginForm } from '@/components/auth/login-form';
-import { ThemeSwitcher } from '@/components/app/theme-switcher';
+import { AuthShell } from '@/components/auth/auth-shell';
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh w-full flex-col items-center justify-center gap-4 p-6 md:p-10">
-      <div className="w-full max-w-sm">
+    <AuthShell variant="login">
         <LoginForm />
-      </div>
-      <ThemeSwitcher />
-    </div>
+    </AuthShell>
   );
 }

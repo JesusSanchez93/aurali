@@ -7,6 +7,7 @@ import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import ProfileProvider from '@/components/providers/profile-provider';
 import { WorkflowGuideModal } from '@/components/app/dashboard/workflow-guide-modal';
 import { SidebarSwipeHandler } from '@/components/dashboard/sidebar-swipe-handler';
+import { DashboardLoadingState } from '@/components/dashboard/dashboard-loading-state';
 
 interface Props {
   children: ReactNode;
@@ -15,7 +16,7 @@ interface Props {
 export default async function DashboardLayout({ children }: Props) {
   const { profile } = await getSessionProfile();
 
-  if (!profile?.id) return <div>Loading...</div>;
+  if (!profile?.id) return <DashboardLoadingState />;
 
   return (
     <div className="flex h-svh flex-col bg-muted">
