@@ -93,4 +93,6 @@ Every new table migration must include:
 
 Special cases: public/catalog tables use `USING (true)` for SELECT. Junction tables without `organization_id` check via parent table subquery.
 
-After applying: run `supabase db reset` (local) or `supabase migration up` (remote), then regenerate types.
+**Migrations must be additive and forward-only.** Never use `DROP`, `TRUNCATE`, or destructive `ALTER` that would require a `db reset`. Every migration must apply cleanly on top of existing data with `supabase migration up` — both locally and on the cloud — without resetting the database. Use `ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, `CREATE POLICY IF NOT EXISTS`, and conditional logic to avoid conflicts with previously applied migrations.
+
+After applying: run `supabase migration up` (local and remote), then regenerate types.

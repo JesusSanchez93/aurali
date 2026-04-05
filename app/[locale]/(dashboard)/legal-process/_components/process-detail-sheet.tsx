@@ -27,6 +27,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AlertTriangle, Archive, CheckCircle2, MoreHorizontal, RotateCcw, ShieldQuestion, X, XCircle } from 'lucide-react';
+import { ProcessPaymentsSection } from '@/app/[locale]/(dashboard)/legal-process/_components/process-payments-section';
 import { useTranslations } from 'next-intl';
 import {
     Carousel,
@@ -40,6 +41,8 @@ import {
 type LegalProcess = Database['public']['Tables']['legal_processes']['Row'];
 type LegalProcessClient = Database['public']['Tables']['legal_process_clients']['Row'];
 type LegalProcessBank = Database['public']['Tables']['legal_process_banks']['Row'];
+type ProcessFee = { id: string; total_amount: number; currency: string; notes: string | null } | null;
+type ProcessPayment = { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string };
 
 interface Props {
     processId: string | null;
@@ -92,6 +95,8 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         process: LegalProcess;
         client: LegalProcessClient | null;
         banking: LegalProcessBank | null;
+        fee: ProcessFee;
+        payments: ProcessPayment[];
     } | null>(null);
 
     const loadData = (id: string) => {
@@ -425,6 +430,15 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                     </div>
                                 )}
                             </div>
+
+                            {processId && (
+                                <ProcessPaymentsSection
+                                    legalProcessId={processId}
+                                    fee={data?.fee ?? null}
+                                    payments={data?.payments ?? []}
+                                    onUpdate={() => loadData(processId)}
+                                />
+                            )}
 
                             {processId && (
                                 <DocumentPreviews

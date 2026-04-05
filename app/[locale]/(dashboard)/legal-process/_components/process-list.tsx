@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Mail, Phone, CalendarDays, Loader2, MoreHorizontal, Archive, XCircle, RotateCcw } from 'lucide-react';
+import { Mail, Phone, CalendarDays, Loader2, MoreHorizontal, Archive, XCircle, RotateCcw, SendHorizonal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +24,7 @@ import {
   archiveLegalProcess,
   declineLegalProcess,
   revertArchivedProcess,
+  resendDraftEmail,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
 
 type LegalProcess = Database['public']['Tables']['legal_processes']['Row'];
@@ -245,6 +246,18 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
                     </DropdownMenuItem>
                   ) : (
                     <>
+                      {isDraft && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => runAction(() => resendDraftEmail(process.id), t('resend_email.success'))}
+                            className="gap-2"
+                          >
+                            <SendHorizonal className="h-4 w-4" />
+                            {t('resend_email.trigger')}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
                       <DropdownMenuItem
                         onClick={() => setArchiveConfirming(true)}
                         className="gap-2"

@@ -22,13 +22,17 @@
  *   end              — marks workflow as completed
  */
 
+import React from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { render } from '@react-email/render';
 import { resend } from '@/lib/resend';
 import { generateDocument, generatePreviewHtml } from '@/lib/documents/generateDocument';
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
+import { WorkflowEmail } from '@/emails/WorkflowEmail';
+import type { EmailTheme } from '@/emails/WorkflowEmail';
 import type {
   WorkflowNodeRow,
   WorkflowEdgeRow,
@@ -228,21 +232,18 @@ async function sendEmail(
   subject: string,
   bodyHtml: string,
   attachments?: EmailAttachment[],
+  ctaUrl?: string,
+  ctaLabel?: string,
+  theme?: Partial<EmailTheme>,
 ): Promise<void> {
+  const html = await render(
+    React.createElement(WorkflowEmail, { bodyHtml, ctaUrl, ctaLabel, subject, theme }),
+  );
   const { error } = await resend.emails.send({
     from: 'Aurali Legal <no-reply@aurali.app>',
     to,
     subject,
-    html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                  line-height: 1.7; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 32px 24px;">
-        ${bodyHtml}
-        <hr style="margin: 32px 0; border: none; border-top: 1px solid #e2e8f0;" />
-        <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-          Este mensaje fue generado automáticamente por Aurali Legal.
-        </p>
-      </div>
-    `,
+    html,
     attachments,
   });
   if (error) {
@@ -298,7 +299,17 @@ async function executeSendEmail(
     return { status: 'failed', output: {}, error: 'Campo "to" vacío o sin resolver' };
   }
 
-  const bodyHtml = substituteVars(resolveBodyHtml(cfg.body), context);
+  // Extract form_url from context — it becomes the CTA button, not inline text
+  const formUrl = (context.legalProcess as unknown as Record<string, unknown>).form_url as string | undefined;
+
+  // Strip {{form_url}} BEFORE substituteVars so the URL never gets injected into the body
+  // (TipTap may render it as <a href="{{form_url}}">{{form_url}}</a>)
+  const cleanedTemplate = resolveBodyHtml(cfg.body)
+    .replace(/<a[^>]*>\s*\{\{form_url\}\}\s*<\/a>/gi, '')
+    .replace(/\{\{form_url\}\}/gi, '')
+    .replace(/<p>(\s|&nbsp;)*<\/p>/g, '');
+
+  const bodyHtml = substituteVars(cleanedTemplate, context);
 
   // Build PDF attachments — only when attach_enabled is true
   const attachments: EmailAttachment[] = [];
@@ -325,7 +336,7 @@ async function executeSendEmail(
     }
   }
 
-  await sendEmail(to, subject, bodyHtml, attachments.length ? attachments : undefined);
+  await sendEmail(to, subject, bodyHtml, attachments.length ? attachments : undefined, formUrl);
 
   void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
     organization_id: context.legalProcess.organization_id,
@@ -576,6 +587,13 @@ export async function buildDocumentTemplateData(
       } | null;
     };
 
+  // Fetch fee
+  const { data: feeRow } = await db
+    .from('legal_process_fees')
+    .select('total_amount')
+    .eq('legal_process_id', legalProcessId)
+    .maybeSingle() as { data: { total_amount: number } | null };
+
   const client = clientData;
   const clientName = [client?.first_name, client?.last_name].filter(Boolean).join(' ');
 
@@ -620,6 +638,9 @@ export async function buildDocumentTemplateData(
       day: 'numeric',
     }),
     PROCESS_STATUS: String(legalProcess.status ?? ''),
+    FEE_AMOUNT: feeRow?.total_amount != null
+      ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(feeRow.total_amount))
+      : '',
     BANK_NAME: bankData?.bank_name ?? '',
     BANK_DOCUMENT_SLUG: bankData?.document_slug ?? '',
     BANK_DOCUMENT_NUMBER: bankData?.document_number ?? '',
@@ -742,6 +763,13 @@ async function executeGenerateDocument(
     }
   }
 
+  // Fetch fee
+  const { data: feeRow2 } = await (supabase as SupabaseClient & Record<string, unknown>)
+    .from('legal_process_fees')
+    .select('total_amount')
+    .eq('legal_process_id', context.legalProcess.id)
+    .maybeSingle() as { data: { total_amount: number } | null };
+
   const clientName = [context.clientData.first_name, context.clientData.last_name]
     .filter(Boolean).join(' ');
 
@@ -778,6 +806,9 @@ async function executeGenerateDocument(
       ? new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })
       : '',
     PROCESS_STATUS: String(context.legalProcess.status ?? ''),
+    FEE_AMOUNT: feeRow2?.total_amount != null
+      ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(feeRow2.total_amount))
+      : '',
     // Banking
     BANK_NAME: bankData?.bank_name ?? '',
     BANK_DOCUMENT_SLUG: bankData?.document_slug ?? '',

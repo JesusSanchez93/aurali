@@ -23,6 +23,7 @@ export const VARIABLE_GROUPS: Array<{ key: string; variables: VariableDef[] }> =
             { key: 'PROCESS_ID',     label: 'ID del Proceso' },
             { key: 'PROCESS_DATE',   label: 'Fecha del Proceso' },
             { key: 'PROCESS_STATUS', label: 'Estado del Proceso' },
+            { key: 'FEE_AMOUNT',     label: 'Valor del Proceso' },
         ],
     },
     {

@@ -9,9 +9,10 @@ import { toast } from 'sonner';
 import { FormSelect } from '@/components/common/form/form-select';
 import { useTranslations } from 'next-intl';
 import { FormInput } from '@/components/common/form/form-input';
+import { CurrencyInput } from '@/components/common/form/currency-input';
 import { Button } from '@/components/ui/button';
-import { Form } from '@/components/ui/form';
-import { createLegalProcessDraft } from '../actions';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { createLegalProcessDraft, setProcessFee } from '../actions';
 
 
 type Lawyer = { id: string; firstname: string | null; lastname: string | null; email: string | null };
@@ -40,6 +41,11 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
       .email(validationT('invalid_email'))
       .min(1, validationT('required')),
     assigned_to: z.string().min(1, validationT('required')),
+    total_amount: z.coerce
+      .number()
+      .min(0)
+      .refine((v) => v === 0 || v > 0, { message: validationT('required') })
+      .optional(),
   }), [validationT]);
 
   const lawyerOptions = lawyers.map((l) => ({
@@ -54,6 +60,7 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
       document_id: '',
       document_number: '',
       assigned_to: currentUserId,
+      total_amount: undefined,
     },
   });
 
@@ -65,11 +72,20 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
 
         const { label, key } = document;
 
-        await createLegalProcessDraft({
+        const { id: newProcessId } = await createLegalProcessDraft({
           ...values,
           document_type: label ?? '',
           document_slug: key ?? '',
         });
+
+        if (values.total_amount && values.total_amount > 0) {
+          try {
+            await setProcessFee(newProcessId, values.total_amount);
+          } catch {
+            // Non-blocking: fee can be set later from the detail view
+          }
+        }
+
         form.reset();
         toast.success(processT('form.success_toast'), {
           description: processT('form.success_desc'),
@@ -123,6 +139,25 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
             required
             disabled={isPending}
             options={lawyerOptions}
+          />
+          <FormField
+            control={form.control}
+            name="total_amount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium">{processT('payments.fee_label')}</FormLabel>
+                <FormControl>
+                  <CurrencyInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    disabled={isPending}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">{processT('payments.fee_helper')}</p>
+                <FormMessage />
+              </FormItem>
+            )}
           />
           <Button type="submit" disabled={isPending} className="mt-5">
             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -127,6 +127,31 @@
             "no_name": "Proceso no iniciado",
             "created": "Creado"
         },
+        "payments": {
+            "section_title": "Honorarios y pagos",
+            "total_fee": "Total acordado",
+            "total_paid": "Total pagado",
+            "remaining": "Pendiente",
+            "no_fee": "Sin honorarios registrados",
+            "register_btn": "Registrar pago",
+            "fully_paid_badge": "Pagado",
+            "modal_title": "Registrar pago",
+            "modal_description": "Registra un pago realizado por el cliente.",
+            "field_amount": "Monto",
+            "field_method": "Medio de pago",
+            "field_date": "Fecha de pago",
+            "field_reference": "Referencia",
+            "field_notes": "Notas",
+            "method_cash": "Efectivo",
+            "method_transfer": "Transferencia bancaria",
+            "method_card": "Tarjeta",
+            "method_nequi": "Nequi",
+            "method_daviplata": "Daviplata",
+            "method_other": "Otro",
+            "success": "Pago registrado",
+            "fee_label": "Valor del proceso",
+            "fee_helper": "Honorarios acordados con el cliente (opcional)"
+        },
         "filter": {
             "all": "Todos",
             "placeholder": "Filtrar por estado",
@@ -146,6 +171,11 @@
             "success_toast": "Proceso creado",
             "success_desc": "El proceso ha sido creado exitosamente.",
             "error_toast": "Error"
+        },
+        "resend_email": {
+            "trigger": "Reenviar email de inicio",
+            "success": "Email reenviado correctamente",
+            "error": "No se pudo reenviar el email"
         },
         "archive": {
             "trigger": "Archivar proceso",

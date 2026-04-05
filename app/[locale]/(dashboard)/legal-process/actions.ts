@@ -190,7 +190,7 @@ export async function createLegalProcessDraft(values: {
   document_number: string;
   email: string;
   assigned_to: string;
-}) {
+}): Promise<{ id: string }> {
   const traceId = randomUUID();
   const supabase = await createClient();
 
@@ -263,6 +263,7 @@ export async function createLegalProcessDraft(values: {
 
     const { data: newLegalProcess, error: legalProcessError } = await supabase
       .from('legal_processes')
+      // process_number is assigned by a DB trigger — not provided here
       .insert({
         status: 'draft',
         organization_id: organizationId,
@@ -271,7 +272,7 @@ export async function createLegalProcessDraft(values: {
         access_token: publicToken,
         access_token_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString(), // 72 hours
         created_by: user.id,
-      })
+      } as never)
       .select()
       .single();
 
@@ -345,6 +346,7 @@ export async function createLegalProcessDraft(values: {
     });
 
     revalidateLegalProcessPaths();
+    return { id: newLegalProcess.id };
   } catch (error) {
     const e = error as Error & { digest?: string };
     console.error('[legal-process/createLegalProcessDraft] failed', {
@@ -402,10 +404,25 @@ export async function getLegalProcessDetail(legalProcessId: string) {
     .eq('legal_process_id', legalProcessId)
     .single();
 
+  const [{ data: feeData }, { data: paymentsData }] = await Promise.all([
+    supabase
+      .from('legal_process_fees')
+      .select('id, total_amount, currency, notes')
+      .eq('legal_process_id', legalProcessId)
+      .maybeSingle(),
+    supabase
+      .from('legal_process_payments')
+      .select('id, amount, payment_method, payment_date, reference, notes, created_at')
+      .eq('legal_process_id', legalProcessId)
+      .order('payment_date', { ascending: true }),
+  ]);
+
   return {
     process: legalProcess,
     client: clientData ?? null,
     banking: bankingData ?? null,
+    fee: feeData ?? null,
+    payments: (paymentsData ?? []) as { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string }[],
   };
 }
 
@@ -1129,6 +1146,211 @@ export async function updateDocumentPreviewContent(
  * org-rep, etc.) so the client can substitute variables before saving the HTML
  * preview without running TipTap on the server.
  */
+// ─── Fees & Payments ──────────────────────────────────────────────────────────
+
+export async function setProcessFee(
+  legalProcessId: string,
+  totalAmount: number,
+  notes?: string,
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('organization_id')
+    .eq('id', legalProcessId)
+    .single();
+  if (!lp) throw new Error('Proceso no encontrado');
+
+  const { error } = await supabase
+    .from('legal_process_fees')
+    .upsert(
+      {
+        legal_process_id: legalProcessId,
+        organization_id: lp.organization_id!,
+        total_amount: totalAmount,
+        notes: notes ?? null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'legal_process_id' },
+    );
+
+  if (error) throw new Error(error.message);
+  revalidateLegalProcessPaths();
+}
+
+export type PaymentMethod = 'cash' | 'transfer' | 'card' | 'nequi' | 'daviplata' | 'other';
+
+export async function registerPayment(
+  legalProcessId: string,
+  data: {
+    amount: number;
+    paymentMethod: PaymentMethod;
+    paymentDate: string;
+    reference?: string;
+    notes?: string;
+  },
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('organization_id')
+    .eq('id', legalProcessId)
+    .single();
+  if (!lp) throw new Error('Proceso no encontrado');
+
+  const { error } = await supabase
+    .from('legal_process_payments')
+    .insert({
+      legal_process_id: legalProcessId,
+      organization_id: lp.organization_id!,
+      amount: data.amount,
+      payment_method: data.paymentMethod,
+      payment_date: data.paymentDate,
+      reference: data.reference ?? null,
+      notes: data.notes ?? null,
+    });
+
+  if (error) throw new Error(error.message);
+
+  void supabase.from('audit_logs').insert({
+    organization_id: lp.organization_id,
+    user_id: user.id,
+    action: 'payment_registered',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: {
+      amount: data.amount,
+      payment_method: data.paymentMethod,
+      payment_date: data.paymentDate,
+      reference: data.reference ?? null,
+    },
+  });
+
+  revalidateLegalProcessPaths();
+}
+
+export async function getProcessFeeAndPayments(legalProcessId: string): Promise<{
+  fee: { id: string; total_amount: number; currency: string; notes: string | null } | null;
+  payments: { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string }[];
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const [{ data: fee }, { data: payments }] = await Promise.all([
+    supabase
+      .from('legal_process_fees')
+      .select('id, total_amount, currency, notes')
+      .eq('legal_process_id', legalProcessId)
+      .maybeSingle(),
+    supabase
+      .from('legal_process_payments')
+      .select('id, amount, payment_method, payment_date, reference, notes, created_at')
+      .eq('legal_process_id', legalProcessId)
+      .order('payment_date', { ascending: true }),
+  ]);
+
+  return {
+    fee: fee ?? null,
+    payments: (payments ?? []) as { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string }[],
+  };
+}
+
+// ─── Document template data ───────────────────────────────────────────────────
+
+/**
+ * Resends the initial invitation email to the client for a draft process.
+ * Refreshes the access token expiry (72 h from now) and sends the form URL.
+ */
+export async function resendDraftEmail(legalProcessId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('status, organization_id, email')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!lp) throw new Error('Proceso no encontrado');
+  if (lp.status !== 'draft') throw new Error('Solo se puede reenviar el email en procesos en borrador');
+
+  // Generate a fresh token, reset used flag, and extend expiry to 72 h from now
+  const newToken = randomUUID();
+  const newExpiry = new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString();
+  await supabase
+    .from('legal_processes')
+    .update({ access_token: newToken, access_token_used: false, access_token_expires_at: newExpiry } as never)
+    .eq('id', legalProcessId);
+
+  const token = newToken;
+
+  const formUrl = `${process.env.NEXT_PUBLIC_APP_URL}/legal-process/validate-token?token=${token}`;
+
+  // Get client email (prefer legal_process_clients record, fall back to lp.email)
+  const { data: clientRecord } = await supabase
+    .from('legal_process_clients')
+    .select('email, first_name')
+    .eq('legal_process_id', legalProcessId)
+    .maybeSingle();
+
+  const toEmail = clientRecord?.email ?? lp.email;
+  if (!toEmail) throw new Error('No se encontró un email de destinatario');
+
+  // Fetch org name for email branding
+  const { data: org } = await (supabase as unknown as { from: (t: string) => { select: (s: string) => { eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: { name: string | null } | null }> } } } })
+    .from('organizations')
+    .select('name')
+    .eq('id', lp.organization_id ?? '')
+    .maybeSingle();
+
+  const orgName = org?.name ?? 'Aurali Legal';
+  const firstName = clientRecord?.first_name ?? '';
+  const greeting = firstName ? `Hola, ${firstName}` : 'Hola';
+
+  const bodyHtml = `<p>${greeting},</p><p>Te recordamos que tienes un proceso legal pendiente de iniciar. Por favor ingresa al siguiente enlace para completar tu información y dar inicio a tu proceso.</p>`;
+
+  const { resend } = await import('@/lib/resend');
+  const React = await import('react');
+  const { render } = await import('@react-email/render');
+  const { WorkflowEmail } = await import('@/emails/WorkflowEmail');
+
+  const html = await render(
+    React.createElement(WorkflowEmail, {
+      bodyHtml,
+      ctaUrl: formUrl,
+      ctaLabel: 'Completar formulario →',
+      subject: 'Tu proceso legal está listo para iniciarse',
+      theme: { orgName },
+    }),
+  );
+
+  const { error: emailError } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL ?? 'noreply@aurali.app',
+    to: toEmail,
+    subject: 'Tu proceso legal está listo para iniciarse',
+    html,
+  });
+
+  if (emailError) throw new Error(`Error al enviar el email: ${(emailError as { message: string }).message}`);
+
+  void supabase.from('audit_logs').insert({
+    organization_id: lp.organization_id,
+    user_id: user.id,
+    action: 'email_resent',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { to: toEmail, source: 'manual_resend' },
+  });
+}
+
 export async function getProcessTemplateData(
   legalProcessId: string,
 ): Promise<Record<string, string>> {

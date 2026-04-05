@@ -620,6 +620,9 @@ export type Database = {
           client_id: string | null
           created_at: string
           created_by: string | null
+          doc_validated_at: string | null
+          doc_validation_details: Json | null
+          doc_validation_status: string | null
           document_back_image: string | null
           document_front_image: string | null
           document_id: string | null
@@ -633,15 +636,15 @@ export type Database = {
           legal_process_id: string | null
           organization_id: string | null
           phone: string | null
-          doc_validation_status: string | null
-          doc_validation_details: Json | null
-          doc_validated_at: string | null
         }
         Insert: {
           address?: string | null
           client_id?: string | null
           created_at?: string
           created_by?: string | null
+          doc_validated_at?: string | null
+          doc_validation_details?: Json | null
+          doc_validation_status?: string | null
           document_back_image?: string | null
           document_front_image?: string | null
           document_id?: string | null
@@ -655,15 +658,15 @@ export type Database = {
           legal_process_id?: string | null
           organization_id?: string | null
           phone?: string | null
-          doc_validation_status?: string | null
-          doc_validation_details?: Json | null
-          doc_validated_at?: string | null
         }
         Update: {
           address?: string | null
           client_id?: string | null
           created_at?: string
           created_by?: string | null
+          doc_validated_at?: string | null
+          doc_validation_details?: Json | null
+          doc_validation_status?: string | null
           document_back_image?: string | null
           document_front_image?: string | null
           document_id?: string | null
@@ -677,9 +680,6 @@ export type Database = {
           legal_process_id?: string | null
           organization_id?: string | null
           phone?: string | null
-          doc_validation_status?: string | null
-          doc_validation_details?: Json | null
-          doc_validated_at?: string | null
         }
         Relationships: [
           {
@@ -712,6 +712,124 @@ export type Database = {
           },
         ]
       }
+      legal_process_fees: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          legal_process_id: string
+          notes: string | null
+          organization_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          legal_process_id: string
+          notes?: string | null
+          organization_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          legal_process_id?: string
+          notes?: string | null
+          organization_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_process_fees_legal_process_id_fkey"
+            columns: ["legal_process_id"]
+            isOneToOne: true
+            referencedRelation: "legal_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_fees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_process_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          gateway_provider: string | null
+          gateway_transaction_id: string | null
+          id: string
+          legal_process_id: string
+          notes: string | null
+          organization_id: string
+          payment_date: string
+          payment_method: string
+          reference: string | null
+          registered_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          gateway_provider?: string | null
+          gateway_transaction_id?: string | null
+          id?: string
+          legal_process_id: string
+          notes?: string | null
+          organization_id: string
+          payment_date?: string
+          payment_method: string
+          reference?: string | null
+          registered_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          gateway_provider?: string | null
+          gateway_transaction_id?: string | null
+          id?: string
+          legal_process_id?: string
+          notes?: string | null
+          organization_id?: string
+          payment_date?: string
+          payment_method?: string
+          reference?: string | null
+          registered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_process_payments_legal_process_id_fkey"
+            columns: ["legal_process_id"]
+            isOneToOne: false
+            referencedRelation: "legal_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_payments_registered_by_fkey"
+            columns: ["registered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_processes: {
         Row: {
           access_token: string | null
@@ -726,8 +844,10 @@ export type Database = {
           id: string
           lawyer_id: string | null
           organization_id: string | null
+          previous_status: string | null
           process_number: number
           status: string
+          status_note: string | null
           workflow_run_id: string | null
         }
         Insert: {
@@ -743,8 +863,10 @@ export type Database = {
           id?: string
           lawyer_id?: string | null
           organization_id?: string | null
-          process_number?: number
+          previous_status?: string | null
+          process_number: number
           status?: string
+          status_note?: string | null
           workflow_run_id?: string | null
         }
         Update: {
@@ -760,8 +882,10 @@ export type Database = {
           id?: string
           lawyer_id?: string | null
           organization_id?: string | null
+          previous_status?: string | null
           process_number?: number
           status?: string
+          status_note?: string | null
           workflow_run_id?: string | null
         }
         Relationships: [
@@ -1083,7 +1207,7 @@ export type Database = {
           signature_url: string | null
           system_role: string
           updated_at: string
-          workflow_guide_seen: boolean | null
+          workflow_guide_seen: boolean
         }
         Insert: {
           created_at?: string
@@ -1100,7 +1224,7 @@ export type Database = {
           signature_url?: string | null
           system_role?: string
           updated_at?: string
-          workflow_guide_seen?: boolean | null
+          workflow_guide_seen?: boolean
         }
         Update: {
           created_at?: string
@@ -1117,7 +1241,7 @@ export type Database = {
           signature_url?: string | null
           system_role?: string
           updated_at?: string
-          workflow_guide_seen?: boolean | null
+          workflow_guide_seen?: boolean
         }
         Relationships: []
       }
@@ -1411,6 +1535,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          icon_svg: string | null
           id: string
           is_default: boolean
           name: string
@@ -1420,6 +1545,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          icon_svg?: string | null
           id?: string
           is_default?: boolean
           name: string
@@ -1429,6 +1555,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          icon_svg?: string | null
           id?: string
           is_default?: boolean
           name?: string
@@ -1684,3 +1811,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -127,6 +127,31 @@
             "no_name": "Process not started",
             "created": "Created"
         },
+        "payments": {
+            "section_title": "Fees & payments",
+            "total_fee": "Agreed total",
+            "total_paid": "Total paid",
+            "remaining": "Remaining",
+            "no_fee": "No fee registered",
+            "register_btn": "Register payment",
+            "fully_paid_badge": "Paid",
+            "modal_title": "Register payment",
+            "modal_description": "Record a payment made by the client.",
+            "field_amount": "Amount",
+            "field_method": "Payment method",
+            "field_date": "Payment date",
+            "field_reference": "Reference",
+            "field_notes": "Notes",
+            "method_cash": "Cash",
+            "method_transfer": "Bank transfer",
+            "method_card": "Card",
+            "method_nequi": "Nequi",
+            "method_daviplata": "Daviplata",
+            "method_other": "Other",
+            "success": "Payment registered",
+            "fee_label": "Process fee",
+            "fee_helper": "Agreed fee with the client (optional)"
+        },
         "filter": {
             "all": "All",
             "placeholder": "Filter by status",
@@ -146,6 +171,11 @@
             "success_toast": "Process created",
             "success_desc": "The process has been created successfully.",
             "error_toast": "Error"
+        },
+        "resend_email": {
+            "trigger": "Resend welcome email",
+            "success": "Email sent successfully",
+            "error": "Failed to send email"
         },
         "archive": {
             "trigger": "Archive process",
