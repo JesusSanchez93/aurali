@@ -42,10 +42,8 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
       .min(1, validationT('required')),
     assigned_to: z.string().min(1, validationT('required')),
     total_amount: z.coerce
-      .number()
-      .min(0)
-      .refine((v) => v === 0 || v > 0, { message: validationT('required') })
-      .optional(),
+      .number({ required_error: validationT('required'), invalid_type_error: validationT('required') })
+      .positive({ message: validationT('required') }),
   }), [validationT]);
 
   const lawyerOptions = lawyers.map((l) => ({
@@ -78,12 +76,10 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
           document_slug: key ?? '',
         });
 
-        if (values.total_amount && values.total_amount > 0) {
-          try {
-            await setProcessFee(newProcessId, values.total_amount);
-          } catch {
-            // Non-blocking: fee can be set later from the detail view
-          }
+        try {
+          await setProcessFee(newProcessId, values.total_amount);
+        } catch {
+          // Non-blocking: fee can be set later from the detail view
         }
 
         form.reset();
@@ -145,7 +141,7 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
             name="total_amount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">{processT('payments.fee_label')}</FormLabel>
+                <FormLabel className="text-sm font-medium after:content-['*'] after:ml-0.5 after:text-destructive">{processT('payments.fee_label')}</FormLabel>
                 <FormControl>
                   <CurrencyInput
                     value={field.value}
@@ -154,7 +150,6 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
                     disabled={isPending}
                   />
                 </FormControl>
-                <p className="text-xs text-muted-foreground">{processT('payments.fee_helper')}</p>
                 <FormMessage />
               </FormItem>
             )}
