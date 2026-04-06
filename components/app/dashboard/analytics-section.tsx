@@ -232,7 +232,7 @@ export default function AnalyticsSection({ data }: { data: DashboardAnalytics })
                                     <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                                     <YAxis type="category" dataKey="bank" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={110} />
                                     <Tooltip content={<HorizontalTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
-                                    <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} maxBarSize={20} />
                                 </BarChart>
                             </ResponsiveContainer>
                         )}

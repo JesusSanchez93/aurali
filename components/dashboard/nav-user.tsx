@@ -134,7 +134,7 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={logout}
-              className="cursor-pointer text-red-600 hover:bg-red-100 focus:text-red-600 dark:text-red-500 dark:hover:bg-red-900"
+              className="cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive dark:hover:bg-destructive/20"
             >
               <LogOut />
               {t('logout')}

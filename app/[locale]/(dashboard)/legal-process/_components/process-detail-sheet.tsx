@@ -177,6 +177,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         <>
             <Sheet
                 size='2xl'
+                stickyHeader
                 open={open}
                 onOpenChange={(v) => {
                     if (!v && lightboxOpen) return;
@@ -195,7 +196,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                             {commonT('no_data')}
                         </div>
                     ) : (
-                        <div className="space-y-6 p-4 pt-0 overflow-y-auto max-h-[calc(100vh-0rem)]">
+                        <div className="space-y-6 p-4 pt-0">
                             {/* Status note banner */}
                             {(process as { status_note?: string | null })?.status_note && (
                                 <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30 px-4 py-3">
@@ -209,7 +210,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                             )}
 
                             {/* Status */}
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm font-medium text-muted-foreground">{processT('status.label')}:</span>
                                     <Badge
@@ -223,7 +224,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                     </Badge>
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 self-end sm:self-auto">
                                     {!isArchived && processId && !isTerminal && (
                                         <WorkflowActionButton
                                             legalProcessId={processId}
@@ -237,7 +238,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    className="h-7 w-7 p-0"
+                                                    className="h-11 w-11 sm:h-7 sm:w-7 p-0"
                                                     disabled={actioning}
                                                 >
                                                     <MoreHorizontal className="h-4 w-4" />
@@ -286,7 +287,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                             {/* Client Data */}
                             <div>
                                 <h4 className="text-sm font-semibold mb-3">{processT('sections.personal_data')}</h4>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field label={processT('fields.first_name')} value={client?.first_name} />
                                     <Field label={processT('fields.last_name')} value={client?.last_name} />
                                     <Field label={processT('fields.email')} value={client?.email} />
@@ -302,7 +303,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                     <Separator />
                                     <div>
                                         <h4 className="text-sm font-semibold mb-3">{processT('sections.document_images')}</h4>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {client?.document_front_image && (
                                                 <div className="space-y-1">
                                                     <p className="text-xs font-medium text-muted-foreground">{processT('fields.document_front')}</p>
@@ -363,7 +364,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                                         <p key={i} className="text-sm text-red-700 dark:text-red-300">{err}</p>
                                                     ))}
                                                     {details?.extractedData && (
-                                                        <div className="mt-2 grid grid-cols-2 gap-2 border-t border-red-200 pt-2 dark:border-red-800/40">
+                                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-red-200 pt-2 dark:border-red-800/40">
                                                             {details.extractedData.fullName != null && (
                                                                 <div>
                                                                     <p className="text-xs text-red-500 dark:text-red-400">Nombre en documento</p>
@@ -401,7 +402,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                             {/* Banking Data */}
                             <div>
                                 <h4 className="text-sm font-semibold mb-3">{processT('sections.banking_info')}</h4>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field label={processT('fields.bank_name')} value={banking?.bank_name} />
                                     <Field label={processT('fields.last_4_digits')} value={banking?.last_4_digits} />
                                 </div>
@@ -412,7 +413,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                             {/* Info about events */}
                             <div>
                                 <h4 className="text-sm font-semibold mb-3">{processT('sections.facts_info')}</h4>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field label={processT('fields.file_complait')} value={banking?.file_complait} />
                                     <Field label={processT('fields.no_signal')} value={banking?.no_signal} />
                                     <Field label={processT('fields.bank_notification')} value={banking?.bank_notification} />

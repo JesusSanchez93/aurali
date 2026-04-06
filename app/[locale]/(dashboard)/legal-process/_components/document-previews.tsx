@@ -140,7 +140,7 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
         </div>
 
         {/* ── Document cards ───────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {previews.map((doc) => {
             const createdAt = new Date(doc.created_at).toLocaleDateString('es', {
               day: '2-digit', month: 'short', year: 'numeric',
@@ -237,7 +237,8 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
             }}
           >
             {viewingDoc?.html_content && (
-              <div className="mx-auto w-[794px] bg-white shadow-2xl">
+              <div className="overflow-x-auto">
+              <div className="mx-auto w-[794px] min-w-[794px] bg-white shadow-2xl">
                 <iframe
                   srcDoc={withPreviewStyles(viewingDoc.html_content)}
                   title={viewingDoc.document_name ?? t('document_fallback')}
@@ -246,6 +247,7 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
                   className="block w-full border-none"
                   style={{ height: '2400px' }}
                 />
+              </div>
               </div>
             )}
           </div>
