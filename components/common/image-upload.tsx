@@ -116,11 +116,11 @@ export function ImageUpload({ required = false, value, onChange, onDeleteClick }
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 text-gray-500 transition hover:border-gray-400 hover:text-gray-600 bg-white dark:bg-black "
+            className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white text-gray-500 transition hover:border-gray-400 hover:text-gray-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-300"
             style={{ aspectRatio: 1.55 / 1 }}
           >
             <span className="text-sm">{t('click_to_upload_image')}</span>
-            <span className="text-xs text-gray-400">PNG, JPG, JPEG</span>
+            <span className="text-xs text-gray-400 dark:text-slate-500">PNG, JPG, JPEG</span>
           </button>
         </div>
       )}
@@ -145,7 +145,7 @@ export function ImageUpload({ required = false, value, onChange, onDeleteClick }
       {imageSrc && (
         <div
           style={{ margin: 0 }}
-          className="fixed left-0 top-0 z-20 h-full w-full bg-white"
+          className="fixed left-0 top-0 z-20 h-full w-full bg-white dark:bg-slate-950"
         >
           <div className="relative mx-auto h-full max-w-screen-sm">
             <Cropper

@@ -1,6 +1,6 @@
 'use client';
 
-import { AnimatePresence, animate, motion, useInView, useMotionValue, useScroll, useTransform } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, animate, motion, useInView, useMotionValue, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import {
   ArrowRight,
   BarChart3,
@@ -77,12 +77,30 @@ export function LandingPage({
   const t = useTranslations('landing');
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState('');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const sectionIds = ['features', 'benefits', 'how-it-works', 'pricing'];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection('#' + entry.target.id);
+        });
+      },
+      { rootMargin: '-40% 0px -55% 0px', threshold: 0 },
+    );
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -102,8 +120,8 @@ export function LandingPage({
   const navLinks = useMemo(
     () => [
       { href: '#features', label: t('nav.features') },
-      { href: '#benefits', label: t('nav.benefits') },
       { href: '#how-it-works', label: t('nav.howItWorks') },
+      { href: '#benefits', label: t('nav.benefits') },
       { href: '#pricing', label: t('nav.pricing') },
     ],
     [t],
@@ -190,6 +208,7 @@ export function LandingPage({
         menuOpen={menuOpen}
         isLoggedIn={isLoggedIn}
         platformHref={platformHref}
+        activeSection={activeSection}
         onMenuToggle={() => setMenuOpen((value) => !value)}
         onClose={() => setMenuOpen(false)}
       />
@@ -220,6 +239,7 @@ function LandingNav({
   menuOpen,
   isLoggedIn,
   platformHref,
+  activeSection,
   onMenuToggle,
   onClose,
 }: {
@@ -228,12 +248,21 @@ function LandingNav({
   menuOpen: boolean;
   isLoggedIn: boolean;
   platformHref: '/dashboard' | '/onboarding';
+  activeSection: string;
   onMenuToggle: () => void;
   onClose: () => void;
 }) {
   const t = useTranslations('landing');
   const accessHref = isLoggedIn ? platformHref : '/auth/login';
   const accessLabel = isLoggedIn ? t('nav.platformCta') : t('nav.cta');
+
+  function scrollToSection(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
+    const id = href.replace('#', '');
+    const el = document.getElementById(id);
+    if (!el) return;
+    e.preventDefault();
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   return (
     <>
@@ -253,19 +282,40 @@ function LandingNav({
             <span className="text-xl font-bold tracking-tight text-[var(--landing-primary)]">Aurali</span>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex">
-            {links.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-[color:var(--landing-muted)] transition-colors hover:text-[var(--landing-primary)]"
-              >
-                {link.label}
-              </a>
-            ))}
+          <nav className="hidden items-center gap-1 lg:flex">
+            <LayoutGroup id="landing-nav">
+              {links.map((link) => (
+                <motion.a
+                  key={link.href}
+                  href={link.href}
+                  onClick={(e) => scrollToSection(e, link.href)}
+                  className="relative rounded-full px-4 py-2 text-sm font-medium transition-colors hover:text-[var(--landing-primary)]"
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 20 }}
+                >
+                  {activeSection === link.href && (
+                    <motion.div
+                      layoutId="nav-pill"
+                      className="absolute inset-0 rounded-full bg-[rgba(30,27,75,0.07)]"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <span
+                    className={cn(
+                      'relative z-10 transition-colors',
+                      activeSection === link.href
+                        ? 'text-[var(--landing-primary)]'
+                        : 'text-[color:var(--landing-muted)]',
+                    )}
+                  >
+                    {link.label}
+                  </span>
+                </motion.a>
+              ))}
+            </LayoutGroup>
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 lg:flex">
             <LandingLanguageSwitcher />
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }}>
               <Button
@@ -281,7 +331,7 @@ function LandingNav({
             type="button"
             onClick={onMenuToggle}
             aria-label={t('nav.mobileAria')}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white/80 text-[var(--landing-primary)] shadow-sm backdrop-blur md:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white/80 text-[var(--landing-primary)] shadow-sm backdrop-blur lg:hidden"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -296,7 +346,7 @@ function LandingNav({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="fixed inset-x-0 bottom-0 top-[76px] z-40 bg-white/18 backdrop-blur-md md:hidden"
+              className="fixed inset-x-0 bottom-0 top-[76px] z-40 bg-white/18 backdrop-blur-md lg:hidden"
               style={{ willChange: 'opacity' }}
               onClick={onClose}
             />
@@ -305,7 +355,7 @@ function LandingNav({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -18 }}
               transition={entryTransition}
-              className="fixed inset-x-0 top-[76px] z-50 border-t border-black/5 bg-white/95 px-4 pb-6 pt-3 shadow-lg backdrop-blur md:hidden"
+              className="fixed inset-x-0 top-[76px] z-50 border-t border-black/5 bg-white/95 px-4 pb-6 pt-3 shadow-lg backdrop-blur lg:hidden"
               style={{ willChange: 'transform, opacity' }}
             >
               <div className="mx-auto flex max-w-7xl flex-col gap-2">
@@ -316,7 +366,7 @@ function LandingNav({
                   <a
                     key={link.href}
                     href={link.href}
-                    onClick={onClose}
+                    onClick={(e) => { scrollToSection(e, link.href); onClose(); }}
                     className="rounded-2xl px-4 py-3 text-sm font-medium text-[var(--landing-primary)] hover:bg-[rgba(124,58,237,0.08)]"
                   >
                     {link.label}
@@ -410,6 +460,7 @@ function LandingLanguageSwitcher() {
 }
 
 function HeroSection({ t }: { t: Translator }) {
+  const reducedMotion = useReducedMotion();
   const processSteps = [
     { icon: FolderKanban, label: t('hero.visual.steps.intake') },
     { icon: Bot, label: t('hero.visual.steps.generation') },
@@ -473,9 +524,11 @@ function HeroSection({ t }: { t: Translator }) {
             </motion.div>
             <motion.a
               whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
               transition={{ duration: 0.2 }}
               href="#how-it-works"
-              style={{ willChange: 'transform' }}
+              onClick={(e) => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+              style={{ willChange: 'transform', cursor: 'pointer' }}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 bg-white/80 px-7 py-3 text-sm font-medium text-[var(--landing-primary)] shadow-sm backdrop-blur"
             >
               {t('hero.secondaryCta')}
@@ -492,7 +545,7 @@ function HeroSection({ t }: { t: Translator }) {
           style={{ willChange: 'transform, opacity' }}
         >
           <motion.div
-            animate={{ y: [0, -8, 0] }}
+            animate={reducedMotion ? {} : { y: [0, -8, 0] }}
             transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
             className="absolute inset-x-8 top-12 -z-10 h-72 rounded-full bg-[radial-gradient(circle,_rgba(124,58,237,0.28)_0%,_rgba(124,58,237,0)_70%)] blur-3xl"
             style={{ willChange: 'transform' }}
@@ -745,8 +798,10 @@ function BenefitsSection({ t, benefits }: { t: Translator; benefits: string[] })
           <SectionHeader eyebrow={t('benefits.eyebrow')} title={t('benefits.title')} description={t('benefits.description')} align="left" />
           <div className="mt-10 space-y-5">
             <StatCard prefix="" suffix="%" value={80} label={t('benefits.stats.time')} />
-            <StatCard prefix="" suffix="x" value={3} label={t('benefits.stats.capacity')} />
-            <StatCard prefix="" suffix="" value={0} label={t('benefits.stats.manual')} />
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <StatCard prefix="" suffix="x" value={3} label={t('benefits.stats.capacity')} />
+              <StatCard prefix="" suffix="" value={0} label={t('benefits.stats.manual')} />
+            </div>
           </div>
         </div>
 
@@ -820,6 +875,7 @@ function TestimonialsSection({ t, testimonials }: { t: Translator; testimonials:
 }
 
 function FinalCtaSection({ t }: { t: Translator }) {
+  const reducedMotion = useReducedMotion();
   return (
     <section id="pricing" className="px-4 py-20 sm:px-6 lg:px-8">
       <motion.div
@@ -827,13 +883,13 @@ function FinalCtaSection({ t }: { t: Translator }) {
         className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-[var(--landing-primary)] via-[#2d226e] to-[var(--landing-accent)] px-6 py-14 text-white shadow-[0_40px_90px_-45px_rgba(30,27,75,0.9)] sm:px-10 lg:px-14"
       >
         <motion.div
-          animate={{ y: [0, -10, 0], x: [0, 6, 0] }}
+          animate={reducedMotion ? {} : { y: [0, -10, 0], x: [0, 6, 0] }}
           transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
           className="absolute left-8 top-8 h-40 w-40 rounded-full bg-[rgba(245,158,11,0.22)] blur-3xl"
           style={{ willChange: 'transform' }}
         />
         <motion.div
-          animate={{ y: [0, 10, 0], x: [0, -8, 0] }}
+          animate={reducedMotion ? {} : { y: [0, 10, 0], x: [0, -8, 0] }}
           transition={{ repeat: Infinity, duration: 7, ease: 'easeInOut' }}
           className="absolute bottom-0 right-0 h-52 w-52 rounded-full bg-[rgba(255,255,255,0.12)] blur-3xl"
           style={{ willChange: 'transform' }}

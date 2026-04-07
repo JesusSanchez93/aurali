@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
-import { FormInput } from '@/components/common/form/form-input';
+import { FormOtp } from '@/components/common/form/form-otp';
 import { Spinner } from '@/components/ui/spinner';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { ViewTransition } from 'react';
@@ -23,8 +23,8 @@ const formSchema = z.object({
     .min(1, 'Required field'),
   last_4_digits: z
     .string({ required_error: 'Required field' })
-    .trim()
-    .min(1, 'Required field'),
+    .length(4, 'Ingresa exactamente 4 dígitos')
+    .regex(/^\d+$/, 'Solo se permiten dígitos'),
   file_complait: z
     .boolean({ required_error: 'Required field' })
     .default(false),
@@ -115,11 +115,10 @@ export default function BankingInformationForm() {
               size='xl'
               required
             />
-            <FormInput
+            <FormOtp
               control={form.control}
               name="last_4_digits"
               label="Últimos cuatro dígitos del producto"
-              size='xl'
               required
             />
             <FormFileUpload

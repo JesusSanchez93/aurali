@@ -42,10 +42,12 @@ export function FormTextarea<T extends FieldValues>({
                 name={name}
                 render={({ field }) => (
                     <FormItem>
-                        <FormLabel htmlFor={id} className="text-sm font-medium">
-                            {label}
-                            {required && <span className="ml-0.5 text-red-500">*</span>}
-                        </FormLabel>
+                        {label && (
+                            <FormLabel htmlFor={id} className="text-sm font-medium">
+                                {label}
+                                {required && <span className="ml-0.5 text-red-500">*</span>}
+                            </FormLabel>
+                        )}
                         <FormControl>
                             <Textarea
                                 {...field}

@@ -57,12 +57,14 @@ export function FormSelect<T extends FieldValues>({
                 <SelectTrigger
                   id={id}
                   className={
-                    cn({ 'border-red-500 focus:ring-red-500': fieldState.error }, 'bg-white dark:bg-black ',
-                      size === 'sm' && 'h-8 text-sm',
-                      size === 'md' && 'h-9 text-base',
-                      size === 'lg' && 'h-10 text-lg',
-                      size === 'xl' && 'h-12 text-xl',
-                      size === '2xl' && 'h-16 text-2xl',
+                    cn(
+                      'bg-background',
+                      { 'border-red-500 focus:ring-red-500': fieldState.error },
+                      size === 'sm' && 'h-11 sm:h-8 text-sm',
+                      size === 'md' && 'h-11 sm:h-9 text-base',
+                      size === 'lg' && 'h-12 sm:h-12 text-lg',
+                      size === 'xl' && 'h-12 sm:h-12 text-xl',
+                      size === '2xl' && 'h-16 sm:h-16 text-2xl',
                     )
                   }
                 >

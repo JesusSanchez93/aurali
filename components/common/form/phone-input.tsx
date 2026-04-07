@@ -110,11 +110,12 @@ const CountrySelect = ({
           variant="outline"
           className={cn(
             'flex gap-1 rounded-e-none rounded-s-lg border-r-0 px-3 focus:z-10',
-            size === 'sm' && 'h-8 text-sm',
-            size === 'md' && 'h-9 text-base',
-            size === 'lg' && 'h-10 text-lg',
-            size === 'xl' && 'h-12 text-xl',
-            size === '2xl' && 'h-16 text-2xl',
+            size === 'sm' && 'h-11 sm:h-8 text-sm',
+            size === 'md' && 'h-11 sm:h-9 text-base',
+            size === 'lg' && 'h-12 sm:h-12 text-lg',
+            size === 'xl' && 'h-12 sm:h-12 text-xl',
+            size === '2xl' && 'h-16 sm:h-16 text-2xl',
+            !size && 'h-11 sm:h-9',
           )}
           disabled={disabled}
         >

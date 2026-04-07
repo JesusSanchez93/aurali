@@ -22,7 +22,7 @@ export default function Stepper({ steps, currentStep }: StepperProps) {
                             {index === 0 && <div className="flex-1" />}
                             {/* Line */}
                             {(index !== 0) && (
-                                <div className={`flex-1 h-0.5 transition-all ${beforeCurrentStepIsCompleted ? "bg-green-500" : "bg-gray-300"}`} />
+                                <div className={`flex-1 h-0.5 transition-all ${beforeCurrentStepIsCompleted ? "bg-green-500" : "bg-gray-300 dark:bg-slate-700"}`} />
                             )}
 
                             <div className="flex flex-col items-center gap-2 relative">
@@ -32,7 +32,7 @@ export default function Stepper({ steps, currentStep }: StepperProps) {
                                         `flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all 
                                         ${isCompleted ? "" : "mx-2"}
                                     ${isCompleted ? "bg-green-500 border-green-500 text-white" : ""}
-                                    ${isActive ? "border-blue-500 text-blue-500" : "border-gray-300 text-gray-400"}`}
+                                    ${isActive ? "border-blue-500 text-blue-500" : "border-gray-300 dark:border-slate-600 text-gray-400 dark:text-slate-500"}`}
                                 >
                                     {isCompleted ? <Check size={18} /> : index + 1}
                                 </div>
@@ -40,7 +40,7 @@ export default function Stepper({ steps, currentStep }: StepperProps) {
 
                             {/* Line */}
                             {index !== steps.length - 1 && (
-                                <div className={`flex-1 h-0.5 transition-all ${isCompleted ? "bg-green-500" : "bg-gray-300"}`} />
+                                <div className={`flex-1 h-0.5 transition-all ${isCompleted ? "bg-green-500" : "bg-gray-300 dark:bg-slate-700"}`} />
                             )}
 
                             {/* Line */}
@@ -57,7 +57,7 @@ export default function Stepper({ steps, currentStep }: StepperProps) {
                         <div key={index} className="flex justify-center items-center w-full">
                             <div className="flex flex-col items-center gap-2">
                                 <div className="text-sm font-medium text-center">
-                                    <p className={isActive ? "text-blue-600" : "text-gray-500"}>
+                                    <p className={isActive ? "text-blue-500" : "text-gray-500 dark:text-slate-400"}>
                                         {step}
                                     </p>
                                 </div>

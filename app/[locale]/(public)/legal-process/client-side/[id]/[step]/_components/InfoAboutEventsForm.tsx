@@ -1,7 +1,7 @@
 'use client';
 
 import { z } from 'zod';
-import { useTransition, useEffect } from 'react';
+import { useTransition, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ import { useLegalProcessBankingData, useLegalProcessId } from '@/app/[locale]/(p
 import { useRouter } from 'next/navigation';
 import { FormSwitch } from '@/components/common/form/form-switch';
 import { FormTextarea } from '@/components/common/form/form-textarea';
+import { AudioRecorderModal } from '@/components/common/audio-recorder-modal';
+import { Mic } from 'lucide-react';
 
 const formSchema = z.object({
     file_complait: z
@@ -53,6 +55,7 @@ export default function InfoAboutEventsForm() {
     const id = useLegalProcessId();
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const [audioModalOpen, setAudioModalOpen] = useState(false);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -154,13 +157,43 @@ export default function InfoAboutEventsForm() {
                         />
                     </div>
                     <div className="grid grid-cols-1 gap-6 mt-5">
-                        <FormTextarea
-                            control={form.control}
-                            name="fraud_incident_summary"
-                            label="Redactar breve relato de los hechos sucedidos"
-                            required
-                        />
+                        <div>
+                            <div className="mb-1.5 flex items-center justify-between">
+                                <span className="text-sm font-medium">
+                                    Redactar breve relato de los hechos sucedidos
+                                    <span className="ml-0.5 text-red-500">*</span>
+                                </span>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 rounded-full text-xs"
+                                    onClick={() => setAudioModalOpen(true)}
+                                >
+                                    <Mic className="h-3.5 w-3.5" />
+                                    Grabar audio
+                                </Button>
+                            </div>
+                            <FormTextarea
+                                control={form.control}
+                                name="fraud_incident_summary"
+                                label=""
+                                required
+                                rows={10}
+                            />
+                        </div>
                     </div>
+
+                    <AudioRecorderModal
+                        open={audioModalOpen}
+                        onOpenChange={setAudioModalOpen}
+                        onComplete={(text) =>
+                            form.setValue('fraud_incident_summary', text, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                            })
+                        }
+                    />
                     <ViewTransition name="onboarding-form-footer">
                         <div className="mt-6 flex justify-between">
                             <Button
