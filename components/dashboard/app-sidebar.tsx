@@ -9,7 +9,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -61,11 +61,11 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset">
+      <SidebarHeader className="px-4 py-3">
+        <Logo size={22} />
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>
-            <Logo size={22} />
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {

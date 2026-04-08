@@ -28,7 +28,9 @@ export function AppNavBar() {
           orientation="vertical"
           className="mx-2 shrink-0 bg-border data-[orientation=horizontal]:h-px data-[orientation=vertical]:h-4 data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px"
         />
-        {activeItem ? t(activeItem.titleKey) : ''}
+        <span className="text-sm font-semibold">
+          {activeItem ? t(activeItem.titleKey) : ''}
+        </span>
         <div className="flex-auto" />
         <div className="flex items-center gap-2">
           <LanguageSwitcher />
