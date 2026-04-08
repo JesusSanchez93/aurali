@@ -299,8 +299,9 @@ async function executeSendEmail(
     return { status: 'failed', output: {}, error: 'Campo "to" vacío o sin resolver' };
   }
 
-  // Extract form_url from context — it becomes the CTA button, not inline text
-  const formUrl = (context.legalProcess as unknown as Record<string, unknown>).form_url as string | undefined;
+  // Extract form_url from context — it becomes the CTA button only when the process is still in draft
+  const rawFormUrl = (context.legalProcess as unknown as Record<string, unknown>).form_url as string | undefined;
+  const formUrl = context.legalProcess.status === 'draft' ? rawFormUrl : undefined;
 
   // Strip {{form_url}} BEFORE substituteVars so the URL never gets injected into the body
   // (TipTap may render it as <a href="{{form_url}}">{{form_url}}</a>)
