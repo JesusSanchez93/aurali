@@ -74,6 +74,9 @@ Auth lives at `app/[locale]/auth/`. API routes at `app/api/` (PDF generation, wo
 `components/ui/` — shadcn/ui primitives (don't modify directly).
 Feature components live in `components/app/`, `components/auth/`, `components/dashboard/`, etc.
 
+**Common components** (`components/common/`) — reusable wrappers over shadcn primitives. Always use these instead of the raw `components/ui/` equivalents:
+- `components/common/sheet.tsx` — Sheet wrapper with `title`, `body`, `footer`, `size`, `stickyHeader`, `stickyFooter` props. Use `size="3xl"` for wide forms. **Never import directly from `@/components/ui/sheet` in feature components.**
+
 ## Commit Conventions
 
 - **Spanish** for domain logic (features, fixes, business refactors)

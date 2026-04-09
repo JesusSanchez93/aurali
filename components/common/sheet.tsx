@@ -22,7 +22,7 @@ interface Props {
   footer?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
   stickyHeader?: boolean;
   stickyFooter?: boolean;
 }

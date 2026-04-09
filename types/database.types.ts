@@ -34,6 +34,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_variables: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          examples: string[] | null
+          id: string
+          key: string
+          name: string
+          organization_id: string | null
+          prompt: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          examples?: string[] | null
+          id?: string
+          key: string
+          name: string
+          organization_id?: string | null
+          prompt: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          examples?: string[] | null
+          id?: string
+          key?: string
+          name?: string
+          organization_id?: string | null
+          prompt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_variables_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_variables_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string | null
