@@ -15,6 +15,7 @@ import { FormInput } from '@/components/common/form/form-input';
 import { FormSelect } from '@/components/common/form/form-select';
 import Tiptap, { type TiptapHandle } from '@/components/common/tip-tap';
 import VariablesPanel from './variables-panel';
+import type { AiVariable } from '@/app/[locale]/(dashboard)/settings/ai-variables/actions';
 import { createTemplate, updateTemplate } from '../actions';
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
@@ -57,6 +58,7 @@ interface Props {
     template?: Template;
     headers?: DocOption[];
     footers?: DocOption[];
+    aiVariables?: AiVariable[];
 }
 
 // ─── TipTap JSON → HTML ───────────────────────────────────────────────────────
@@ -195,7 +197,7 @@ function PreviewModal({
 }
 
 // ─── Main form ────────────────────────────────────────────────────────────────
-export default function TemplateForm({ template, headers = [], footers = [] }: Props) {
+export default function TemplateForm({ template, headers = [], footers = [], aiVariables = [] }: Props) {
     const t = useTranslations('formats');
     const commonT = useTranslations('common');
     const router = useRouter();
@@ -377,6 +379,7 @@ export default function TemplateForm({ template, headers = [], footers = [] }: P
                         {/* Variables panel */}
                         <VariablesPanel
                             onInsert={(variable) => tiptapRef.current?.insertVariable(variable)}
+                            aiVariables={aiVariables}
                         />
                     </div>
                 </form>

@@ -24,6 +24,7 @@ import {
   buildPuppeteerFooterTemplate,
 } from './htmlRenderer';
 import { htmlToPdf } from './pdfGenerator';
+import { extractAiVariableKeys, resolveAiVariables } from '@/lib/anthropic/resolveAiVariables';
 import { DEFAULT_TEMPLATES } from './templates/index';
 import { generateHTML } from '@tiptap/html/server';
 import { Node, mergeAttributes } from '@tiptap/core';
@@ -268,6 +269,19 @@ export async function generateDocument(
     throw new Error(`La plantilla "${template.name}" no tiene contenido definido.`);
   }
 
+  // ── 2a. Resolve AI variables (keys prefixed with AI_) ────────────────────
+  // Scan the template for AI_ variable keys, call Claude with the full process
+  // context, and merge the generated text into `data` before substitution.
+  if (legalProcessId) {
+    const sourceContent = editedTiptapContent ?? template.content;
+    const aiKeys = extractAiVariableKeys(sourceContent);
+    if (aiKeys.length > 0) {
+      const orgId = organizationId ?? template.organization_id;
+      const aiValues = await resolveAiVariables(legalProcessId, orgId, aiKeys);
+      Object.assign(data, aiValues);
+    }
+  }
+
   // ── 2. Resolve TipTap content ─────────────────────────────────────────────
   // When editedTiptapContent is provided (lawyer edited the preview), use it
   // directly. Variable chips render as {VAR} tokens via renderHTML and are
@@ -424,6 +438,7 @@ export interface GeneratePreviewHtmlResult {
 export async function generatePreviewHtml(
   templateId: string,
   data: Record<string, string>,
+  options?: { legalProcessId?: string; organizationId?: string },
 ): Promise<GeneratePreviewHtmlResult> {
   const supabase = await createClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -442,6 +457,16 @@ export async function generatePreviewHtml(
 
   if (!template.content) {
     throw new Error(`La plantilla "${template.name}" no tiene contenido definido.`);
+  }
+
+  // ── 2a. Resolve AI variables ──────────────────────────────────────────────
+  if (options?.legalProcessId) {
+    const aiKeys = extractAiVariableKeys(template.content);
+    if (aiKeys.length > 0) {
+      const orgId = options.organizationId ?? template.organization_id;
+      const aiValues = await resolveAiVariables(options.legalProcessId, orgId, aiKeys);
+      Object.assign(data, aiValues);
+    }
   }
 
   // ── 2. Substitute variables in TipTap JSON (for editor) ──────────────────

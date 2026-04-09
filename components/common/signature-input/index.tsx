@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import SignaturePad from 'signature_pad';
+import { getStroke } from 'perfect-freehand';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ImageCropModal } from '@/components/app/settings/image-crop-modal';
@@ -43,65 +43,161 @@ function useSignatureFonts() {
   }, []);
 }
 
+// ─── Color picker ─────────────────────────────────────────────────────────────
+
+const COLORS = [
+  { id: 'black', value: '#1a1a1a' },
+  { id: 'blue',  value: '#1d4ed8' },
+  { id: 'red',   value: '#dc2626' },
+] as const;
+
+type ColorValue = typeof COLORS[number]['value'];
+
+function ColorPicker({
+  color,
+  onChange,
+}: {
+  color: ColorValue;
+  onChange: (c: ColorValue) => void;
+}) {
+  return (
+    <div className="absolute bottom-2.5 right-2.5 flex gap-1.5 z-10">
+      {COLORS.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onChange(c.value); }}
+          className={cn(
+            'h-5 w-5 rounded-full border-2 transition-transform hover:scale-110',
+            color === c.value ? 'border-foreground scale-110 shadow-sm' : 'border-white/80 shadow',
+          )}
+          style={{ backgroundColor: c.value }}
+          aria-label={c.id}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── perfect-freehand helpers ─────────────────────────────────────────────────
+
+const STROKE_OPTIONS = {
+  size: 4,
+  thinning: 0.6,
+  smoothing: 0.5,
+  streamline: 0.5,
+  simulatePressure: true,
+};
+
+/** Converts a perfect-freehand stroke (array of [x,y]) to an SVG path `d` string. */
+function getSvgPathFromStroke(stroke: number[][]): string {
+  if (stroke.length < 2) return '';
+  const [first, ...rest] = stroke;
+  const d = [`M ${first[0].toFixed(2)} ${first[1].toFixed(2)}`];
+  for (let i = 0; i < rest.length - 1; i++) {
+    const [x0, y0] = rest[i];
+    const [x1, y1] = rest[i + 1];
+    d.push(`Q ${x0.toFixed(2)} ${y0.toFixed(2)} ${((x0 + x1) / 2).toFixed(2)} ${((y0 + y1) / 2).toFixed(2)}`);
+  }
+  const last = rest[rest.length - 1];
+  d.push(`L ${last[0].toFixed(2)} ${last[1].toFixed(2)}`);
+  d.push('Z');
+  return d.join(' ');
+}
+
 // ─── Draw tab ─────────────────────────────────────────────────────────────────
 
 function DrawTab({ onResult }: { onResult: (b64: string) => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const padRef    = useRef<SignaturePad | null>(null);
-  const [isEmpty, setIsEmpty] = useState(true);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [strokes, setStrokes] = useState<number[][][]>([]);
+  const [currentStroke, setCurrentStroke] = useState<number[][] | null>(null);
+  const [color, setColor] = useState<ColorValue>(COLORS[0].value);
 
-  // Initialize SignaturePad once the canvas mounts
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const isEmpty = strokes.length === 0 && !currentStroke;
 
-    // Resize to actual display pixels (HiDPI support)
-    const ratio = window.devicePixelRatio || 1;
-    canvas.width  = canvas.offsetWidth  * ratio;
-    canvas.height = canvas.offsetHeight * ratio;
-    const ctx = canvas.getContext('2d')!;
-    ctx.scale(ratio, ratio);
+  function getPoint(e: React.PointerEvent<SVGSVGElement>): number[] {
+    const rect = svgRef.current!.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top, e.pressure || 0.5];
+  }
 
-    const pad = new SignaturePad(canvas, {
-      penColor: '#1a1a1a',
-      backgroundColor: 'rgba(0,0,0,0)',
-      minWidth: 1,
-      maxWidth: 3,
-    });
+  function handlePointerDown(e: React.PointerEvent<SVGSVGElement>) {
+    (e.target as Element).setPointerCapture(e.pointerId);
+    setCurrentStroke([getPoint(e)]);
+  }
 
-    pad.addEventListener('endStroke', () => setIsEmpty(pad.isEmpty()));
-    padRef.current = pad;
+  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    if (!currentStroke) return;
+    setCurrentStroke((prev) => [...(prev ?? []), getPoint(e)]);
+  }
 
-    return () => pad.off();
-  }, []);
+  function handlePointerUp() {
+    if (currentStroke && currentStroke.length > 0) {
+      setStrokes((prev) => [...prev, currentStroke]);
+    }
+    setCurrentStroke(null);
+  }
 
   function handleClear() {
-    padRef.current?.clear();
-    setIsEmpty(true);
+    setStrokes([]);
+    setCurrentStroke(null);
   }
 
   function handleConfirm() {
-    if (!padRef.current || padRef.current.isEmpty()) return;
-    // Export as PNG with white background
-    const canvas = canvasRef.current!;
-    const offscreen = document.createElement('canvas');
-    offscreen.width  = canvas.width;
-    offscreen.height = canvas.height;
-    const ctx = offscreen.getContext('2d')!;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, offscreen.width, offscreen.height);
-    ctx.drawImage(canvas, 0, 0);
-    onResult(offscreen.toDataURL('image/png'));
+    if (strokes.length === 0) return;
+    const svgEl = svgRef.current!;
+    const { width, height } = svgEl.getBoundingClientRect();
+
+    svgEl.setAttribute('width', String(width));
+    svgEl.setAttribute('height', String(height));
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    svgEl.removeAttribute('width');
+    svgEl.removeAttribute('height');
+
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const ratio = window.devicePixelRatio || 1;
+      const canvas = document.createElement('canvas');
+      canvas.width  = width  * ratio;
+      canvas.height = height * ratio;
+      const ctx = canvas.getContext('2d')!;
+      ctx.scale(ratio, ratio);
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      onResult(canvas.toDataURL('image/png'));
+    };
+    img.src = url;
   }
 
   return (
     <div className="space-y-3">
       <div className="relative rounded-lg border-2 border-dashed border-muted-foreground/30 bg-white overflow-hidden">
-        <canvas
-          ref={canvasRef}
-          className="block w-full touch-none"
+        <svg
+          ref={svgRef}
+          className="block w-full touch-none cursor-crosshair"
           style={{ height: 200 }}
-        />
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+        >
+          <rect width="100%" height="100%" fill="transparent" />
+          {strokes.map((pts, i) => (
+            <path
+              key={i}
+              d={getSvgPathFromStroke(getStroke(pts, STROKE_OPTIONS))}
+              fill={color}
+            />
+          ))}
+          {currentStroke && currentStroke.length > 0 && (
+            <path
+              d={getSvgPathFromStroke(getStroke(currentStroke, STROKE_OPTIONS))}
+              fill={color}
+            />
+          )}
+        </svg>
+
         {isEmpty && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <p className="text-sm text-muted-foreground/50 select-none">
@@ -109,6 +205,9 @@ function DrawTab({ onResult }: { onResult: (b64: string) => void }) {
             </p>
           </div>
         )}
+
+        <span className="pointer-events-none absolute left-[8%] right-[8%] top-[70%] border-t border-dashed border-slate-300" />
+        <ColorPicker color={color} onChange={setColor} />
       </div>
 
       <div className="flex items-center justify-between">
@@ -129,17 +228,16 @@ function DrawTab({ onResult }: { onResult: (b64: string) => void }) {
 function TypeTab({ onResult }: { onResult: (b64: string) => void }) {
   useSignatureFonts();
 
-  const [text, setText]         = useState('');
-  const [fontId, setFontId]     = useState(FONTS[0].id);
-  const previewRef              = useRef<HTMLDivElement>(null);
+  const [text, setText]     = useState('');
+  const [fontId, setFontId] = useState(FONTS[0].id);
+  const [color, setColor]   = useState<ColorValue>(COLORS[0].value);
+  const previewRef          = useRef<HTMLDivElement>(null);
 
   const selectedFont = FONTS.find((f) => f.id === fontId)!;
 
   function handleConfirm() {
     if (!text.trim() || !previewRef.current) return;
 
-    // Render the preview div to a canvas via a foreign-object SVG trick
-    // to capture the exact font rendering.
     const el = previewRef.current;
     const { width, height } = el.getBoundingClientRect();
 
@@ -149,14 +247,11 @@ function TypeTab({ onResult }: { onResult: (b64: string) => void }) {
     canvas.height = height * ratio;
     const ctx = canvas.getContext('2d')!;
     ctx.scale(ratio, ratio);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
 
-    // Draw text centred in the canvas
     const fontSize = Math.min(height * 0.6, 72);
-    ctx.font        = `${fontSize}px ${selectedFont.family}`;
-    ctx.fillStyle   = '#1a1a1a';
-    ctx.textAlign   = 'center';
+    ctx.font         = `${fontSize}px ${selectedFont.family}`;
+    ctx.fillStyle    = color;
+    ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, width / 2, height / 2);
 
@@ -194,12 +289,16 @@ function TypeTab({ onResult }: { onResult: (b64: string) => void }) {
       </div>
 
       {/* Preview */}
-      <div
-        ref={previewRef}
-        className="flex h-[120px] w-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-white overflow-hidden px-4"
-        style={{ fontFamily: selectedFont.family, fontSize: 'clamp(28px, 8vw, 64px)', color: '#1a1a1a', lineHeight: 1 }}
-      >
-        {text || <span className="text-muted-foreground/40 text-sm font-sans">Vista previa</span>}
+      <div className="relative">
+        <div
+          ref={previewRef}
+          className="flex h-[200px] w-full items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 bg-white overflow-hidden px-4"
+          style={{ fontFamily: selectedFont.family, fontSize: 'clamp(28px, 8vw, 64px)', color, lineHeight: 1 }}
+        >
+          {text || <span className="text-muted-foreground/40 text-sm font-sans">Vista previa</span>}
+          <span className="pointer-events-none absolute left-[8%] right-[8%] top-[70%] border-t border-dashed border-slate-300" />
+        </div>
+        <ColorPicker color={color} onChange={setColor} />
       </div>
 
       <div className="flex justify-end">

@@ -844,7 +844,10 @@ async function executeGenerateDocument(
       let name: string;
       let tiptapContent: unknown;
       try {
-        ({ html, name, tiptapContent } = await generatePreviewHtml(tid, templateData));
+        ({ html, name, tiptapContent } = await generatePreviewHtml(tid, templateData, {
+          legalProcessId: context.legalProcess.id,
+          organizationId: context.legalProcess.organization_id ?? undefined,
+        }));
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         return { status: 'failed', output: {}, error: `Error generando vista previa ${tid}: ${message}` };

@@ -42,6 +42,7 @@ type Props = {
 export default function AccountProfileSection({ profile, documentTypeOptions, memberships }: Props) {
   const processT = useTranslations('process.fields');
   const validationT = useTranslations('common.validation');
+  const t = useTranslations('settings.account');
   const [isPending, startTransition] = useTransition();
 
   // ── Signature state ───────────────────────────────────────────────────────
@@ -55,9 +56,9 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
       try {
         const url = await uploadProfileSignature(base64);
         setSignatureUrl(url);
-        toast.success('Firma guardada');
+        toast.success(t('signature_saved'));
       } catch {
-        toast.error('Error al guardar la firma');
+        toast.error(t('signature_save_error'));
       }
     });
   }
@@ -67,9 +68,9 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
       try {
         await deleteProfileSignature();
         setSignatureUrl(null);
-        toast.success('Firma eliminada');
+        toast.success(t('signature_deleted'));
       } catch {
-        toast.error('Error al eliminar la firma');
+        toast.error(t('signature_delete_error'));
       }
     });
   }
@@ -103,9 +104,9 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
           ...values,
           professional_card_number: values.professional_card_number || undefined,
         });
-        toast.success('Perfil actualizado');
+        toast.success(t('profile_updated'));
       } catch {
-        toast.error('Error al actualizar el perfil');
+        toast.error(t('profile_update_error'));
       }
     });
   }
@@ -115,7 +116,11 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
 
       {/* ── Personal data ─────────────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Datos personales</h2>
+        <div>
+          <h2 className="text-lg font-semibold">{t('personal_data')}</h2>
+          <p className="text-sm text-muted-foreground">{t('personal_data_description')}</p>
+        </div>
+        <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] flex flex-col sm:flex-row gap-8">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -164,74 +169,100 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
             <div className="flex justify-end">
               <Button type="submit" disabled={isPending}>
                 {isPending ? <Spinner className="mr-2 h-4 w-4" /> : null}
-                Guardar cambios
+                {t('save_changes')}
               </Button>
             </div>
           </form>
         </Form>
+        </div>
       </section>
+      
 
       {/* ── Signature ─────────────────────────────────────────────────────── */}
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold">Firma</h2>
+          <h2 className="text-lg font-semibold">{t('signature_title')}</h2>
           <p className="text-sm text-muted-foreground">
-            Imagen que se insertará automáticamente en los documentos generados.
+            {t('signature_description')}
           </p>
         </div>
 
         {signatureUrl ? (
-          /* ── Has signature: preview + actions ── */
-          <div className="flex items-start gap-4 rounded-lg border p-4">
-            <div className="flex-shrink-0 rounded border bg-white p-3 shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={signatureUrl}
-                alt="Firma"
-                className="block max-h-20 max-w-[200px] object-contain"
-              />
+          /* ── Has signature: card with preview + metadata ── */
+          <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] flex flex-col sm:flex-row gap-8">
+            {/* Signature canvas area */}
+            <div className="flex-shrink-0 w-full sm:w-auto">
+              <div className="relative flex w-full sm:w-72 items-center justify-center rounded-lg border border-dashed p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={signatureUrl}
+                  alt="Firma"
+                  className="relative z-10 block max-h-full max-w-full object-contain"
+                />
+                <span className="pointer-events-none absolute left-[8%] right-[8%] top-[70%] border-t border-dashed border-slate-300" />
+              </div>
             </div>
-            <div className="flex flex-col gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={signaturePending}
-                onClick={() => setSignatureDialogOpen(true)}
-              >
-                <PenLine className="mr-2 h-4 w-4" />
-                Cambiar firma
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                disabled={signaturePending}
-                onClick={handleDeleteSignature}
-              >
-                {signaturePending
-                  ? <Spinner className="mr-2 h-4 w-4" />
-                  : <Trash2 className="mr-2 h-4 w-4" />
-                }
-                Eliminar
-              </Button>
+
+            {/* Metadata + actions */}
+            <div className="flex flex-1 flex-col gap-4 w-full">
+              {/* Status badge */}
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                {t('signature_registered')}
+              </span>
+
+              {/* Meta info */}
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  {t('signature_status_label')}
+                </p>
+                <p className="text-sm text-foreground">{t('signature_status_active')}</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={signaturePending}
+                  onClick={() => setSignatureDialogOpen(true)}
+                >
+                  <PenLine className="mr-1.5 h-3.5 w-3.5" />
+                  {t('signature_change')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={signaturePending}
+                  onClick={handleDeleteSignature}
+                >
+                  {signaturePending
+                    ? <Spinner className="mr-1.5 h-3.5 w-3.5" />
+                    : <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  }
+                  {t('signature_delete')}
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
-          /* ── No signature: open dialog ── */
+          /* ── No signature: empty state ── */
           <button
             type="button"
             disabled={signaturePending}
             onClick={() => setSignatureDialogOpen(true)}
-            className="flex h-28 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 text-sm text-muted-foreground transition hover:border-muted-foreground/60 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+            className="flex h-36 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/25 text-muted-foreground transition hover:border-muted-foreground/50 hover:bg-muted/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
           >
             {signaturePending ? (
-              <Spinner className="h-5 w-5" />
+              <Spinner className="h-6 w-6" />
             ) : (
               <>
-                <PenLine className="h-5 w-5" />
-                Crear firma
+                <PenLine className="h-6 w-6 opacity-40" />
+                <span className="text-sm font-medium">{t('signature_create')}</span>
+                <span className="text-xs opacity-60">{t('signature_empty_hint')}</span>
               </>
             )}
           </button>
@@ -241,7 +272,7 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
         <Dialog open={signatureDialogOpen} onOpenChange={setSignatureDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Crear firma</DialogTitle>
+              <DialogTitle>{t('signature_create')}</DialogTitle>
             </DialogHeader>
             <SignatureInput
               onConfirm={handleSignatureConfirm}
@@ -253,9 +284,13 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
 
       {/* ── Organizations ─────────────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Organizaciones</h2>
+        <div>
+          <h2 className="text-lg font-semibold">{t('organizations_title')}</h2>
+          <p className="text-sm text-muted-foreground">{t('organizations_description')}</p>
+        </div>
+        <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] flex flex-col gap-8">
         {memberships.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sin organizaciones.</p>
+          <p className="text-sm text-muted-foreground">{t('organizations_empty')}</p>
         ) : (
           <div className="space-y-2">
             {memberships.map((m) => (
@@ -274,16 +309,16 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
                     ) : (
                       <User className="h-3 w-3" />
                     )}
-                    {m.role === 'ORG_ADMIN' ? 'Admin' : 'Usuario'}
+                    {m.role === 'ORG_ADMIN' ? t('role_admin') : t('role_user')}
                   </Badge>
                   {!m.active && (
-                    <Badge variant="outline" className="text-muted-foreground">Inactivo</Badge>
+                    <Badge variant="outline" className="text-muted-foreground">{t('inactive')}</Badge>
                   )}
                 </div>
               </div>
             ))}
           </div>
-        )}
+        )}</div>
       </section>
 
     </div>

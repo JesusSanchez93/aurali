@@ -69,11 +69,17 @@ export async function uploadProfileSignature(base64DataUrl: string): Promise<str
   const buffer = Buffer.from(base64Data, 'base64');
 
   const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/jpeg' ? 'jpg' : 'webp';
-  const path = `${user.id}/signature.${ext}`;
+
+  // Remove any previous signature files so the new URL is always fresh (avoids CDN cache hits)
+  await supabase.storage
+    .from('signatures')
+    .remove([`${user.id}/signature.png`, `${user.id}/signature.jpg`, `${user.id}/signature.webp`]);
+
+  const path = `${user.id}/signature_${Date.now()}.${ext}`;
 
   const { error: uploadErr } = await supabase.storage
     .from('signatures')
-    .upload(path, buffer, { contentType: mimeType, upsert: true });
+    .upload(path, buffer, { contentType: mimeType });
   if (uploadErr) throw new Error(uploadErr.message);
 
   const { data: { publicUrl } } = supabase.storage
@@ -94,10 +100,15 @@ export async function deleteProfileSignature(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  // Remove any known extension variants
-  await supabase.storage
+  // List all files in the user's signatures folder and delete them
+  const { data: files } = await supabase.storage
     .from('signatures')
-    .remove([`${user.id}/signature.png`, `${user.id}/signature.jpg`, `${user.id}/signature.webp`]);
+    .list(user.id);
+
+  if (files && files.length > 0) {
+    const paths = files.map((f) => `${user.id}/${f.name}`);
+    await supabase.storage.from('signatures').remove(paths);
+  }
 
   const { error } = await supabase
     .from('profiles')

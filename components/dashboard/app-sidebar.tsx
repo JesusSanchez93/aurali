@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Scale, Settings, Users, ShieldCheck, BookOpen, FileText } from 'lucide-react';
+import { Home, Scale, Settings, Users, ShieldCheck, BookOpen, FileText, Sparkles } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
 
 import {
@@ -29,12 +29,13 @@ export const userItems = [
 ];
 
 export const adminUserItems = [
-  { titleKey: 'home',      url: '/dashboard',              icon: Home },
-  { titleKey: 'processes', url: '/legal-process',          icon: Scale },
-  { titleKey: 'clients',   url: '/clients',                icon: Users },
-  { titleKey: 'users',     url: '/settings/users',         icon: Users },
-  { titleKey: 'documents', url: '/settings/documents',     icon: FileText },
-  { titleKey: 'settings',  url: '/settings/workflows',     icon: Settings },
+  { titleKey: 'home',         url: '/dashboard',               icon: Home },
+  { titleKey: 'processes',    url: '/legal-process',           icon: Scale },
+  { titleKey: 'clients',      url: '/clients',                 icon: Users },
+  { titleKey: 'users',        url: '/settings/users',          icon: Users },
+  { titleKey: 'documents',    url: '/settings/documents',      icon: FileText },
+  { titleKey: 'ai_variables', url: '/settings/ai-variables',   icon: Sparkles },
+  { titleKey: 'settings',     url: '/settings/workflows',      icon: Settings },
 ];
 
 export const adminItems = [
