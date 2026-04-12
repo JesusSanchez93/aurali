@@ -61,6 +61,15 @@ export type DashboardAnalytics = {
     monthlyVolume: { month: string; label: string; count: number }[];
     topBanks: { bank: string; count: number }[];
     fraudFactors: { factor: string; count: number; pct: number }[];
+    financials: {
+        totalBilled: number;
+        totalCollected: number;
+        totalPending: number;
+        collectionRate: number;
+        currency: string;
+        monthlyPayments: { month: string; label: string; amount: number }[];
+        paymentMethods: { method: string; count: number; amount: number }[];
+    };
 };
 
 const ACTIVE_STATUSES = new Set([
@@ -92,11 +101,15 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
             monthlyVolume: [],
             topBanks: [],
             fraudFactors: [],
+            financials: {
+                totalBilled: 0, totalCollected: 0, totalPending: 0, collectionRate: 0,
+                currency: 'ARS', monthlyPayments: [], paymentMethods: [],
+            },
         };
     }
 
     // ── Fetch raw data ───────────────────────────────────────────────────────
-    const [{ data: processes }, { data: banks }] = await Promise.all([
+    const [{ data: processes }, { data: banks }, { data: fees }, { data: payments }] = await Promise.all([
         supabase
             .from('legal_processes')
             .select('status, created_at')
@@ -104,6 +117,14 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
         supabase
             .from('legal_process_banks')
             .select('bank_name, file_complait, no_signal, bank_notification, access_website, access_link, used_to_operate_stolen_amount, lost_card')
+            .eq('organization_id', orgId),
+        supabase
+            .from('legal_process_fees')
+            .select('total_amount, currency')
+            .eq('organization_id', orgId),
+        supabase
+            .from('legal_process_payments')
+            .select('amount, payment_date, payment_method')
             .eq('organization_id', orgId),
     ]);
 
@@ -180,11 +201,51 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
         return { factor, count, pct: Math.round((count / total_banks) * 100) };
     }).sort((a, b) => b.count - a.count);
 
+    // ── Financials ────────────────────────────────────────────────────────────
+    const allFees = fees ?? [];
+    const allPayments = payments ?? [];
+
+    const totalBilled = allFees.reduce((sum, f) => sum + f.total_amount, 0);
+    const totalCollected = allPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPending = Math.max(0, totalBilled - totalCollected);
+    const collectionRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
+    const currency = allFees[0]?.currency ?? 'ARS';
+
+    // Monthly payments — last 12 months
+    const monthlyPayMap: Record<string, number> = {};
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthlyPayMap[key] = 0;
+    }
+    for (const p of allPayments) {
+        const d = new Date(p.payment_date);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (key in monthlyPayMap) monthlyPayMap[key] += p.amount;
+    }
+    const monthlyPayments = Object.entries(monthlyPayMap).map(([key, amount]) => {
+        const [year, month] = key.split('-');
+        return { month: key, label: `${MONTHS_ES[parseInt(month) - 1]} ${year.slice(2)}`, amount };
+    });
+
+    // Payment methods
+    const methodMap: Record<string, { count: number; amount: number }> = {};
+    for (const p of allPayments) {
+        const m = p.payment_method ?? 'other';
+        if (!methodMap[m]) methodMap[m] = { count: 0, amount: 0 };
+        methodMap[m].count++;
+        methodMap[m].amount += p.amount;
+    }
+    const paymentMethods = Object.entries(methodMap)
+        .map(([method, v]) => ({ method, ...v }))
+        .sort((a, b) => b.amount - a.amount);
+
     return {
         kpis: { total, active, finished, archived, declined, conversionRate },
         statusDistribution,
         monthlyVolume,
         topBanks,
         fraudFactors,
+        financials: { totalBilled, totalCollected, totalPending, collectionRate, currency, monthlyPayments, paymentMethods },
     };
 }

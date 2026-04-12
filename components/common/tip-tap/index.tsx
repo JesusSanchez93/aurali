@@ -13,8 +13,12 @@ import { PercentTable, PercentTableCell, PercentTableHeader } from './extensions
 import { TableRow } from '@tiptap/extension-table';
 import { ImageExtension } from './extensions/image-node';
 import { VariableNode } from './extensions/variable-node';
-import { VariableSuggestionExtension, VariableSuggestionDropdown } from './extensions/variable-suggestion';
-const extensions = [
+import { VariableHighlight } from './extensions/variable-highlight';
+import { UppercaseMark } from './extensions/uppercase-mark';
+import { DocumentHeaderExtension, DocumentFooterExtension, SignatureSpaceExtension } from './extensions/document-section-nodes';
+
+/** Extensions that don't depend on runtime props */
+const BASE_EXTENSIONS = [
     TextStyleKit,
     StarterKit,
     TextAlign.configure({
@@ -31,7 +35,10 @@ const extensions = [
     PercentTableHeader,
     ImageExtension,
     VariableNode,
-    VariableSuggestionExtension,
+    UppercaseMark,
+    DocumentHeaderExtension,
+    DocumentFooterExtension,
+    SignatureSpaceExtension,
 ];
 // ─── Page sizes ──────────────────────────────────────────────────────────────
 const PAGE_SIZES = {
@@ -55,6 +62,8 @@ interface Props {
     mode?: 'default' | 'document';
     /** Overrides the sticky top offset of the menu bar (default: var(--header-height)). Use '0px' inside modals. */
     menuBarStickyTop?: string;
+    /** Additional variable keys (e.g. AI variables) to highlight alongside static VARIABLE_GROUPS keys */
+    aiVariableKeys?: string[];
 }
 
 // ─── Gap between pages (px) ──────────────────────────────────────────────────
@@ -113,7 +122,7 @@ function DocumentCanvas({ children, pageSize }: { children: React.ReactNode; pag
                 {/* ── White page sheets (behind editor content) ── */}
                 {Array.from({ length: numPages }, (_, i) => (
                     <div
-                        key={i}
+                        key={`page-${i}`}
                         className="absolute inset-x-0 bg-background shadow-md ring-1 ring-border"
                         style={{
                             top: i * (minHeight + PAGE_GAP),
@@ -130,7 +139,7 @@ function DocumentCanvas({ children, pageSize }: { children: React.ReactNode; pag
                 {/* ── Gap overlays between pages (above content) ── */}
                 {Array.from({ length: numPages - 1 }, (_, i) => (
                     <div
-                        key={i}
+                        key={`gap-${i}`}
                         className="pointer-events-none absolute inset-x-0 z-5"
                         style={{
                             top: (i + 1) * minHeight + i * PAGE_GAP,
@@ -143,12 +152,18 @@ function DocumentCanvas({ children, pageSize }: { children: React.ReactNode; pag
     );
 }
 
-const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'default', menuBarStickyTop }, ref) => {
+const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'default', menuBarStickyTop, aiVariableKeys }, ref) => {
     const [pageSize, setPageSize] = useState<PageSize>('A4');
     const isDocument = mode === 'document';
     // Always holds the latest serialized content so getContent() never reads
     // a stale closure — updated on every editor transaction via onUpdate.
     const latestContentRef = useRef<unknown>(value ?? null);
+
+    const extensions = useMemo(
+        () => [...BASE_EXTENSIONS, VariableHighlight.configure({ extraKeys: aiVariableKeys ?? [] })],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [],
+    );
 
     const editor = useEditor({
         extensions,
@@ -162,8 +177,8 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
         editorProps: {
             attributes: {
                 class: isDocument
-                    ? 'min-h-[1000px] px-[100px] pt-0 prose max-w-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0'
-                    : 'min-h-[300px] px-3 py-2 prose max-w-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0',
+                    ? 'min-h-[1000px] px-[100px] pt-0 prose max-w-none prose-p:mb-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0'
+                    : 'min-h-[300px] px-3 py-2 prose max-w-none prose-p:mb-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0',
             },
         },
     });
@@ -273,7 +288,6 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
                 <DocumentCanvas pageSize={pageSize}>
                     <EditorContent editor={editor} />
                 </DocumentCanvas>
-                {editor && <VariableSuggestionDropdown editor={editor} />}
             </div>
         );
     }
@@ -284,7 +298,6 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({ value, onChange, mode = 'defau
             <div>
                 <EditorContent editor={editor} />
             </div>
-            {editor && <VariableSuggestionDropdown editor={editor} />}
         </div>
     );
 });

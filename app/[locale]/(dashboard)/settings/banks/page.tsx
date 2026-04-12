@@ -1,0 +1,15 @@
+import { getOrgBanks, getCatalogBanksForOrg } from './actions';
+import { BanksSection } from './_components/banks-section';
+
+export default async function BanksSettingsPage() {
+  const [banks, catalogBanks] = await Promise.all([
+    getOrgBanks(),
+    getCatalogBanksForOrg(),
+  ]);
+
+  return (
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
+      <BanksSection initialBanks={banks} catalogBanks={catalogBanks} />
+    </div>
+  );
+}

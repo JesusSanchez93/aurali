@@ -1,770 +1,923 @@
 {
-    "metadata": {
-        "title": "Aurali.app",
-        "description": "Legal Process Manager"
+  "metadata": {
+    "title": "Aurali.app",
+    "description": "Legal Process Manager"
+  },
+  "common": {
+    "loading": "Loading...",
+    "loading_description": "We are preparing your Aurali experience and connecting the required information to show the right interface.",
+    "error": "An error occurred",
+    "error_fallback": "An unexpected error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "pagination": {
+      "showing": "Showing {start} to {end} of {total} processes",
+      "previous": "Previous",
+      "next": "Next"
     },
-    "common": {
-        "loading": "Loading...",
-        "loading_description": "We are preparing your Aurali experience and connecting the required information to show the right interface.",
-        "error": "An error occurred",
-        "error_fallback": "An unexpected error occurred",
-        "save": "Save",
-        "cancel": "Cancel",
-        "confirm": "Confirm",
-        "delete": "Delete",
-        "pagination": {
-            "showing": "Showing {start} to {end} of {total} processes",
-            "previous": "Previous",
-            "next": "Next"
+    "status": "Status",
+    "yes": "Yes",
+    "no": "No",
+    "no_data": "No information could be loaded.",
+    "validation": {
+      "required": "Required field",
+      "invalid_email": "Invalid email format",
+      "passwords_not_match": "Passwords do not match"
+    },
+    "nav": {
+      "home": "Home",
+      "analytics": "Analytics",
+      "processes": "Legal processes",
+      "clients": "Clients",
+      "users": "Users",
+      "settings": "Settings",
+      "email": "Email",
+      "repeat_password": "Repeat Password",
+      "check_email": "Check Your Email",
+      "password_reset_sent": "Password reset instructions sent",
+      "password_reset_instructions": "If you registered using your email and password, you will receive a password reset email.",
+      "user": {
+        "upgrade": "Upgrade to Pro",
+        "account": "Account",
+        "billing": "Billing",
+        "notifications": "Notifications",
+        "settings": "Settings",
+        "logout": "Log out",
+        "exit_organization": "Exit organization"
+      },
+      "workflows": "Workflows",
+      "admin_clients": "Clients",
+      "catalog": "Global Catalog",
+      "banks": "Banks",
+      "document_types": "Document Types",
+      "ai_variables": "AI Variables",
+      "formats": "Document Templates"
+    },
+    "upload": {
+      "click_to_upload": "Click to upload a document",
+      "click_to_upload_image": "Click to upload",
+      "can_upload_more": "You can upload {count} more file{pluralShort}",
+      "confirm_crop": "Confirm crop",
+      "document_fallback": "Document"
+    },
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "toggle": "Toggle theme"
+    },
+    "image_crop": {
+      "title": "Crop image",
+      "aspect_ratio": "Aspect ratio:",
+      "square": "Square (1:1)",
+      "wide": "Wide (3:1)",
+      "apply": "Apply crop",
+      "alt": "Crop"
+    },
+    "audio_recorder": {
+      "title": "Record event account",
+      "start": "Start recording",
+      "pause": "Pause",
+      "resume": "Resume",
+      "finish": "Finish",
+      "retry": "Retry",
+      "processing": "Processing with AI…",
+      "mic_error": "Could not access microphone. Please check permissions."
+    },
+    "reason_dialog": {
+      "reason_label": "Reason (optional)",
+      "reason_placeholder": "Briefly describe the reason for this action...",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "stats": {
+      "total_clients": "Registered Clients",
+      "total_clients_desc": "Total in the organization",
+      "total_processes": "Legal Processes",
+      "total_processes_desc": "Total processes registered",
+      "completed_processes": "Completed Processes",
+      "completed_processes_desc": "Processes that have finished"
+    },
+    "superadmin_banner": {
+      "viewing_as": "Viewing as:",
+      "return_profile": "Return to my profile"
+    },
+    "workflow_guide": {
+      "skip": "Skip",
+      "step_counter": "Step {current} of {total}",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish",
+      "steps": {
+        "welcome": "Welcome",
+        "templates": "Templates",
+        "email_nodes": "Emails",
+        "doc_nodes": "Documents",
+        "preview": "Processes"
+      },
+      "content": {
+        "welcome": {
+          "title": "Your workspace is ready!",
+          "description": "You completed the initial setup. Before creating your first legal process, there are some key configurations that will make the workflow operate correctly.",
+          "req1": "Create at least one document template",
+          "req2": "Configure the email nodes",
+          "req3": "Link templates to the generation nodes"
         },
-        "status": "Status",
-        "yes": "Yes",
-        "no": "No",
-        "no_data": "No information could be loaded.",
-        "validation": {
-            "required": "Required field",
-            "invalid_email": "Invalid email format",
-            "passwords_not_match": "Passwords do not match"
+        "templates": {
+          "title": "Create your document templates",
+          "description": "Templates are the base documents (powers of attorney, contracts, letters) that the workflow generates automatically for each process. You can use variables like {{client.first_name}} that are replaced with the client's real data.",
+          "tip": "Go to Settings → Document templates to create your first template."
         },
-        "nav": {
-            "home": "Home",
-            "processes": "Legal processes",
-            "clients": "Clients",
-            "users": "Users",
-            "documents": "Documents",
-            "settings": "Settings",
-            "email": "Email",
-            "repeat_password": "Repeat Password",
-            "check_email": "Check Your Email",
-            "password_reset_sent": "Password reset instructions sent",
-            "password_reset_instructions": "If you registered using your email and password, you will receive a password reset email.",
-            "user": {
-                "upgrade": "Upgrade to Pro",
-                "account": "Account",
-                "billing": "Billing",
-                "notifications": "Notifications",
-                "settings": "Settings",
-                "logout": "Log out",
-                "exit_organization": "Exit organization"
-            },
-            "workflows": "Workflows",
-            "admin_clients": "Clients",
-            "catalog": "Global Catalog",
-            "ai_variables": "AI Variables"
+        "email_nodes": {
+          "title": "Configure the email nodes",
+          "description": "The workflow contains nodes that send emails automatically: one to send the form to the client and another to send the final documents. Verify the subject, body and attachments of each one.",
+          "tip": "Open the editor in Settings → Workflows and click on each email node to configure it."
         },
-        "upload": {
-            "click_to_upload": "Click to upload a document",
-            "click_to_upload_image": "Click to upload",
-            "can_upload_more": "You can upload {count} more file{pluralShort}",
-            "confirm_crop": "Confirm crop",
-            "document_fallback": "Document"
+        "doc_nodes": {
+          "title": "Link templates to the workflow",
+          "description": "The \"Generate documents\" node needs to know which templates to produce. Once your templates are created, open them in the workflow editor and select them within the node.",
+          "tip": "In the workflow editor, click on the \"Generate documents\" node and select the templates from the configuration panel."
+        },
+        "preview": {
+          "title": "This is what the processes section looks like",
+          "description": "Each row is a legal process with its number, client, identity document and current status. The workflow advances automatically between states as you complete the required actions.",
+          "tip": "Create your first process from the \"New process\" button in the Legal Processes section."
         }
-    },
-    "dashboard": {
-        "title": "Dashboard",
-        "welcome": "Welcome back",
-        "stats": {
-            "total_clients": "Registered Clients",
-            "total_clients_desc": "Total in the organization",
-            "total_processes": "Legal Processes",
-            "total_processes_desc": "Total processes registered",
-            "completed_processes": "Completed Processes",
-            "completed_processes_desc": "Processes that have finished"
+      },
+      "illustrations": {
+        "templates": {
+          "doc1": "Power of Attorney",
+          "doc2": "Service Contract",
+          "doc3": "Authorization Letter",
+          "new_badge": "New"
+        },
+        "email_nodes": {
+          "node1": "Send form to client",
+          "node2": "Send documents to client",
+          "settings_path": "Settings → Workflows"
+        },
+        "doc_nodes": {
+          "generate": "Generate documents",
+          "link": "Link templates to node",
+          "doc1": "Power of Attorney",
+          "doc2": "Service Contract"
+        },
+        "welcome": {
+          "templates": "Templates",
+          "emails": "Emails",
+          "flow": "Flow"
+        },
+        "preview": {
+          "history": "History"
         }
+      },
+      "status": {
+        "draft": "Draft",
+        "completed": "Completed",
+        "approved": "Approved",
+        "documents_sent": "Docs sent",
+        "finished": "Finished"
+      }
+    }
+  },
+  "process": {
+    "tabs": {
+      "processes": "Legal processes",
+      "formats": "Formats"
     },
-    "process": {
-        "tabs": {
-            "processes": "Legal processes",
-            "formats": "Formats"
+    "detail": "Process Detail",
+    "created_at": "Created on {date}",
+    "status": {
+      "label": "Status",
+      "draft": "Draft",
+      "pending_client_data": "In process",
+      "completed": "Completed",
+      "approved": "Approved",
+      "paid": "Paid",
+      "documents_approved": "Documents approved",
+      "documents_sent": "Documents sent",
+      "documents_received": "Documents received",
+      "finished": "Finished",
+      "archived": "Archived",
+      "declined": "Declined"
+    },
+    "sections": {
+      "personal_data": "Personal Data",
+      "document_images": "Identity Document",
+      "banking_info": "Banking Information",
+      "facts_info": "Information about the Facts"
+    },
+    "fields": {
+      "first_name": "First Name",
+      "last_name": "Last Name",
+      "email": "Email",
+      "phone": "Phone",
+      "document_type": "Document Type",
+      "document_number": "Document Number",
+      "professional_card_number": "Professional Card Number",
+      "document_front": "Front",
+      "document_back": "Back",
+      "bank_name": "Bank",
+      "last_4_digits": "Last 4 digits",
+      "file_complait": "Did you file a complaint?",
+      "no_signal": "No signal?",
+      "bank_notification": "Bank notifications?",
+      "access_website": "Did you access the website?",
+      "access_link": "Did you access a suspicious link?",
+      "used_to_operate_stolen_amount": "Operations for stolen amount?",
+      "lost_card": "Did you lose your card?",
+      "fraud_incident_summary": "Incident summary",
+      "assigned_to": "Assigned to"
+    },
+    "list": {
+      "empty_title": "No active processes found.",
+      "empty_desc": "Start a new process using the form above.",
+      "no_email": "No Email",
+      "no_name": "Process not started",
+      "created": "Created"
+    },
+    "payments": {
+      "section_title": "Fees & payments",
+      "total_fee": "Agreed total",
+      "total_paid": "Total paid",
+      "remaining": "Remaining",
+      "no_fee": "No fee registered",
+      "register_btn": "Register payment",
+      "fully_paid_badge": "Paid",
+      "modal_title": "Register payment",
+      "modal_description": "Record a payment made by the client.",
+      "field_amount": "Amount",
+      "field_method": "Payment method",
+      "field_date": "Payment date",
+      "field_reference": "Reference",
+      "field_notes": "Notes",
+      "method_cash": "Cash",
+      "method_transfer": "Bank transfer",
+      "method_card": "Card",
+      "method_nequi": "Nequi",
+      "method_daviplata": "Daviplata",
+      "method_other": "Other",
+      "success": "Payment registered",
+      "fee_label": "Process fee",
+      "fee_helper": "Agreed fee with the client (optional)"
+    },
+    "filter": {
+      "all": "All",
+      "placeholder": "Filter by status",
+      "selected_count": "{count} statuses"
+    },
+    "search": {
+      "placeholder": "Search by client, document... or #0001",
+      "clear": "Clear search"
+    },
+    "form": {
+      "trigger": "New legal process",
+      "sheet_title": "New process",
+      "description": "Form to create a new process",
+      "title": "Start New Process",
+      "submit": "Start process",
+      "submitting": "Starting...",
+      "success_toast": "Process created",
+      "success_desc": "The process has been created successfully.",
+      "error_toast": "Error"
+    },
+    "resend_email": {
+      "trigger": "Resend welcome email",
+      "success": "Email sent successfully",
+      "error": "Failed to send email"
+    },
+    "archive": {
+      "trigger": "Archive process",
+      "confirm_title": "Archive process",
+      "confirm_description": "Are you sure you want to archive this process? The process will become inactive but its data will be preserved. You can revert this action later.",
+      "confirm_button": "Archive",
+      "cancel_button": "Cancel",
+      "success": "Process archived",
+      "revert_trigger": "Revert archive",
+      "revert_confirm_title": "Revert archive",
+      "revert_confirm_description": "Do you want to restore this process to its previous status? The process will return to the state it was in before being archived.",
+      "revert_confirm_button": "Restore",
+      "revert_success": "Process restored",
+      "note_label": "Note",
+      "note_placeholder": "Add an optional note..."
+    },
+    "decline": {
+      "trigger": "Decline process",
+      "confirm_title": "Decline process",
+      "confirm_description": "Are you sure you want to decline this process? This indicates the process was rejected and will not continue. This action cannot be undone.",
+      "confirm_button": "Decline",
+      "cancel_button": "Cancel",
+      "success": "Process declined",
+      "note_label": "Note",
+      "note_placeholder": "Add an optional note..."
+    },
+    "payment": {
+      "mark_as_paid": "Mark as paid",
+      "revert_payment": "Revert payment",
+      "confirm_title": "Confirm initial payment",
+      "confirm_description": "Are you sure you want to mark this process as paid? This indicates that the client has made the payment for the start of the legal process.",
+      "revert_title": "Revert payment status",
+      "revert_description": "Are you sure you want to revert the payment status? The process will return to the completed state.",
+      "confirm_revert_desc": "Are you sure you want to revert the payment? The status will return to 'In process'.",
+      "confirm_button": "Confirm",
+      "cancel_button": "Cancel"
+    },
+    "timeline": {
+      "button": "History",
+      "title": "Process history",
+      "empty": "No events recorded for this process.",
+      "error_loading": "Error loading history",
+      "badge_audit": "audit",
+      "badge_workflow": "workflow",
+      "badge_error": "Error",
+      "system_user": "System",
+      "unknown_user": "Unknown user",
+      "audit_actions": {
+        "process_created": "Process created",
+        "workflow_started": "Workflow started",
+        "workflow_resumed": "Workflow resumed",
+        "workflow_completed": "Workflow completed",
+        "workflow_failed": "Workflow error",
+        "workflow_retried": "Workflow retried",
+        "status_change": "Status change",
+        "status_archived": "Process archived",
+        "status_declined": "Process declined",
+        "status_reverted": "Archive reverted",
+        "email_sent": "Email sent",
+        "document_generated": "Documents generated",
+        "document_preview_generated": "Drafts generated",
+        "document_preview_updated": "Draft updated",
+        "payment_confirmed": "Payment confirmed",
+        "workflow_notification": "Notification sent",
+        "default": "Event"
+      },
+      "node_types": {
+        "start": "Start",
+        "end": "End",
+        "status_update": "Status update",
+        "send_email": "Send email",
+        "client_form": "Client form",
+        "notify_lawyer": "Lawyer notification",
+        "manual_action": "Manual action",
+        "generate_document": "Generate document",
+        "send_documents": "Send documents"
+      },
+      "meta": {
+        "type": "Type: {value}",
+        "client": "Client: {value}",
+        "to": "To: {value}",
+        "attachments": "{count} attachment(s)",
+        "documents": "{count} document(s)",
+        "waiting_form": "Waiting for client form submission",
+        "from_node": "From: {value}",
+        "node": "Node: {value}",
+        "manual": "(manual)",
+        "finished_at": "Finished: {date}"
+      }
+    },
+    "document_previews": {
+      "section_preliminary": "Preliminary documents",
+      "section_final": "Final documents",
+      "document_fallback": "Document",
+      "document_count": "{count} {count, plural, one {document} other {documents}}",
+      "thumbnail_expand_aria": "Expand {name}",
+      "thumbnail_expand_label": "Expand",
+      "no_preview_content": "No preview content available",
+      "card_footer_label": "Preview",
+      "btn_view": "View",
+      "btn_edit": "Edit",
+      "btn_edit_document": "Edit this document",
+      "btn_close": "Close",
+      "btn_cancel": "Cancel",
+      "btn_save": "Save changes",
+      "btn_saving": "Saving…",
+      "badge_draft": "Draft",
+      "edit_title_fallback": "Edit document",
+      "save_success": "Document updated",
+      "save_error_fallback": "Error saving document"
+    }
+  },
+  "clients": {
+    "list": {
+      "empty": "No active clients found.",
+      "document": "Document",
+      "created": "Created"
+    },
+    "search": {
+      "placeholder": "Search by name, email, phone or ID...",
+      "clear": "Clear search"
+    },
+    "detail": {
+      "title": "Client Detail",
+      "registered_at": "Registered on",
+      "personal_data": "Personal Data",
+      "annex_documents": "Annex Documents",
+      "front_image": "Front image",
+      "back_image": "Back image"
+    }
+  },
+  "onboarding": {
+    "home": {
+      "title": "Aurali.app",
+      "description": "The digital employee for law firms and lawyers that helps you automate internal processes and be more effective in time use, so your focus is on what truly matters.",
+      "start": "Start"
+    },
+    "step1": {
+      "title": "Step 1 of 4: Personal user data"
+    },
+    "step2": {
+      "title": "Step 2 of 4: Organization data"
+    },
+    "step3": {
+      "title": "Step 3 of 4: Configure banks",
+      "description": "Select the banks your organization will work with. You can change them later.",
+      "add_bank": "Add bank",
+      "bank_name": "Bank name",
+      "bank_name_placeholder": "E.g. Bancolombia",
+      "no_banks": "No banks configured yet.",
+      "add": "Add",
+      "remove": "Remove"
+    },
+    "step4": {
+      "title": "Step 4 of 4: Document types",
+      "description": "Configure the identity document types your organization will accept.",
+      "add_document": "Add document",
+      "document_name": "Document name",
+      "document_name_placeholder": "E.g. National ID",
+      "document_slug": "Code (abbreviation)",
+      "document_slug_placeholder": "E.g. ID",
+      "no_documents": "No document types configured.",
+      "add": "Add",
+      "remove": "Remove"
+    },
+    "fields": {
+      "legal_name": "Legal name",
+      "nit": "NIT",
+      "address": "Address",
+      "city": "City",
+      "region": "Region / State",
+      "country": "Country"
+    },
+    "progress": {
+      "aria_label": "Onboarding progress",
+      "step1": "Profile",
+      "step2": "Company",
+      "step3": "Banks",
+      "step4": "Documents",
+      "workflow_selection": "Flow"
+    }
+  },
+  "auth": {
+    "shell": {
+      "brandLine": "Intelligent legal operations",
+      "backHome": "Back to home",
+      "eyebrow": "Secure access to your legal platform",
+      "loginTitle": "Return to your legal operation with full context",
+      "loginDescription": "Sign in to Aurali to review processes, documents, and automations from a workspace designed for clarity across your team.",
+      "signUpTitle": "Start running your firm with less friction",
+      "signUpDescription": "Create your account and begin organizing intake, document generation, and follow-up from a single platform.",
+      "panelLabel": "Operational view",
+      "panelTitle": "Automation in motion",
+      "panelBadge": "Secure",
+      "steps": {
+        "1": "Client intake and initial validation",
+        "2": "AI preparing documents and tasks",
+        "3": "Team and client kept in sync"
+      },
+      "stats": {
+        "time": "less time spent on manual coordination",
+        "capacity": "more operational capacity per lawyer",
+        "documents": "documents and flows ready for review"
+      }
+    },
+    "login": {
+      "title": "Login",
+      "description": "Enter your email below to login to your account",
+      "submit": "Login",
+      "forgot_password": "Forgot your password?",
+      "no_account": "Don't have an account?",
+      "sign_up": "Sign up",
+      "already_have_account": "Already have an account?",
+      "login": "Login"
+    },
+    "signUp": {
+      "title": "Create Account",
+      "description": "Enter your email below to create your account",
+      "submit": "Create Account",
+      "already_have_account": "Already have an account?",
+      "login": "Login"
+    },
+    "forgotPassword": {
+      "title": "Forgot your password?",
+      "description": "Enter your email and we'll send you a link to reset it",
+      "submit": "Send Link"
+    },
+    "updatePassword": {
+      "title": "Update Password",
+      "description": "Enter your new password below",
+      "submit": "Update Password"
+    },
+    "sign_up_success": {
+      "title": "Thank you for signing up!",
+      "description": "Check your email to confirm",
+      "content": "You've successfully signed up. Please check your email to confirm your account before signing in.",
+      "continue": "Continue to Onboarding"
+    },
+    "fields": {
+      "password": "Password",
+      "new_password": "New Password"
+    }
+  },
+  "formats": {
+    "title": "Document Templates",
+    "description": "Manage templates for legal process document generation.",
+    "new": "New Template",
+    "new_title": "New Template",
+    "edit_title": "Edit Template",
+    "form_description": "Define the name and content of the template.",
+    "field_name": "Template name",
+    "field_name_placeholder": "e.g. Bank letter, Power of attorney...",
+    "field_content": "Content",
+    "empty": "No templates created yet. Create the first one using the button above.",
+    "col_name": "Name",
+    "col_version": "Version",
+    "col_created_at": "Created",
+    "col_actions": "Actions",
+    "create_success": "Template created successfully.",
+    "update_success": "Template updated successfully.",
+    "delete_success": "Template deleted.",
+    "delete_title": "Delete template",
+    "delete_description": "Are you sure you want to delete this template? This action cannot be undone.",
+    "variables": {
+      "title": "Dynamic variables",
+      "description": "Click to insert into the editor or type them manually.",
+      "manual_hint": "You can also type them directly in the editor using the format '{VARIABLE_NAME}'.",
+      "groups": {
+        "client": "Client Information",
+        "process": "Process Information",
+        "banking": "Banking Information",
+        "lawyer": "Lawyer Information",
+        "org_rep": "Firm Legal Representative",
+        "ai": "AI Variables"
+      },
+      "FIRST_NAME": "First Name",
+      "LAST_NAME": "Last Name",
+      "DOCUMENT_TYPE": "Document Type",
+      "DOCUMENT_NAME": "Document Name",
+      "DOCUMENT_NUMBER": "Document Number",
+      "EMAIL": "Email",
+      "PHONE": "Phone",
+      "ADDRESS": "Address",
+      "PROCESS_ID": "Process ID",
+      "PROCESS_DATE": "Process Date",
+      "PROCESS_STATUS": "Process Status",
+      "BANK_NAME": "Bank Name",
+      "BANK_DOCUMENT_SLUG": "Bank Document Type",
+      "BANK_DOCUMENT_NUMBER": "Bank Document Number",
+      "BANK_LAST_4_DIGITS": "Last 4 Digits",
+      "FRAUD_INCIDENT_SUMMARY": "Fraud Incident Summary",
+      "LAWYER_FIRST_NAME": "Lawyer First Name",
+      "LAWYER_LAST_NAME": "Lawyer Last Name",
+      "LAWYER_DOCUMENT_TYPE": "Lawyer Document Type",
+      "LAWYER_DOCUMENT_NAME": "Lawyer Document Name",
+      "LAWYER_DOCUMENT_NUMBER": "Lawyer Document Number",
+      "LAWYER_SIGNATURE": "Lawyer Signature",
+      "ORG_REP_FIRST_NAME": "Representative First Name",
+      "ORG_REP_LAST_NAME": "Representative Last Name",
+      "ORG_REP_DOCUMENT_TYPE": "Representative Document Type",
+      "ORG_REP_DOCUMENT_NAME": "Representative Document Name",
+      "ORG_REP_DOCUMENT_NUMBER": "Representative Document Number",
+      "ORG_REP_EMAIL": "Representative Email",
+      "ORG_NAME": "Firm Name"
+    }
+  },
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "benefits": "Benefits",
+      "howItWorks": "How it works",
+      "pricing": "Pricing",
+      "cta": "Request access",
+      "platformCta": "Go to platform",
+      "mobileAria": "Open main menu",
+      "language": "Change language",
+      "languages": {
+        "es": "Español (ES)",
+        "en": "English (EN)"
+      }
+    },
+    "hero": {
+      "eyebrow": "AI-powered legal automation platform",
+      "titleLine1": "The intelligence your firm",
+      "titleLine2": "needed to grow",
+      "subtitle": "Aurali automates your legal processes from client intake to document generation so your team can focus on what matters: legal judgment and client relationships.",
+      "primaryCta": "Request free demo",
+      "secondaryCta": "See how it works",
+      "visual": {
+        "label": "Operational view",
+        "title": "Visual engine for legal workflows",
+        "badge": "Active flow",
+        "steps": {
+          "intake": "Client intake and initial validation",
+          "generation": "AI drafts documents with real variables",
+          "notification": "Client notified automatically",
+          "review": "Final review and case closure"
         },
-        "detail": "Process Detail",
-        "created_at": "Created on {date}",
-        "status": {
-            "label": "Status",
-            "draft": "Draft",
-            "pending_client_data": "In process",
-            "completed": "Completed",
-            "approved": "Approved",
-            "paid": "Paid",
-            "documents_approved": "Documents approved",
-            "documents_sent": "Documents sent",
-            "documents_received": "Documents received",
-            "finished": "Finished",
-            "archived": "Archived",
-            "declined": "Declined"
-        },
-        "sections": {
-            "personal_data": "Personal Data",
-            "document_images": "Identity Document",
-            "banking_info": "Banking Information",
-            "facts_info": "Information about the Facts"
-        },
-        "fields": {
-            "first_name": "First Name",
-            "last_name": "Last Name",
-            "email": "Email",
-            "phone": "Phone",
-            "document_type": "Document Type",
-            "document_number": "Document Number",
-            "professional_card_number": "Professional Card Number",
-            "document_front": "Front",
-            "document_back": "Back",
-            "bank_name": "Bank",
-            "last_4_digits": "Last 4 digits",
-            "file_complait": "Did you file a complaint?",
-            "no_signal": "No signal?",
-            "bank_notification": "Bank notifications?",
-            "access_website": "Did you access the website?",
-            "access_link": "Did you access a suspicious link?",
-            "used_to_operate_stolen_amount": "Operations for stolen amount?",
-            "lost_card": "Did you lose your card?",
-            "fraud_incident_summary": "Incident summary",
-            "assigned_to": "Assigned to"
-        },
-        "list": {
-            "empty_title": "No active processes found.",
-            "empty_desc": "Start a new process using the form above.",
-            "no_email": "No Email",
-            "no_name": "Process not started",
-            "created": "Created"
-        },
-        "payments": {
-            "section_title": "Fees & payments",
-            "total_fee": "Agreed total",
-            "total_paid": "Total paid",
-            "remaining": "Remaining",
-            "no_fee": "No fee registered",
-            "register_btn": "Register payment",
-            "fully_paid_badge": "Paid",
-            "modal_title": "Register payment",
-            "modal_description": "Record a payment made by the client.",
-            "field_amount": "Amount",
-            "field_method": "Payment method",
-            "field_date": "Payment date",
-            "field_reference": "Reference",
-            "field_notes": "Notes",
-            "method_cash": "Cash",
-            "method_transfer": "Bank transfer",
-            "method_card": "Card",
-            "method_nequi": "Nequi",
-            "method_daviplata": "Daviplata",
-            "method_other": "Other",
-            "success": "Payment registered",
-            "fee_label": "Process fee",
-            "fee_helper": "Agreed fee with the client (optional)"
-        },
-        "filter": {
-            "all": "All",
-            "placeholder": "Filter by status",
-            "selected_count": "{count} statuses"
-        },
-        "search": {
-            "placeholder": "Search by client, document... or #0001",
-            "clear": "Clear search"
-        },
-        "form": {
-            "trigger": "New legal process",
-            "sheet_title": "New process",
-            "description": "Form to create a new process",
-            "title": "Start New Process",
-            "submit": "Start process",
-            "submitting": "Starting...",
-            "success_toast": "Process created",
-            "success_desc": "The process has been created successfully.",
-            "error_toast": "Error"
-        },
-        "resend_email": {
-            "trigger": "Resend welcome email",
-            "success": "Email sent successfully",
-            "error": "Failed to send email"
-        },
-        "archive": {
-            "trigger": "Archive process",
-            "confirm_title": "Archive process",
-            "confirm_description": "Are you sure you want to archive this process? The process will become inactive but its data will be preserved. You can revert this action later.",
-            "confirm_button": "Archive",
-            "cancel_button": "Cancel",
-            "success": "Process archived",
-            "revert_trigger": "Revert archive",
-            "revert_confirm_title": "Revert archive",
-            "revert_confirm_description": "Do you want to restore this process to its previous status? The process will return to the state it was in before being archived.",
-            "revert_confirm_button": "Restore",
-            "revert_success": "Process restored",
-            "note_label": "Note",
-            "note_placeholder": "Add an optional note..."
-        },
-        "decline": {
-            "trigger": "Decline process",
-            "confirm_title": "Decline process",
-            "confirm_description": "Are you sure you want to decline this process? This indicates the process was rejected and will not continue. This action cannot be undone.",
-            "confirm_button": "Decline",
-            "cancel_button": "Cancel",
-            "success": "Process declined",
-            "note_label": "Note",
-            "note_placeholder": "Add an optional note..."
-        },
-        "payment": {
-            "mark_as_paid": "Mark as paid",
-            "revert_payment": "Revert payment",
-            "confirm_title": "Confirm initial payment",
-            "confirm_description": "Are you sure you want to mark this process as paid? This indicates that the client has made the payment for the start of the legal process.",
-            "revert_title": "Revert payment status",
-            "revert_description": "Are you sure you want to revert the payment status? The process will return to the completed state.",
-            "confirm_revert_desc": "Are you sure you want to revert the payment? The status will return to 'In process'.",
-            "confirm_button": "Confirm",
-            "cancel_button": "Cancel"
-        },
-        "timeline": {
-            "button": "History",
-            "title": "Process history",
-            "empty": "No events recorded for this process.",
-            "error_loading": "Error loading history",
-            "badge_audit": "audit",
-            "badge_workflow": "workflow",
-            "badge_error": "Error",
-            "system_user": "System",
-            "unknown_user": "Unknown user",
-            "audit_actions": {
-                "process_created": "Process created",
-                "workflow_started": "Workflow started",
-                "workflow_resumed": "Workflow resumed",
-                "workflow_completed": "Workflow completed",
-                "workflow_failed": "Workflow error",
-                "workflow_retried": "Workflow retried",
-                "status_change": "Status change",
-                "status_archived": "Process archived",
-                "status_declined": "Process declined",
-                "status_reverted": "Archive reverted",
-                "email_sent": "Email sent",
-                "document_generated": "Documents generated",
-                "document_preview_generated": "Drafts generated",
-                "document_preview_updated": "Draft updated",
-                "payment_confirmed": "Payment confirmed",
-                "workflow_notification": "Notification sent",
-                "default": "Event"
-            },
-            "node_types": {
-                "start": "Start",
-                "end": "End",
-                "status_update": "Status update",
-                "send_email": "Send email",
-                "client_form": "Client form",
-                "notify_lawyer": "Lawyer notification",
-                "manual_action": "Manual action",
-                "generate_document": "Generate document",
-                "send_documents": "Send documents"
-            },
-            "meta": {
-                "type": "Type: {value}",
-                "client": "Client: {value}",
-                "to": "To: {value}",
-                "attachments": "{count} attachment(s)",
-                "documents": "{count} document(s)",
-                "waiting_form": "Waiting for client form submission",
-                "from_node": "From: {value}",
-                "node": "Node: {value}",
-                "manual": "(manual)",
-                "finished_at": "Finished: {date}"
-            }
-        },
-        "document_previews": {
-            "section_preliminary": "Preliminary documents",
-            "section_final": "Final documents",
-            "document_fallback": "Document",
-            "document_count": "{count} {count, plural, one {document} other {documents}}",
-            "thumbnail_expand_aria": "Expand {name}",
-            "thumbnail_expand_label": "Expand",
-            "no_preview_content": "No preview content available",
-            "card_footer_label": "Preview",
-            "btn_view": "View",
-            "btn_edit": "Edit",
-            "btn_edit_document": "Edit this document",
-            "btn_close": "Close",
-            "btn_cancel": "Cancel",
-            "btn_save": "Save changes",
-            "btn_saving": "Saving…",
-            "badge_draft": "Draft",
-            "edit_title_fallback": "Edit document",
-            "save_success": "Document updated",
-            "save_error_fallback": "Error saving document"
+        "floating": {
+          "document": "Document generated",
+          "client": "Client notified",
+          "process": "Process automated"
         }
+      }
     },
-    "clients": {
-        "list": {
-            "empty": "No active clients found.",
-            "document": "Document",
-            "created": "Created"
+    "socialProof": {
+      "title": "Designed for lawyers and law firms across Latin America",
+      "pills": {
+        "one": "100% digital",
+        "two": "Multi-user",
+        "three": "AI document generation"
+      }
+    },
+    "problem": {
+      "eyebrow": "The problem we solve",
+      "title": "Your time is too valuable to waste on paperwork",
+      "description": "Aurali removes manual coordination and turns every legal process into a visible, measurable, repeatable operation.",
+      "cards": {
+        "manual": {
+          "title": "Manual processes",
+          "description": "Coordination through WhatsApp, spreadsheets, and email with no real control or traceability."
         },
-        "search": {
-            "placeholder": "Search by name, email, phone or ID...",
-            "clear": "Clear search"
+        "repetitive": {
+          "title": "Repeating documents",
+          "description": "Every claim, power of attorney, or letter gets drafted from scratch even when the process is the same."
         },
-        "detail": {
-            "title": "Client Detail",
-            "registered_at": "Registered on",
-            "personal_data": "Personal Data",
-            "annex_documents": "Annex Documents",
-            "front_image": "Front image",
-            "back_image": "Back image"
+        "visibility": {
+          "title": "No visibility",
+          "description": "You do not know the real-time status of each case or which task is slowing down the team."
         }
+      }
     },
-    "onboarding": {
-        "home": {
-            "title": "Aurali.app",
-            "description": "The digital employee for law firms and lawyers that helps you automate internal processes and be more effective in time use, so your focus is on what truly matters.",
-            "start": "Start"
+    "features": {
+      "eyebrow": "Everything you need, in one place",
+      "title": "Built to adapt to the way you work",
+      "description": "One platform to orchestrate intake, automation, documents, and follow-up without relying on disconnected tools.",
+      "items": {
+        "workflows": {
+          "title": "Automated workflows",
+          "description": "Define once how your process works. Aurali handles execution automatically."
         },
+        "documents": {
+          "title": "Documents in seconds",
+          "description": "Generate letters, powers of attorney, and filings automatically with real client data."
+        },
+        "ai": {
+          "title": "Artificial intelligence",
+          "description": "Built-in AI to draft, review, and adapt documents to your legal criteria."
+        },
+        "multiLawyer": {
+          "title": "Multi-lawyer collaboration",
+          "description": "Assign cases, control permissions, and collaborate with your team from a single workspace."
+        },
+        "notifications": {
+          "title": "Smart notifications",
+          "description": "Clients receive automatic updates at every stage of the process."
+        },
+        "visibility": {
+          "title": "Total visibility",
+          "description": "Real-time dashboard with the status of every process, client, and lawyer."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "Simple by design",
+      "title": "From intake to delivery, without friction",
+      "description": "Every stage connects to the next one so your operation moves forward with less noise and more control.",
+      "steps": {
         "step1": {
-            "title": "Step 1 of 4: Personal user data"
+          "title": "Create the process",
+          "description": "Register the client and case type in seconds with the right information from the start."
         },
         "step2": {
-            "title": "Step 2 of 4: Organization data"
+          "title": "The workflow does the work",
+          "description": "Forms, validations, and communications run automatically based on your rules."
         },
         "step3": {
-            "title": "Step 3 of 4: Configure banks",
-            "description": "Select the banks your organization will work with. You can change them later.",
-            "add_bank": "Add bank",
-            "bank_name": "Bank name",
-            "bank_name_placeholder": "E.g. Bancolombia",
-            "no_banks": "No banks configured yet.",
-            "add": "Add",
-            "remove": "Remove"
+          "title": "AI generates the documents",
+          "description": "Use live case data to produce review-ready drafts without copy-paste work."
         },
         "step4": {
-            "title": "Step 4 of 4: Document types",
-            "description": "Configure the identity document types your organization will accept.",
-            "add_document": "Add document",
-            "document_name": "Document name",
-            "document_name_placeholder": "E.g. National ID",
-            "document_slug": "Code (abbreviation)",
-            "document_slug_placeholder": "E.g. ID",
-            "no_documents": "No document types configured.",
-            "add": "Add",
-            "remove": "Remove"
-        },
-        "fields": {
-            "legal_name": "Legal name",
-            "nit": "NIT",
-            "address": "Address",
-            "city": "City",
-            "region": "Region / State",
-            "country": "Country"
+          "title": "Sign, deliver, and close",
+          "description": "Documents are ready for review, client delivery, and case closure."
         }
+      }
     },
-    "auth": {
-        "shell": {
-            "brandLine": "Intelligent legal operations",
-            "backHome": "Back to home",
-            "eyebrow": "Secure access to your legal platform",
-            "loginTitle": "Return to your legal operation with full context",
-            "loginDescription": "Sign in to Aurali to review processes, documents, and automations from a workspace designed for clarity across your team.",
-            "signUpTitle": "Start running your firm with less friction",
-            "signUpDescription": "Create your account and begin organizing intake, document generation, and follow-up from a single platform.",
-            "panelLabel": "Operational view",
-            "panelTitle": "Automation in motion",
-            "panelBadge": "Secure",
-            "steps": {
-                "1": "Client intake and initial validation",
-                "2": "AI preparing documents and tasks",
-                "3": "Team and client kept in sync"
-            },
-            "stats": {
-                "time": "less time spent on manual coordination",
-                "capacity": "more operational capacity per lawyer",
-                "documents": "documents and flows ready for review"
-            }
-        },
-        "login": {
-            "title": "Login",
-            "description": "Enter your email below to login to your account",
-            "submit": "Login",
-            "forgot_password": "Forgot your password?",
-            "no_account": "Don't have an account?",
-            "sign_up": "Sign up",
-            "already_have_account": "Already have an account?",
-            "login": "Login"
-        },
-        "signUp": {
-            "title": "Create Account",
-            "description": "Enter your email below to create your account",
-            "submit": "Create Account",
-            "already_have_account": "Already have an account?",
-            "login": "Login"
-        },
-        "forgotPassword": {
-            "title": "Forgot your password?",
-            "description": "Enter your email and we'll send you a link to reset it",
-            "submit": "Send Link"
-        },
-        "updatePassword": {
-            "title": "Update Password",
-            "description": "Enter your new password below",
-            "submit": "Update Password"
-        },
-        "sign_up_success": {
-            "title": "Thank you for signing up!",
-            "description": "Check your email to confirm",
-            "content": "You've successfully signed up. Please check your email to confirm your account before signing in.",
-            "continue": "Continue to Onboarding"
-        },
-        "fields": {
-            "password": "Password",
-            "new_password": "New Password"
-        }
+    "benefits": {
+      "eyebrow": "Why Aurali?",
+      "title": "More time for what truly matters",
+      "description": "Your team gains operational capacity without losing control, traceability, or document quality.",
+      "stats": {
+        "time": "less time spent on administrative tasks",
+        "capacity": "more cases handled per lawyer",
+        "manual": "documents written manually"
+      },
+      "list": {
+        "one": "It adapts to your workflow, not the other way around.",
+        "two": "No learning curve: intuitive from day one.",
+        "three": "Secure and confidential: your data and processes stay under your control.",
+        "four": "Continuous updates shaped by what your operation actually needs."
+      }
     },
-    "formats": {
-        "title": "Document Templates",
-        "description": "Manage templates for legal process document generation.",
-        "new": "New Template",
-        "new_title": "New Template",
-        "edit_title": "Edit Template",
-        "form_description": "Define the name and content of the template.",
-        "field_name": "Template name",
-        "field_name_placeholder": "e.g. Bank letter, Power of attorney...",
-        "field_content": "Content",
-        "empty": "No templates created yet. Create the first one using the button above.",
-        "col_name": "Name",
-        "col_version": "Version",
-        "col_created_at": "Created",
-        "col_actions": "Actions",
-        "create_success": "Template created successfully.",
-        "update_success": "Template updated successfully.",
-        "delete_success": "Template deleted.",
-        "delete_title": "Delete template",
-        "delete_description": "Are you sure you want to delete this template? This action cannot be undone.",
-        "variables": {
-            "title": "Dynamic variables",
-            "description": "Click to insert into the editor or type them manually.",
-            "manual_hint": "You can also type them directly in the editor using the format '{VARIABLE_NAME}'.",
-            "groups": {
-                "client": "Client Information",
-                "process": "Process Information",
-                "banking": "Banking Information",
-                "lawyer": "Lawyer Information",
-                "org_rep": "Firm Legal Representative",
-                "ai": "AI Variables"
-            },
-            "FIRST_NAME": "First Name",
-            "LAST_NAME": "Last Name",
-            "DOCUMENT_TYPE": "Document Type",
-            "DOCUMENT_NAME": "Document Name",
-            "DOCUMENT_NUMBER": "Document Number",
-            "EMAIL": "Email",
-            "PHONE": "Phone",
-            "ADDRESS": "Address",
-            "PROCESS_ID": "Process ID",
-            "PROCESS_DATE": "Process Date",
-            "PROCESS_STATUS": "Process Status",
-            "BANK_NAME": "Bank Name",
-            "BANK_DOCUMENT_SLUG": "Bank Document Type",
-            "BANK_DOCUMENT_NUMBER": "Bank Document Number",
-            "BANK_LAST_4_DIGITS": "Last 4 Digits",
-            "FRAUD_INCIDENT_SUMMARY": "Fraud Incident Summary",
-            "LAWYER_FIRST_NAME": "Lawyer First Name",
-            "LAWYER_LAST_NAME": "Lawyer Last Name",
-            "LAWYER_DOCUMENT_TYPE": "Lawyer Document Type",
-            "LAWYER_DOCUMENT_NAME": "Lawyer Document Name",
-            "LAWYER_DOCUMENT_NUMBER": "Lawyer Document Number",
-            "LAWYER_SIGNATURE": "Lawyer Signature",
-            "ORG_REP_FIRST_NAME": "Representative First Name",
-            "ORG_REP_LAST_NAME": "Representative Last Name",
-            "ORG_REP_DOCUMENT_TYPE": "Representative Document Type",
-            "ORG_REP_DOCUMENT_NAME": "Representative Document Name",
-            "ORG_REP_DOCUMENT_NUMBER": "Representative Document Number",
-            "ORG_REP_EMAIL": "Representative Email",
-            "ORG_NAME": "Firm Name"
+    "testimonials": {
+      "eyebrow": "Social proof",
+      "title": "Lawyers who want to run with less friction",
+      "description": "Placeholder references to show how Aurali credibility content could look in production.",
+      "items": {
+        "one": {
+          "quote": "Aurali gave us a clear way to standardize processes without losing legal judgment. Today the team always knows what comes next in each case.",
+          "author": "Maria Fernanda Rojas",
+          "role": "Partner, Rojas Legal Studio"
+        },
+        "two": {
+          "quote": "Document generation stopped being a bottleneck. Now we review and approve instead of drafting everything from scratch.",
+          "author": "Sebastian Mejia",
+          "role": "Legal Director, Lex Norte"
+        },
+        "three": {
+          "quote": "We moved from scattered messages to a visible workflow for both the team and the client.",
+          "author": "Valentina Pardo",
+          "role": "Independent lawyer"
         }
+      }
     },
-    "landing": {
-        "nav": {
-            "features": "Features",
-            "benefits": "Benefits",
-            "howItWorks": "How it works",
-            "pricing": "Pricing",
-            "cta": "Request access",
-            "platformCta": "Go to platform",
-            "mobileAria": "Open main menu",
-            "language": "Change language",
-            "languages": {
-                "es": "Español (ES)",
-                "en": "English (EN)"
-            }
-        },
-        "hero": {
-            "eyebrow": "AI-powered legal automation platform",
-            "titleLine1": "The intelligence your firm",
-            "titleLine2": "needed to grow",
-            "subtitle": "Aurali automates your legal processes from client intake to document generation so your team can focus on what matters: legal judgment and client relationships.",
-            "primaryCta": "Request free demo",
-            "secondaryCta": "See how it works",
-            "visual": {
-                "label": "Operational view",
-                "title": "Visual engine for legal workflows",
-                "badge": "Active flow",
-                "steps": {
-                    "intake": "Client intake and initial validation",
-                    "generation": "AI drafts documents with real variables",
-                    "notification": "Client notified automatically",
-                    "review": "Final review and case closure"
-                },
-                "floating": {
-                    "document": "Document generated",
-                    "client": "Client notified",
-                    "process": "Process automated"
-                }
-            }
-        },
-        "socialProof": {
-            "title": "Designed for lawyers and law firms across Latin America",
-            "pills": {
-                "one": "100% digital",
-                "two": "Multi-user",
-                "three": "AI document generation"
-            }
-        },
-        "problem": {
-            "eyebrow": "The problem we solve",
-            "title": "Your time is too valuable to waste on paperwork",
-            "description": "Aurali removes manual coordination and turns every legal process into a visible, measurable, repeatable operation.",
-            "cards": {
-                "manual": {
-                    "title": "Manual processes",
-                    "description": "Coordination through WhatsApp, spreadsheets, and email with no real control or traceability."
-                },
-                "repetitive": {
-                    "title": "Repeating documents",
-                    "description": "Every claim, power of attorney, or letter gets drafted from scratch even when the process is the same."
-                },
-                "visibility": {
-                    "title": "No visibility",
-                    "description": "You do not know the real-time status of each case or which task is slowing down the team."
-                }
-            }
-        },
-        "features": {
-            "eyebrow": "Everything you need, in one place",
-            "title": "Built to adapt to the way you work",
-            "description": "One platform to orchestrate intake, automation, documents, and follow-up without relying on disconnected tools.",
-            "items": {
-                "workflows": {
-                    "title": "Automated workflows",
-                    "description": "Define once how your process works. Aurali handles execution automatically."
-                },
-                "documents": {
-                    "title": "Documents in seconds",
-                    "description": "Generate letters, powers of attorney, and filings automatically with real client data."
-                },
-                "ai": {
-                    "title": "Artificial intelligence",
-                    "description": "Built-in AI to draft, review, and adapt documents to your legal criteria."
-                },
-                "multiLawyer": {
-                    "title": "Multi-lawyer collaboration",
-                    "description": "Assign cases, control permissions, and collaborate with your team from a single workspace."
-                },
-                "notifications": {
-                    "title": "Smart notifications",
-                    "description": "Clients receive automatic updates at every stage of the process."
-                },
-                "visibility": {
-                    "title": "Total visibility",
-                    "description": "Real-time dashboard with the status of every process, client, and lawyer."
-                }
-            }
-        },
-        "howItWorks": {
-            "eyebrow": "Simple by design",
-            "title": "From intake to delivery, without friction",
-            "description": "Every stage connects to the next one so your operation moves forward with less noise and more control.",
-            "steps": {
-                "step1": {
-                    "title": "Create the process",
-                    "description": "Register the client and case type in seconds with the right information from the start."
-                },
-                "step2": {
-                    "title": "The workflow does the work",
-                    "description": "Forms, validations, and communications run automatically based on your rules."
-                },
-                "step3": {
-                    "title": "AI generates the documents",
-                    "description": "Use live case data to produce review-ready drafts without copy-paste work."
-                },
-                "step4": {
-                    "title": "Sign, deliver, and close",
-                    "description": "Documents are ready for review, client delivery, and case closure."
-                }
-            }
-        },
-        "benefits": {
-            "eyebrow": "Why Aurali?",
-            "title": "More time for what truly matters",
-            "description": "Your team gains operational capacity without losing control, traceability, or document quality.",
-            "stats": {
-                "time": "less time spent on administrative tasks",
-                "capacity": "more cases handled per lawyer",
-                "manual": "documents written manually"
-            },
-            "list": {
-                "one": "It adapts to your workflow, not the other way around.",
-                "two": "No learning curve: intuitive from day one.",
-                "three": "Secure and confidential: your data and processes stay under your control.",
-                "four": "Continuous updates shaped by what your operation actually needs."
-            }
-        },
-        "testimonials": {
-            "eyebrow": "Social proof",
-            "title": "Lawyers who want to run with less friction",
-            "description": "Placeholder references to show how Aurali credibility content could look in production.",
-            "items": {
-                "one": {
-                    "quote": "Aurali gave us a clear way to standardize processes without losing legal judgment. Today the team always knows what comes next in each case.",
-                    "author": "Maria Fernanda Rojas",
-                    "role": "Partner, Rojas Legal Studio"
-                },
-                "two": {
-                    "quote": "Document generation stopped being a bottleneck. Now we review and approve instead of drafting everything from scratch.",
-                    "author": "Sebastian Mejia",
-                    "role": "Legal Director, Lex Norte"
-                },
-                "three": {
-                    "quote": "We moved from scattered messages to a visible workflow for both the team and the client.",
-                    "author": "Valentina Pardo",
-                    "role": "Independent lawyer"
-                }
-            }
-        },
-        "finalCta": {
-            "badge": "Early access",
-            "title": "Start automating your law firm today",
-            "description": "No credit card. No commitment. Just a smarter way to run your legal practice.",
-            "cta": "Request free access"
-        },
-        "footer": {
-            "tagline": "The digital employee for lawyers",
-            "links": {
-                "privacy": "Privacy policy",
-                "terms": "Terms",
-                "contact": "Contact"
-            },
-            "copy": "© 2025 Aurali. All rights reserved."
-        }
+    "finalCta": {
+      "badge": "Early access",
+      "title": "Start automating your law firm today",
+      "description": "No credit card. No commitment. Just a smarter way to run your legal practice.",
+      "cta": "Request free access"
     },
-    "settings": {
-        "ai_variables": {
-            "title": "AI Variables",
-            "description": "Create custom AI-generated variables to use in your document templates.",
-            "new": "New variable",
-            "new_title": "New AI variable",
-            "edit_title": "Edit AI variable",
-            "cancel": "Cancel",
-            "create": "Create variable",
-            "save_changes": "Save changes",
-            "saving": "Saving...",
-            "delete": "Delete",
-            "error": "An error occurred",
-            "create_success": "Variable created successfully",
-            "update_success": "Variable updated successfully",
-            "delete_success": "Variable deleted successfully",
-            "empty_title": "No AI variables",
-            "empty_description": "Create custom variables with prompts so AI can automatically generate content when producing documents.",
-            "col_name": "Name",
-            "col_key": "Variable",
-            "col_description": "Description",
-            "field_name": "Name",
-            "field_name_placeholder": "e.g. Case facts",
-            "field_key": "Variable key",
-            "field_key_hint": "Used in templates as {AI_NAME}. Auto-generated from the name.",
-            "field_description": "Description (optional)",
-            "field_description_placeholder": "What this variable is used for",
-            "field_prompt": "AI Prompt",
-            "field_prompt_placeholder": "Write the facts of the banking fraud case in formal legal language, in third person, based on the client's account and attached documents...",
-            "tips_title": "How to write a good prompt",
-            "tips": {
-                "specific": "Be specific: state which part of the document you want to generate",
-                "formal": "Define the tone: formal, legal, concise, etc.",
-                "third_person": "Specify grammatical person: third person, first person plural",
-                "vague": "Avoid vague instructions like \"write something about the case\"",
-                "no_context": "Don't repeat context — it's sent automatically"
-            },
-            "context_title": "Context available to the AI",
-            "context": {
-                "client_data": "Client personal data",
-                "banking_data": "Banking information",
-                "fraud_summary": "Fraud incident summary",
-                "attached_pdfs": "PDFs attached by the client"
-            },
-            "examples_title": "Writing examples",
-            "examples_description": "Show the AI how you write this field so it can match your style.",
-            "add_example": "Add example",
-            "example_placeholder": "Write an example of how you draft this field...",
-            "delete_confirm_title": "Delete variable?",
-            "delete_confirm_description": "This action cannot be undone. Templates using this variable will have an unresolved token.",
-            "validation": {
-                "prompt_too_short": "The prompt must be at least 20 characters.",
-                "prompt_too_long": "The prompt cannot exceed 2000 characters.",
-                "injection_override": "The prompt contains disallowed instruction override patterns.",
-                "injection_persona": "The prompt contains disallowed role-change instructions.",
-                "injection_jailbreak": "The prompt contains disallowed patterns.",
-                "injection_extract": "The prompt contains disallowed extraction instructions.",
-                "injection_delimiter": "The prompt contains disallowed control delimiters."
-            }
-        },
-        "account": {
-            "personal_data": "Personal data",
-            "personal_data_description": "Basic information about your professional profile.",
-            "organizations_description": "Organizations you belong to and your role in each one.",
-            "save_changes": "Save changes",
-            "profile_updated": "Profile updated",
-            "profile_update_error": "Error updating profile",
-            "signature_title": "Signature",
-            "signature_description": "Image that will be automatically inserted into generated documents.",
-            "signature_registered": "Signature registered",
-            "signature_status_label": "Status",
-            "signature_status_active": "Active · visible in documents",
-            "signature_change": "Change signature",
-            "signature_delete": "Delete",
-            "signature_create": "Create signature",
-            "signature_empty_hint": "Your signature will appear in generated documents",
-            "signature_saved": "Signature saved",
-            "signature_save_error": "Error saving signature",
-            "signature_deleted": "Signature deleted",
-            "signature_delete_error": "Error deleting signature",
-            "organizations_title": "Organizations",
-            "organizations_empty": "No organizations.",
-            "role_admin": "Admin",
-            "role_user": "Member",
-            "inactive": "Inactive"
-        },
-        "workflows": {
-            "title": "Workflow Settings",
-            "description": "Manage legal process types and their automated stages.",
-            "new": "New Template",
-            "save": "Save",
-            "name": "Template name",
-            "name_placeholder": "e.g. Health Tutelage",
-            "steps": "Workflow Stages",
-            "add_step": "Add Stage",
-            "step_title": "Stage title",
-            "step_type": "Action type",
-            "order": "Order",
-            "actions": "Notifications",
-            "save_success": "Workflow saved successfully",
-            "mobile_blocked_eyebrow": "Desktop only",
-            "mobile_blocked_title": "This view is not available on phones",
-            "mobile_blocked_description": "You can review workflow settings from a desktop or a wider screen.",
-            "mobile_blocked_hint_title": "Open it from your computer",
-            "mobile_blocked_hint_description": "The full workflow editor and preview need more space to inspect nodes, connections, and configuration comfortably.",
-            "no_active_organization": "You don't have an active organization.",
-            "readonly_title": "Workflow",
-            "readonly_description": "Read-only view of your organization's active workflow.",
-            "types": {
-                "manual": "Manual",
-                "client_input": "Client Input",
-                "payment": "Initial Payment",
-                "ai_generation": "AI Generation",
-                "ai_wait": "AI Wait",
-                "internal_review": "Internal Review"
-            }
-        }
+    "footer": {
+      "tagline": "The digital employee for lawyers",
+      "links": {
+        "privacy": "Privacy policy",
+        "terms": "Terms",
+        "contact": "Contact"
+      },
+      "copy": "© 2025 Aurali. All rights reserved."
     }
+  },
+  "settings": {
+    "ai_variables": {
+      "title": "AI Variables",
+      "description": "Create custom AI-generated variables to use in your document templates.",
+      "new": "New variable",
+      "new_title": "New AI variable",
+      "edit_title": "Edit AI variable",
+      "cancel": "Cancel",
+      "create": "Create variable",
+      "save_changes": "Save changes",
+      "saving": "Saving...",
+      "delete": "Delete",
+      "error": "An error occurred",
+      "create_success": "Variable created successfully",
+      "update_success": "Variable updated successfully",
+      "delete_success": "Variable deleted successfully",
+      "empty_title": "No AI variables",
+      "empty_description": "Create custom variables with prompts so AI can automatically generate content when producing documents.",
+      "col_name": "Name",
+      "col_key": "Variable",
+      "col_description": "Description",
+      "field_name": "Name",
+      "field_name_placeholder": "e.g. Case facts",
+      "field_key": "Variable key",
+      "field_key_hint": "Used in templates as {AI_NAME}. Auto-generated from the name.",
+      "field_description": "Description (optional)",
+      "field_description_placeholder": "What this variable is used for",
+      "field_prompt": "AI Prompt",
+      "field_prompt_placeholder": "Write the facts of the banking fraud case in formal legal language, in third person, based on the client's account and attached documents...",
+      "tips_title": "How to write a good prompt",
+      "tips": {
+        "specific": "Be specific: state which part of the document you want to generate",
+        "formal": "Define the tone: formal, legal, concise, etc.",
+        "third_person": "Specify grammatical person: third person, first person plural",
+        "vague": "Avoid vague instructions like \"write something about the case\"",
+        "no_context": "Don't repeat context — it's sent automatically"
+      },
+      "context_title": "Context available to the AI",
+      "context": {
+        "client_data": "Client personal data",
+        "banking_data": "Banking information",
+        "fraud_summary": "Fraud incident summary",
+        "attached_pdfs": "PDFs attached by the client"
+      },
+      "examples_title": "Writing examples",
+      "examples_description": "Show the AI how you write this field so it can match your style.",
+      "add_example": "Add example",
+      "example_placeholder": "Write an example of how you draft this field...",
+      "delete_confirm_title": "Delete variable?",
+      "delete_confirm_description": "This action cannot be undone. Templates using this variable will have an unresolved token.",
+      "validation": {
+        "prompt_too_short": "The prompt must be at least 20 characters.",
+        "prompt_too_long": "The prompt cannot exceed 2000 characters.",
+        "injection_override": "The prompt contains disallowed instruction override patterns.",
+        "injection_persona": "The prompt contains disallowed role-change instructions.",
+        "injection_jailbreak": "The prompt contains disallowed patterns.",
+        "injection_extract": "The prompt contains disallowed extraction instructions.",
+        "injection_delimiter": "The prompt contains disallowed control delimiters."
+      }
+    },
+    "account": {
+      "personal_data": "Personal data",
+      "personal_data_description": "Basic information about your professional profile.",
+      "organizations_description": "Organizations you belong to and your role in each one.",
+      "save_changes": "Save changes",
+      "profile_updated": "Profile updated",
+      "profile_update_error": "Error updating profile",
+      "signature_title": "Signature",
+      "signature_description": "Image that will be automatically inserted into generated documents.",
+      "signature_registered": "Signature registered",
+      "signature_status_label": "Status",
+      "signature_status_active": "Active · visible in documents",
+      "signature_change": "Change signature",
+      "signature_delete": "Delete",
+      "signature_create": "Create signature",
+      "signature_empty_hint": "Your signature will appear in generated documents",
+      "signature_saved": "Signature saved",
+      "signature_save_error": "Error saving signature",
+      "signature_deleted": "Signature deleted",
+      "signature_delete_error": "Error deleting signature",
+      "organizations_title": "Organizations",
+      "organizations_empty": "No organizations.",
+      "role_admin": "Admin",
+      "role_user": "Member",
+      "inactive": "Inactive"
+    },
+    "workflows": {
+      "title": "Workflow Settings",
+      "description": "Manage legal process types and their automated stages.",
+      "new": "New Template",
+      "save": "Save",
+      "name": "Template name",
+      "name_placeholder": "e.g. Health Tutelage",
+      "steps": "Workflow Stages",
+      "add_step": "Add Stage",
+      "step_title": "Stage title",
+      "step_type": "Action type",
+      "order": "Order",
+      "actions": "Notifications",
+      "save_success": "Workflow saved successfully",
+      "mobile_blocked_eyebrow": "Desktop only",
+      "mobile_blocked_title": "This view is not available on phones",
+      "mobile_blocked_description": "You can review workflow settings from a desktop or a wider screen.",
+      "mobile_blocked_hint_title": "Open it from your computer",
+      "mobile_blocked_hint_description": "The full workflow editor and preview need more space to inspect nodes, connections, and configuration comfortably.",
+      "no_active_organization": "You don't have an active organization.",
+      "readonly_title": "Workflow",
+      "readonly_description": "Read-only view of your organization's active workflow.",
+      "types": {
+        "manual": "Manual",
+        "client_input": "Client Input",
+        "payment": "Initial Payment",
+        "ai_generation": "AI Generation",
+        "ai_wait": "AI Wait",
+        "internal_review": "Internal Review"
+      }
+    },
+    "workflow_editor": {
+      "node_id": "Node ID",
+      "node_title_label": "Node title",
+      "node_title_placeholder": "Node name",
+      "config_section": "Configuration",
+      "apply_changes": "Apply changes",
+      "sidebar_title": "Nodes",
+      "sidebar_hint": "Drag to canvas",
+      "email_edit_title": "Edit email — {title}",
+      "email_attachment_hint": "This email will have attached documents. When the step runs, a selection of the generated process documents will be shown to choose which ones to attach.",
+      "email_subject_label": "Subject",
+      "email_subject_placeholder": "Email subject",
+      "email_body_label": "Email body",
+      "email_save_success": "Email updated",
+      "email_save_error": "Error saving"
+    },
+    "header_footer": {
+      "align_left": "Align left",
+      "align_center": "Center",
+      "align_right": "Align right",
+      "upload_image": "Upload image",
+      "remove_image": "Remove image",
+      "image_preview_alt": "Preview",
+      "image_section": "Image",
+      "image_position": "Position:",
+      "text_section": "Text",
+      "is_default_label": "Set as default",
+      "saving": "Saving…",
+      "save_error": "Error saving",
+      "name_label": "Name"
+    }
+  }
 }

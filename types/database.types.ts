@@ -142,6 +142,8 @@ export type Database = {
           document_number: string | null
           document_slug: string | null
           id: string
+          legal_rep_first_name: string | null
+          legal_rep_last_name: string | null
           name: string | null
           organization_id: string | null
           slug: string | null
@@ -154,6 +156,8 @@ export type Database = {
           document_number?: string | null
           document_slug?: string | null
           id?: string
+          legal_rep_first_name?: string | null
+          legal_rep_last_name?: string | null
           name?: string | null
           organization_id?: string | null
           slug?: string | null
@@ -166,6 +170,8 @@ export type Database = {
           document_number?: string | null
           document_slug?: string | null
           id?: string
+          legal_rep_first_name?: string | null
+          legal_rep_last_name?: string | null
           name?: string | null
           organization_id?: string | null
           slug?: string | null
@@ -189,6 +195,8 @@ export type Database = {
           document_slug: string | null
           id: string
           is_active: boolean
+          legal_rep_first_name: string | null
+          legal_rep_last_name: string | null
           name: string
           slug: string
         }
@@ -200,6 +208,8 @@ export type Database = {
           document_slug?: string | null
           id?: string
           is_active?: boolean
+          legal_rep_first_name?: string | null
+          legal_rep_last_name?: string | null
           name: string
           slug: string
         }
@@ -211,6 +221,8 @@ export type Database = {
           document_slug?: string | null
           id?: string
           is_active?: boolean
+          legal_rep_first_name?: string | null
+          legal_rep_last_name?: string | null
           name?: string
           slug?: string
         }
@@ -975,6 +987,7 @@ export type Database = {
           content: Json | null
           created_at: string
           created_by: string | null
+          font_family: string
           footer_id: string | null
           header_id: string | null
           id: string
@@ -986,6 +999,7 @@ export type Database = {
           content?: Json | null
           created_at?: string
           created_by?: string | null
+          font_family?: string
           footer_id?: string | null
           header_id?: string | null
           id?: string
@@ -997,6 +1011,7 @@ export type Database = {
           content?: Json | null
           created_at?: string
           created_by?: string | null
+          font_family?: string
           footer_id?: string | null
           header_id?: string | null
           id?: string

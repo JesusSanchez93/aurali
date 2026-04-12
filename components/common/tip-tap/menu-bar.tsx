@@ -34,13 +34,286 @@ import {
   ChevronDown,
   PanelTop,
   PanelBottom,
+  PenLine,
   PanelLeft,
   PanelRight,
   LayoutTemplate,
   Image as ImageIcon,
   Upload,
+  RemoveFormatting,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+
+// ─── Text format dropdown (B / I / S / </> / AA) ─────────────────────────────
+function TextFormatMenu({ editor, editorState }: {
+  editor: Editor;
+  editorState: {
+    isBold: boolean; canBold: boolean;
+    isItalic: boolean; canItalic: boolean;
+    isStrike: boolean; canStrike: boolean;
+    isCode: boolean; canCode: boolean;
+    isUppercase: boolean;
+  };
+}) {
+  const anyActive = editorState.isBold || editorState.isItalic || editorState.isStrike || editorState.isCode || editorState.isUppercase;
+
+  // Pick the icon for the trigger based on what's active
+  const TriggerIcon = editorState.isBold ? Bold
+    : editorState.isItalic ? Italic
+    : editorState.isStrike ? Strikethrough
+    : editorState.isCode ? Code
+    : Bold;
+  const triggerLabel = editorState.isUppercase ? 'AA' : undefined;
+
+  return (
+    <div className="flex items-center">
+      {/* Primary action: toggle bold */}
+      <Button
+        variant={anyActive ? 'secondary' : 'ghost'}
+        size="icon"
+        type="button"
+        title="Negrita (⌘B)"
+        className="h-8 w-8 rounded-r-none"
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        disabled={!editorState.canBold}
+      >
+        {triggerLabel
+          ? <span className="text-[11px] font-bold leading-none tracking-tight">{triggerLabel}</span>
+          : <TriggerIcon className="h-4 w-4" />}
+      </Button>
+
+      {/* Chevron: open full dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant={anyActive ? 'secondary' : 'ghost'}
+            size="icon"
+            type="button"
+            className="h-8 w-5 rounded-l-none border-l border-l-border/50 px-0"
+          >
+            <ChevronDown className="h-3 w-3 opacity-60" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-52">
+          <DropdownMenuItem
+            onSelect={() => editor.chain().focus().toggleBold().run()}
+            disabled={!editorState.canBold}
+            className={editorState.isBold ? 'bg-accent' : ''}
+          >
+            <Bold className="mr-2 h-4 w-4" />
+            <span className="flex-1">Negrita</span>
+            <kbd className="text-[10px] text-muted-foreground">⌘B</kbd>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => editor.chain().focus().toggleItalic().run()}
+            disabled={!editorState.canItalic}
+            className={editorState.isItalic ? 'bg-accent' : ''}
+          >
+            <Italic className="mr-2 h-4 w-4" />
+            <span className="flex-1">Cursiva</span>
+            <kbd className="text-[10px] text-muted-foreground">⌘I</kbd>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => editor.chain().focus().toggleStrike().run()}
+            disabled={!editorState.canStrike}
+            className={editorState.isStrike ? 'bg-accent' : ''}
+          >
+            <Strikethrough className="mr-2 h-4 w-4" />
+            <span className="flex-1">Tachado</span>
+            <kbd className="text-[10px] text-muted-foreground">⌘⇧S</kbd>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => editor.chain().focus().toggleCode().run()}
+            disabled={!editorState.canCode}
+            className={editorState.isCode ? 'bg-accent' : ''}
+          >
+            <Code className="mr-2 h-4 w-4" />
+            <span className="flex-1">Código</span>
+            <kbd className="text-[10px] text-muted-foreground">⌘`</kbd>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => editor.chain().focus().toggleUppercase().run()}
+            className={editorState.isUppercase ? 'bg-accent' : ''}
+          >
+            <span className="mr-2 h-4 w-4 text-center text-[11px] font-bold leading-none">AA</span>
+            <span className="flex-1">Mayúsculas</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => editor.chain().focus().unsetAllMarks().run()}>
+            <RemoveFormatting className="mr-2 h-4 w-4" />
+            <span className="flex-1">Borrar formato</span>
+            <kbd className="text-[10px] text-muted-foreground">⌘\</kbd>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+// ─── Text type dropdown (Tt / H1–H6) ─────────────────────────────────────────
+const HEADING_ICONS = [Heading1, Heading2, Heading3, Heading4, Heading5, Heading6] as const;
+
+function TextTypeMenu({ editor, editorState }: {
+  editor: Editor;
+  editorState: {
+    isParagraph: boolean;
+    isHeading1: boolean; isHeading2: boolean; isHeading3: boolean;
+    isHeading4: boolean; isHeading5: boolean; isHeading6: boolean;
+  };
+}) {
+  const activeLevel = editorState.isHeading1 ? 1
+    : editorState.isHeading2 ? 2
+    : editorState.isHeading3 ? 3
+    : editorState.isHeading4 ? 4
+    : editorState.isHeading5 ? 5
+    : editorState.isHeading6 ? 6
+    : 0;
+
+  const ActiveIcon = activeLevel > 0 ? HEADING_ICONS[activeLevel - 1] : null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={activeLevel > 0 ? 'secondary' : 'ghost'}
+          size="sm"
+          type="button"
+          className="h-8 gap-1 px-2"
+          title="Tipo de texto"
+        >
+          {ActiveIcon
+            ? <ActiveIcon className="h-4 w-4" />
+            : <span className="text-[13px] font-semibold leading-none tracking-tight">Tt</span>}
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-52">
+        <DropdownMenuItem
+          onSelect={() => editor.chain().focus().setParagraph().run()}
+          className={editorState.isParagraph ? 'bg-accent' : ''}
+        >
+          <span className="mr-2 w-4 text-center text-xs text-muted-foreground">Tt</span>
+          <span className="flex-1 text-sm">Texto normal</span>
+          <kbd className="text-[10px] text-muted-foreground">⌘⌥0</kbd>
+        </DropdownMenuItem>
+        {([1, 2, 3, 4, 5, 6] as const).map((level) => {
+          const Icon = HEADING_ICONS[level - 1];
+          const isActive = editorState[`isHeading${level}` as keyof typeof editorState];
+          const sizes = ['text-xl font-bold', 'text-lg font-bold', 'text-base font-semibold', 'text-sm font-semibold', 'text-sm font-medium', 'text-xs font-medium'];
+          return (
+            <DropdownMenuItem
+              key={level}
+              onSelect={() => editor.chain().focus().toggleHeading({ level }).run()}
+              className={isActive ? 'bg-accent' : ''}
+            >
+              <Icon className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className={`flex-1 ${sizes[level - 1]}`}>Título {level}</span>
+              <kbd className="text-[10px] text-muted-foreground">⌘⌥{level}</kbd>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ─── Align dropdown ───────────────────────────────────────────────────────────
+function AlignMenu({ editor, editorState }: {
+  editor: Editor;
+  editorState: { isAlignLeft: boolean; isAlignCenter: boolean; isAlignRight: boolean };
+}) {
+  const ActiveIcon = editorState.isAlignCenter ? AlignCenter
+    : editorState.isAlignRight ? AlignRight
+    : AlignLeft;
+  const anyActive = editorState.isAlignCenter || editorState.isAlignRight;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={anyActive ? 'secondary' : 'ghost'}
+          size="sm"
+          type="button"
+          className="h-8 gap-1 px-2"
+          title="Alineación"
+        >
+          <ActiveIcon className="h-4 w-4" />
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuItem
+          onSelect={() => editor.chain().focus().setTextAlign('left').run()}
+          className={editorState.isAlignLeft ? 'bg-accent' : ''}
+        >
+          <AlignLeft className="mr-2 h-4 w-4" />
+          <span className="flex-1">Izquierda</span>
+          <kbd className="text-[10px] text-muted-foreground">⌘⇧L</kbd>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => editor.chain().focus().setTextAlign('center').run()}
+          className={editorState.isAlignCenter ? 'bg-accent' : ''}
+        >
+          <AlignCenter className="mr-2 h-4 w-4" />
+          <span className="flex-1">Centrado</span>
+          <kbd className="text-[10px] text-muted-foreground">⌘⇧E</kbd>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => editor.chain().focus().setTextAlign('right').run()}
+          className={editorState.isAlignRight ? 'bg-accent' : ''}
+        >
+          <AlignRight className="mr-2 h-4 w-4" />
+          <span className="flex-1">Derecha</span>
+          <kbd className="text-[10px] text-muted-foreground">⌘⇧R</kbd>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ─── List dropdown ────────────────────────────────────────────────────────────
+function ListMenu({ editor, editorState }: {
+  editor: Editor;
+  editorState: { isBulletList: boolean; isOrderedList: boolean };
+}) {
+  const ActiveIcon = editorState.isOrderedList ? ListOrdered : List;
+  const anyActive = editorState.isBulletList || editorState.isOrderedList;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant={anyActive ? 'secondary' : 'ghost'}
+          size="sm"
+          type="button"
+          className="h-8 gap-1 px-2"
+          title="Listas"
+        >
+          <ActiveIcon className="h-4 w-4" />
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44">
+        <DropdownMenuItem
+          onSelect={() => editor.chain().focus().toggleBulletList().run()}
+          className={editorState.isBulletList ? 'bg-accent' : ''}
+        >
+          <List className="mr-2 h-4 w-4" />
+          <span className="flex-1 whitespace-nowrap">Lista simple</span>
+          <kbd className="text-[10px] text-muted-foreground">⌘⇧8</kbd>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => editor.chain().focus().toggleOrderedList().run()}
+          className={editorState.isOrderedList ? 'bg-accent' : ''}
+        >
+          <ListOrdered className="mr-2 h-4 w-4" />
+          <span className="flex-1 whitespace-nowrap">Lista numerada</span>
+          <kbd className="text-[10px] text-muted-foreground">⌘⇧7</kbd>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 // ─── Table header helpers ─────────────────────────────────────────────────────
 function getTableInfo(editor: Editor) {
@@ -174,6 +447,8 @@ function TableGridPicker({ onPick }: { onPick: (rows: number, cols: number) => v
           return (
             <div
               key={i}
+              role="button"
+              tabIndex={0}
               className={`h-4 w-4 rounded-sm border transition-colors ${
                 active
                   ? 'border-primary bg-primary/20'
@@ -181,6 +456,7 @@ function TableGridPicker({ onPick }: { onPick: (rows: number, cols: number) => v
               }`}
               onMouseEnter={() => setHovered({ row, col })}
               onClick={() => onPick(row, col)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onPick(row, col)}
             />
           );
         })}
@@ -445,6 +721,9 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
       isAlignLeft: ctx.editor.isActive({ textAlign: 'left' }) ?? false,
       isAlignCenter: ctx.editor.isActive({ textAlign: 'center' }) ?? false,
       isAlignRight: ctx.editor.isActive({ textAlign: 'right' }) ?? false,
+      isUppercase: ctx.editor.isActive('uppercase') ?? false,
+      hasHeader: (() => { let found = false; ctx.editor.state.doc.forEach((n) => { if (n.type.name === 'documentHeader') found = true; }); return found; })(),
+      hasFooter: (() => { let found = false; ctx.editor.state.doc.forEach((n) => { if (n.type.name === 'documentFooter') found = true; }); return found; })(),
     }),
   });
 
@@ -455,77 +734,17 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1">
-        {/* Text formatting */}
-        <Button variant={editorState.isBold ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleBold().run()} disabled={!editorState.canBold}>
-          <Bold />
-        </Button>
-        <Button variant={editorState.isItalic ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleItalic().run()} disabled={!editorState.canItalic}>
-          <Italic />
-        </Button>
-        <Button variant={editorState.isStrike ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleStrike().run()} disabled={!editorState.canStrike}>
-          <Strikethrough />
-        </Button>
-        <Button variant={editorState.isCode ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleCode().run()} disabled={!editorState.canCode}>
-          <Code />
-        </Button>
+        {/* Text formatting group */}
+        <TextFormatMenu editor={editor} editorState={editorState} />
 
-        {/* Blocks */}
-        <Button variant={editorState.isParagraph ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().setParagraph().run()}>
-          <Pilcrow />
-        </Button>
-        <Button variant={editorState.isHeading1 ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
-          <Heading1 />
-        </Button>
-        <Button variant={editorState.isHeading2 ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-          <Heading2 />
-        </Button>
-        <Button variant={editorState.isHeading3 ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-          <Heading3 />
-        </Button>
-        <Button variant={editorState.isHeading4 ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}>
-          <Heading4 />
-        </Button>
-        <Button variant={editorState.isHeading5 ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}>
-          <Heading5 />
-        </Button>
-        <Button variant={editorState.isHeading6 ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}>
-          <Heading6 />
-        </Button>
+        {/* Text type group */}
+        <TextTypeMenu editor={editor} editorState={editorState} />
 
-        {/* Lists */}
-        <Button variant={editorState.isBulletList ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          <List />
-        </Button>
-        <Button variant={editorState.isOrderedList ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-          <ListOrdered />
-        </Button>
+        {/* List group */}
+        <ListMenu editor={editor} editorState={editorState} />
 
-        {/* Alignment */}
-        <Button variant={editorState.isAlignLeft ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}>
-          <AlignLeft />
-        </Button>
-        <Button variant={editorState.isAlignCenter ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}>
-          <AlignCenter />
-        </Button>
-        <Button variant={editorState.isAlignRight ? 'secondary' : 'ghost'} size="icon" type="button"
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}>
-          <AlignRight />
-        </Button>
+        {/* Alignment group */}
+        <AlignMenu editor={editor} editorState={editorState} />
 
         {/* Image */}
         <ImageMenu editor={editor} />
@@ -564,6 +783,47 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
 
         {/* Table */}
         <TableMenu editor={editor} />
+
+        {/* Document sections */}
+        <div className="mx-1 w-px self-stretch bg-border" />
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          className="h-8 gap-1.5 px-2 text-xs"
+          title={editorState.hasHeader ? 'Ya existe una cabecera' : 'Insertar cabecera de documento'}
+          disabled={editorState.hasHeader}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onClick={() => (editor as any).chain().focus().insertDocumentHeader().run()}
+        >
+          <PanelTop className="h-3.5 w-3.5" />
+          Cabecera
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          className="h-8 gap-1.5 px-2 text-xs"
+          title={editorState.hasFooter ? 'Ya existe un pie de página' : 'Insertar pie de página de documento'}
+          disabled={editorState.hasFooter}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onClick={() => (editor as any).chain().focus().insertDocumentFooter().run()}
+        >
+          <PanelBottom className="h-3.5 w-3.5" />
+          Pie
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          className="h-8 gap-1.5 px-2 text-xs"
+          title="Insertar espacio de firma"
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onClick={() => (editor as any).chain().focus().insertSignatureSpace().run()}
+        >
+          <PenLine className="h-3.5 w-3.5" />
+          Firma
+        </Button>
         </div>
 
         {pageSizeProps && (

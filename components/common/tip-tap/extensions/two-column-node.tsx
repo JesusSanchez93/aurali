@@ -20,7 +20,7 @@ declare module '@tiptap/core' {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MIN_COLS = 2;
 const MAX_COLS = 5;
-const COL_GAP = 12;      // px — gap between columns
+const COL_GAP = 24;      // px — gap between columns (~0.6cm, standard column gutter)
 const MIN_RATIO = 0.15;  // minimum flex-ratio per column
 const COL_PADDING = 0;   // px — inner padding inside each column
 
@@ -95,7 +95,7 @@ export const ColumnExtension = Node.create({
         const direction: ColDirection = node.attrs.direction ?? 'col';
 
         let style =
-            `flex:${width};min-width:0;min-height:80px;` +
+            `flex:${width};min-width:0;` +
             `padding:${COL_PADDING}px;box-sizing:border-box;`;
 
         if (direction === 'row') {
@@ -360,7 +360,12 @@ function TwoColumnComponent({ node, editor, getPos, deleteNode }: NodeViewProps)
                  * handler still runs (no preventDefault) and places the cursor.
                  */}
                 <div
-                    className="relative p-1"
+                    className="relative p-2"
+                    style={{
+                        backgroundColor: 'hsl(var(--muted) / 0.4)',
+                        backgroundImage: 'radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px)',
+                        backgroundSize: '16px 16px',
+                    }}
                     onMouseDown={(e) => {
                         if ((e.target as HTMLElement).closest('[contenteditable="false"]')) return;
                         editor.view.focus();
@@ -412,7 +417,7 @@ function TwoColumnComponent({ node, editor, getPos, deleteNode }: NodeViewProps)
                                     'pointer-events-auto absolute flex items-center gap-1',
                                     'opacity-0 transition-opacity duration-150 group-hover/cols:opacity-100',
                                 )}
-                                style={{ bottom: -5, right: rightOffset }}
+                                style={{ bottom: -30, right: rightOffset }}
                             >
                                 {/* Direction toggle */}
                                 <button

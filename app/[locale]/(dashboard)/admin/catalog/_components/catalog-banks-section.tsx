@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useReducer, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,46 +24,75 @@ type Bank = {
   document_slug: string | null;
   document_name: { es?: string; en?: string } | null;
   document_number: string | null;
+  legal_rep_first_name: string | null;
+  legal_rep_last_name:  string | null;
 };
 
 const schema = z.object({
-  code:            z.string().min(1, 'El código es requerido').trim(),
-  name:            z.string().min(1, 'El nombre es requerido').trim(),
-  document_slug:   z.string().trim().optional(),
-  document_number: z.string().trim().optional(),
+  code:                 z.string().min(1, 'El código es requerido').trim(),
+  name:                 z.string().min(1, 'El nombre es requerido').trim(),
+  document_slug:        z.string().trim().optional(),
+  document_number:      z.string().trim().optional(),
+  legal_rep_first_name: z.string().trim().optional(),
+  legal_rep_last_name:  z.string().trim().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
+// ── UI state reducer ──────────────────────────────────────────────────────────
+type UIState = {
+  sheetOpen: boolean;
+  editTarget: Bank | null;
+  deleteTarget: Bank | null;
+  pendingId: string | null;
+};
+
+type UIAction =
+  | { type: 'OPEN_ADD' }
+  | { type: 'OPEN_EDIT'; bank: Bank }
+  | { type: 'CLOSE_SHEET' }
+  | { type: 'SET_DELETE_TARGET'; bank: Bank | null }
+  | { type: 'SET_PENDING_ID'; id: string | null };
+
+const uiInitial: UIState = { sheetOpen: false, editTarget: null, deleteTarget: null, pendingId: null };
+
+function uiReducer(state: UIState, action: UIAction): UIState {
+  switch (action.type) {
+    case 'OPEN_ADD':          return { ...state, sheetOpen: true, editTarget: null };
+    case 'OPEN_EDIT':         return { ...state, sheetOpen: true, editTarget: action.bank };
+    case 'CLOSE_SHEET':       return { ...state, sheetOpen: false, editTarget: null };
+    case 'SET_DELETE_TARGET': return { ...state, deleteTarget: action.bank };
+    case 'SET_PENDING_ID':    return { ...state, pendingId: action.id };
+    default: return state;
+  }
+}
+
 export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBanks: Bank[]; documentTypes: DocType[] }) {
   const [banks, setBanks] = useState<Bank[]>(initialBanks);
   const [search, setSearch] = useState('');
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Bank | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Bank | null>(null);
+  const [{ sheetOpen, editTarget, deleteTarget, pendingId }, uiDispatch] = useReducer(uiReducer, uiInitial);
   const [isSubmitting, startSubmit] = useTransition();
-  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { code: '', name: '', document_slug: '', document_number: '' },
+    defaultValues: { code: '', name: '', document_slug: '', document_number: '', legal_rep_first_name: '', legal_rep_last_name: '' },
   });
 
   function openAdd() {
-    setEditTarget(null);
-    form.reset({ code: '', name: '', document_slug: '', document_number: '' });
-    setSheetOpen(true);
+    form.reset({ code: '', name: '', document_slug: '', document_number: '', legal_rep_first_name: '', legal_rep_last_name: '' });
+    uiDispatch({ type: 'OPEN_ADD' });
   }
 
   function openEdit(bank: Bank) {
-    setEditTarget(bank);
     form.reset({
       code: bank.code,
       name: bank.name,
       document_slug: bank.document_slug ?? '',
       document_number: bank.document_number ?? '',
+      legal_rep_first_name: bank.legal_rep_first_name ?? '',
+      legal_rep_last_name:  bank.legal_rep_last_name ?? '',
     });
-    setSheetOpen(true);
+    uiDispatch({ type: 'OPEN_EDIT', bank });
   }
 
   function handleSubmit(values: FormValues) {
@@ -83,6 +112,8 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
             documentSlug,
             documentName,
             values.document_number || undefined,
+            values.legal_rep_first_name || undefined,
+            values.legal_rep_last_name || undefined,
           );
           setBanks((prev) => prev.map((b) => b.id === editTarget.id ? {
             ...b,
@@ -92,6 +123,8 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
             document_slug: documentSlug,
             document_name: documentName,
             document_number: values.document_number || null,
+            legal_rep_first_name: values.legal_rep_first_name || null,
+            legal_rep_last_name:  values.legal_rep_last_name || null,
           } : b));
         } else {
           await addCatalogBank(
@@ -100,6 +133,8 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
             documentSlug,
             documentName,
             values.document_number || undefined,
+            values.legal_rep_first_name || undefined,
+            values.legal_rep_last_name || undefined,
           );
           setBanks((prev) => [...prev, {
             id: crypto.randomUUID(),
@@ -110,11 +145,12 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
             document_slug: documentSlug,
             document_name: documentName,
             document_number: values.document_number || null,
+            legal_rep_first_name: values.legal_rep_first_name || null,
+            legal_rep_last_name:  values.legal_rep_last_name || null,
           }]);
         }
         form.reset();
-        setSheetOpen(false);
-        setEditTarget(null);
+        uiDispatch({ type: 'CLOSE_SHEET' });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Error al guardar banco');
       }
@@ -122,19 +158,19 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
   }
 
   function handleToggle(bank: Bank) {
-    setPendingId(bank.id);
+    uiDispatch({ type: 'SET_PENDING_ID', id: bank.id });
     toggleCatalogBank(bank.id, !bank.is_active)
       .then(() => setBanks((prev) => prev.map((b) => b.id === bank.id ? { ...b, is_active: !b.is_active } : b)))
       .catch(() => toast.error('Error al actualizar banco'))
-      .finally(() => setPendingId(null));
+      .finally(() => uiDispatch({ type: 'SET_PENDING_ID', id: null }));
   }
 
   function handleDelete(id: string) {
-    setPendingId(id);
+    uiDispatch({ type: 'SET_PENDING_ID', id });
     deleteCatalogBank(id)
       .then(() => setBanks((prev) => prev.filter((b) => b.id !== id)))
       .catch(() => toast.error('Error al eliminar banco'))
-      .finally(() => setPendingId(null));
+      .finally(() => uiDispatch({ type: 'SET_PENDING_ID', id: null }));
   }
 
   const q = search.trim().toLowerCase();
@@ -156,8 +192,7 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
           <Sheet
             open={sheetOpen}
             onOpenChange={(open) => {
-              setSheetOpen(open);
-              if (!open) { form.reset(); setEditTarget(null); }
+              if (!open) { form.reset(); uiDispatch({ type: 'CLOSE_SHEET' }); }
             }}
             trigger={
               <Button size="sm" onClick={openAdd}>
@@ -206,6 +241,22 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
                     placeholder="Ej: 890.903.938-8"
                     disabled={isSubmitting}
                   />
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormInput
+                      control={form.control}
+                      name="legal_rep_first_name"
+                      label="Nombre rep. legal"
+                      placeholder="Ej: María"
+                      disabled={isSubmitting}
+                    />
+                    <FormInput
+                      control={form.control}
+                      name="legal_rep_last_name"
+                      label="Apellido rep. legal"
+                      placeholder="Ej: García"
+                      disabled={isSubmitting}
+                    />
+                  </div>
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? <Spinner className="h-4 w-4" /> : editTarget ? 'Guardar cambios' : 'Guardar banco'}
                   </Button>
@@ -261,6 +312,11 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
                       )}
                     </div>
                   )}
+                  {(bank.legal_rep_first_name || bank.legal_rep_last_name) && (
+                    <div className="text-xs text-muted-foreground">
+                      Rep. legal: {[bank.legal_rep_first_name, bank.legal_rep_last_name].filter(Boolean).join(' ')}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -292,7 +348,7 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     disabled={pendingId === bank.id}
-                    onClick={() => setDeleteTarget(bank)}
+                    onClick={() => uiDispatch({ type: 'SET_DELETE_TARGET', bank })}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -305,7 +361,7 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
 
       <ConfirmDialog
         isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={() => uiDispatch({ type: 'SET_DELETE_TARGET', bank: null })}
         onConfirm={() => deleteTarget && handleDelete(deleteTarget.id)}
         title="Eliminar banco"
         description={`¿Estás seguro de que deseas eliminar "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}

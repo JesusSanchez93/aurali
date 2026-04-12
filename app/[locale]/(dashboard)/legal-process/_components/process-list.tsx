@@ -102,18 +102,20 @@ export default function ProcessList({ data }: ProcessListProps) {
   );
 }
 
-const STATUS_STYLE: Record<string, { bg: string; border: string; shadow: string; hover: string; badge: string }> = {
-  draft:               { bg: '',                                         border: 'border-slate-200 dark:border-slate-700',       shadow: 'shadow-slate-200/60 dark:shadow-slate-900/40',     hover: 'hover:border-slate-100 hover:shadow-md hover:shadow-slate-100/60 dark:hover:border-slate-800',         badge: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' },
-  pending_client_data: { bg: 'bg-amber-50/40 dark:bg-amber-950/20',     border: 'border-amber-200 dark:border-amber-800/60',    shadow: 'shadow-amber-200/60 dark:shadow-amber-900/40',     hover: 'hover:border-amber-100 hover:shadow-md hover:shadow-amber-100/60 dark:hover:border-amber-900',         badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200' },
-  completed:           { bg: 'bg-blue-50/40 dark:bg-blue-950/20',       border: 'border-blue-200 dark:border-blue-800/60',      shadow: 'shadow-blue-200/60 dark:shadow-blue-900/40',       hover: 'hover:border-blue-100 hover:shadow-md hover:shadow-blue-100/60 dark:hover:border-blue-900',             badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200' },
-  approved:            { bg: 'bg-green-50/40 dark:bg-green-950/20',     border: 'border-green-200 dark:border-green-800/60',    shadow: 'shadow-green-200/60 dark:shadow-green-900/40',     hover: 'hover:border-green-100 hover:shadow-md hover:shadow-green-100/60 dark:hover:border-green-900',           badge: 'bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200' },
-  paid:                { bg: 'bg-emerald-50/40 dark:bg-emerald-950/20', border: 'border-emerald-200 dark:border-emerald-800/60', shadow: 'shadow-emerald-200/60 dark:shadow-emerald-900/40', hover: 'hover:border-emerald-100 hover:shadow-md hover:shadow-emerald-100/60 dark:hover:border-emerald-900',     badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200' },
-  documents_approved:  { bg: 'bg-teal-50/40 dark:bg-teal-950/20',      border: 'border-teal-200 dark:border-teal-800/60',      shadow: 'shadow-teal-200/60 dark:shadow-teal-900/40',       hover: 'hover:border-teal-100 hover:shadow-md hover:shadow-teal-100/60 dark:hover:border-teal-900',             badge: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200' },
-  documents_sent:      { bg: 'bg-sky-50/40 dark:bg-sky-950/20',        border: 'border-sky-200 dark:border-sky-800/60',        shadow: 'shadow-sky-200/60 dark:shadow-sky-900/40',         hover: 'hover:border-sky-100 hover:shadow-md hover:shadow-sky-100/60 dark:hover:border-sky-900',                 badge: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200' },
-  documents_received:  { bg: 'bg-indigo-50/40 dark:bg-indigo-950/20',  border: 'border-indigo-200 dark:border-indigo-800/60',  shadow: 'shadow-indigo-200/60 dark:shadow-indigo-900/40',   hover: 'hover:border-indigo-100 hover:shadow-md hover:shadow-indigo-100/60 dark:hover:border-indigo-900',       badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200' },
-  finished:            { bg: 'bg-purple-50/40 dark:bg-purple-950/20',  border: 'border-purple-200 dark:border-purple-800/60',  shadow: 'shadow-purple-200/60 dark:shadow-purple-900/40',   hover: 'hover:border-purple-100 hover:shadow-md hover:shadow-purple-100/60 dark:hover:border-purple-900',       badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200' },
-  archived:            { bg: 'bg-zinc-50/40 dark:bg-zinc-950/20',      border: 'border-zinc-300 dark:border-zinc-700',         shadow: 'shadow-zinc-200/60 dark:shadow-zinc-900/40',       hover: 'hover:border-zinc-200 hover:shadow-md hover:shadow-zinc-100/60 dark:hover:border-zinc-800',             badge: 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' },
-  declined:            { bg: 'bg-red-50/40 dark:bg-red-950/20',        border: 'border-red-200 dark:border-red-800/60',        shadow: 'shadow-red-200/60 dark:shadow-red-900/40',         hover: 'hover:border-red-100 hover:shadow-md hover:shadow-red-100/60 dark:hover:border-red-900',                 badge: 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300' },
+const HOVER = 'hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/30';
+
+const STATUS_STYLE: Record<string, { gradient: string; hover: string; badge: string }> = {
+  draft:               { gradient: 'rgba(148,163,184,0.18)',  hover: HOVER, badge: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' },
+  pending_client_data: { gradient: 'rgba(251,191,36,0.18)',   hover: HOVER, badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200' },
+  completed:           { gradient: 'rgba(59,130,246,0.18)',   hover: HOVER, badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200' },
+  approved:            { gradient: 'rgba(34,197,94,0.18)',    hover: HOVER, badge: 'bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200' },
+  paid:                { gradient: 'rgba(16,185,129,0.18)',   hover: HOVER, badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200' },
+  documents_approved:  { gradient: 'rgba(20,184,166,0.18)',   hover: HOVER, badge: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200' },
+  documents_sent:      { gradient: 'rgba(14,165,233,0.18)',   hover: HOVER, badge: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200' },
+  documents_received:  { gradient: 'rgba(99,102,241,0.18)',   hover: HOVER, badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200' },
+  finished:            { gradient: 'rgba(168,85,247,0.18)',   hover: HOVER, badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200' },
+  archived:            { gradient: 'rgba(161,161,170,0.18)',  hover: HOVER, badge: 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300' },
+  declined:            { gradient: 'rgba(239,68,68,0.18)',    hover: HOVER, badge: 'bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300' },
 };
 
 function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
@@ -169,9 +171,24 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
     <>
       <div
         onClick={() => !isDraft && onSelect(process.id)}
-        className={`group relative rounded-xl border bg-card text-card-foreground shadow transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards ${statusStyle.bg} ${statusStyle.border} ${statusStyle.shadow} ${!isDraft ? `cursor-pointer ${statusStyle.hover}` : ''}`}
+        className={`group relative rounded-xl border border-border bg-card text-card-foreground transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards ${!isDraft ? `cursor-pointer ${statusStyle.hover}` : ''}`}
         style={{ animationDelay: `${index * 100}ms` }}
       >
+        {/* Status gradient — bottom-right corner */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-xl"
+          style={{
+            background: `radial-gradient(ellipse 50% 80% at 100% 100%, ${statusStyle.gradient} 0%, transparent 100%)`,
+          }}
+        />
+        {/* Dot grid — right half, above gradient */}
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-1/2 rounded-r-xl opacity-40"
+          style={{
+            backgroundImage: 'radial-gradient(circle, white 2px, transparent 2px)',
+            backgroundSize: '14px 14px',
+          }}
+        />
         <div className="flex flex-col gap-3 p-5 relative sm:flex-row">
           <div className="absolute top-[-11px] flex items-center gap-1.5">
             <Badge variant="outline" className="font-mono border-transparent bg-muted text-muted-foreground text-[10px] px-1.5">
