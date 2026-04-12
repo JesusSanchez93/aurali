@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { FormInput } from '@/components/common/form/form-input';
 import Tiptap, { type TiptapHandle } from '@/components/common/tip-tap';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import { ImageCropModal } from './image-crop-modal';
 
 // ─── Shared types ─────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ type DocContent = {
 };
 
 export const headerFooterSchema = z.object({
-  name: z.string().trim().min(1, 'Campo requerido'),
+  name: z.string().trim().min(1),
   image_url: z.string().optional(),
   image_alignment: z.enum(['left', 'center', 'right']).default('left'),
   text_content: z.unknown(),
@@ -55,10 +56,11 @@ export function parseContent(raw: unknown): { imageUrl: string; imageAlignment: 
 // ─── Alignment picker ─────────────────────────────────────────────────────────
 
 function AlignPicker({ value, onChange }: { value: Alignment; onChange: (v: Alignment) => void }) {
+  const t = useTranslations('settings.header_footer');
   const options: { val: Alignment; icon: React.ReactNode; label: string }[] = [
-    { val: 'left',   icon: <AlignLeft  className="h-4 w-4" />, label: 'Alinear a la izquierda' },
-    { val: 'center', icon: <AlignCenter className="h-4 w-4" />, label: 'Centrar' },
-    { val: 'right',  icon: <AlignRight className="h-4 w-4" />, label: 'Alinear a la derecha' },
+    { val: 'left',   icon: <AlignLeft  className="h-4 w-4" />, label: t('align_left') },
+    { val: 'center', icon: <AlignCenter className="h-4 w-4" />, label: t('align_center') },
+    { val: 'right',  icon: <AlignRight className="h-4 w-4" />, label: t('align_right') },
   ];
   return (
     <div className="flex gap-1">
@@ -86,6 +88,7 @@ function AlignPicker({ value, onChange }: { value: Alignment; onChange: (v: Alig
 // ─── Image picker with crop ───────────────────────────────────────────────────
 
 function ImagePicker({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const t = useTranslations('settings.header_footer');
   const inputRef = useRef<HTMLInputElement>(null);
   const [rawSrc, setRawSrc] = useState<string | null>(null);
 
@@ -107,10 +110,10 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (url: strin
     return (
       <div className="relative inline-block">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={value} alt="Vista previa" className="max-h-24 rounded-md border object-contain" />
+        <img src={value} alt={t('image_preview_alt')} className="max-h-24 rounded-md border object-contain" />
         <button
           type="button"
-          aria-label="Quitar imagen"
+          aria-label={t('remove_image')}
           onClick={() => onChange('')}
           className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
         >
@@ -136,7 +139,7 @@ function ImagePicker({ value, onChange }: { value: string; onChange: (url: strin
         className="flex h-20 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 text-sm text-muted-foreground transition hover:border-muted-foreground/60 hover:text-foreground"
       >
         <ImagePlus className="h-5 w-5" />
-        Subir imagen
+        {t('upload_image')}
       </button>
       {rawSrc && (
         <ImageCropModal
@@ -160,6 +163,8 @@ interface Props {
 }
 
 export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, onSave }: Props) {
+  const t = useTranslations('settings.header_footer');
+  const tCommon = useTranslations('common');
   const [isPending, startTransition] = useTransition();
   const tiptapRef = useRef<TiptapHandle>(null);
 
@@ -193,7 +198,7 @@ export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, 
         form.reset();
         onOpenChange(false);
       } catch {
-        toast.error('Error al guardar');
+        toast.error(t('save_error'));
       }
     });
   }
@@ -201,11 +206,11 @@ export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, 
   const formBody = (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormInput control={form.control} name="name" label="Nombre" required />
+        <FormInput control={form.control} name="name" label={t('name_label')} required />
 
         {/* Image section */}
         <div className="space-y-3 rounded-lg border p-4">
-          <span className="text-sm font-medium">Imagen</span>
+          <span className="text-sm font-medium">{t('image_section')}</span>
           <FormField
             control={form.control}
             name="image_url"
@@ -219,7 +224,7 @@ export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, 
           />
           {form.watch('image_url') && (
             <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Posición:</span>
+              <span className="text-sm text-muted-foreground">{t('image_position')}</span>
               <FormField
                 control={form.control}
                 name="image_alignment"
@@ -240,7 +245,7 @@ export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, 
 
         {/* Text section */}
         <div className="space-y-3 rounded-lg border p-4">
-          <span className="text-sm font-medium">Texto</span>
+          <span className="text-sm font-medium">{t('text_section')}</span>
           <FormField
             control={form.control}
             name="text_content"
@@ -263,7 +268,7 @@ export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, 
             <FormItem>
               <div className="flex items-center gap-2">
                 <Switch id="is_default" checked={field.value} onCheckedChange={field.onChange} />
-                <Label htmlFor="is_default">Usar como default</Label>
+                <Label htmlFor="is_default">{t('is_default_label')}</Label>
               </div>
             </FormItem>
           )}
@@ -271,10 +276,10 @@ export function HeaderFooterFormSheet({ open, onOpenChange, title, editingItem, 
 
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {tCommon('cancel')}
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'Guardando…' : 'Guardar'}
+            {isPending ? t('saving') : tCommon('save')}
           </Button>
         </div>
       </form>

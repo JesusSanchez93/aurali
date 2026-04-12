@@ -177,7 +177,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         <>
             <Sheet
                 size='2xl'
-                stickyHeader
+                stickyHeader        
                 open={open}
                 onOpenChange={(v) => {
                     if (!v && lightboxOpen) return;
@@ -501,10 +501,12 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
 
                 return createPortal(
                     <div
+                        role="presentation"
                         className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-sm pointer-events-auto"
                         onClick={() => setLightboxOpen(false)}
+                        onKeyDown={(e) => e.key === 'Escape' && setLightboxOpen(false)}
                     >
-                        <div  onClick={(e) => e.stopPropagation()}>
+                        <div role="presentation" onClick={(e) => e.stopPropagation()}>
                             <Carousel setApi={setCarouselApi}>
                                 <CarouselContent>
                                     {slides.map((slide, i) => (

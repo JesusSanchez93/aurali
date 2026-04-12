@@ -1,7 +1,5 @@
-import { getTemplates } from './actions';
-import FormatsManager from './_components/formats-manager';
+import { redirect } from 'next/navigation';
 
-export default async function FormatsPage() {
-    const templates = await getTemplates();
-    return <FormatsManager templates={templates} />;
+export default function FormatsRedirectPage() {
+  redirect('/settings/document-templates');
 }

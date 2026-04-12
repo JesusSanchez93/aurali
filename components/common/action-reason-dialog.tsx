@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
     Dialog,
     DialogContent,
@@ -32,12 +33,17 @@ export function ActionReasonDialog({
     onConfirm,
     title,
     description,
-    reasonLabel = 'Motivo (opcional)',
-    reasonPlaceholder = 'Describe brevemente el motivo de esta acción...',
-    confirmLabel = 'Confirmar',
-    cancelLabel = 'Cancelar',
+    reasonLabel,
+    reasonPlaceholder,
+    confirmLabel,
+    cancelLabel,
     variant = 'default',
 }: ActionReasonDialogProps) {
+    const t = useTranslations('common.reason_dialog');
+    const resolvedReasonLabel = reasonLabel ?? t('reason_label');
+    const resolvedReasonPlaceholder = reasonPlaceholder ?? t('reason_placeholder');
+    const resolvedConfirmLabel = confirmLabel ?? t('confirm');
+    const resolvedCancelLabel = cancelLabel ?? t('cancel');
     const [note, setNote] = useState('');
 
     const handleClose = () => {
@@ -61,13 +67,13 @@ export function ActionReasonDialog({
 
                 <div className="space-y-1.5">
                     <Label htmlFor="status-note" className="text-sm text-muted-foreground">
-                        {reasonLabel}
+                        {resolvedReasonLabel}
                     </Label>
                     <Textarea
                         id="status-note"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
-                        placeholder={reasonPlaceholder}
+                        placeholder={resolvedReasonPlaceholder}
                         rows={3}
                         className="resize-none text-sm"
                     />
@@ -75,10 +81,10 @@ export function ActionReasonDialog({
 
                 <DialogFooter className="gap-2 sm:gap-0">
                     <Button variant="ghost" onClick={handleClose}>
-                        {cancelLabel}
+                        {resolvedCancelLabel}
                     </Button>
                     <Button variant={variant} onClick={handleConfirm}>
-                        {confirmLabel}
+                        {resolvedConfirmLabel}
                     </Button>
                 </DialogFooter>
             </DialogContent>

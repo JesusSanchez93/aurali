@@ -49,7 +49,7 @@ export default async function OnboardingPage(props: {
     case 'step4_completed':
       redirect({ href: '/onboarding/workflow-selection', locale });
     case 'completed':
-      redirect({ href: '/dashboard', locale });
+      redirect({ href: '/analytics', locale });
   }
 
   return (

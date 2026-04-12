@@ -121,6 +121,31 @@ const VariableNodeServer = Node.create({
   },
 });
 
+// Server-safe document section nodes (no React NodeView)
+const DocumentHeaderServer = Node.create({
+  name: 'documentHeader',
+  group: 'block',
+  content: 'block+',
+  defining: true,
+  isolating: true,
+  parseHTML() { return [{ tag: 'div[data-type="document-header"]' }]; },
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'document-header' }), 0];
+  },
+});
+
+const DocumentFooterServer = Node.create({
+  name: 'documentFooter',
+  group: 'block',
+  content: 'block+',
+  defining: true,
+  isolating: true,
+  parseHTML() { return [{ tag: 'div[data-type="document-footer"]' }]; },
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'document-footer' }), 0];
+  },
+});
+
 const TIPTAP_EXTENSIONS = [
   StarterKit,
   TextStyle,
@@ -130,11 +155,58 @@ const TIPTAP_EXTENSIONS = [
   ColumnExtensionServer,
   TwoColumnExtensionServer,
   VariableNodeServer,
+  DocumentHeaderServer,
+  DocumentFooterServer,
   Table.configure({ resizable: false }),
   TableRow,
   TableCell,
   TableHeader,
 ];
+
+/**
+ * Splits a TipTap document JSON into body content + header/footer HTML.
+ * `documentHeader` and `documentFooter` nodes are extracted and rendered
+ * separately so they can be passed to Puppeteer as per-page templates.
+ */
+function extractDocumentSections(tiptapJson: unknown): {
+  bodyJson: unknown;
+  headerHtml: string;
+  footerHtml: string;
+} {
+  const doc = tiptapJson as { type: string; content?: unknown[] } | null;
+  if (!doc?.content) return { bodyJson: tiptapJson, headerHtml: '', footerHtml: '' };
+
+  let headerNodes: unknown[] | null = null;
+  let footerNodes: unknown[] | null = null;
+  const bodyNodes: unknown[] = [];
+
+  for (const node of doc.content) {
+    const n = node as { type: string; content?: unknown[] };
+    if (n.type === 'documentHeader') {
+      headerNodes = n.content ?? [];
+    } else if (n.type === 'documentFooter') {
+      footerNodes = n.content ?? [];
+    } else {
+      bodyNodes.push(node);
+    }
+  }
+
+  const renderSection = (nodes: unknown[]): string => {
+    if (nodes.length === 0) return '';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return generateHTML({ type: 'doc', content: nodes } as any, TIPTAP_EXTENSIONS as any);
+    } catch {
+      return '';
+    }
+  };
+
+  return {
+    bodyJson: { ...doc, content: bodyNodes },
+    headerHtml: headerNodes !== null ? renderSection(headerNodes) : '',
+    footerHtml: footerNodes !== null ? renderSection(footerNodes) : '',
+  };
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -176,10 +248,11 @@ export interface GenerateDocumentResult {
 interface LegalTemplateRow {
   id: string;
   name: string;
-  content: unknown;         // TipTap JSON
+  content: unknown;         // TipTap JSON (includes documentHeader/documentFooter nodes)
   organization_id: string;
-  header_id: string | null;
-  footer_id: string | null;
+  header_id: string | null; // Legacy — used as fallback when no inline section nodes
+  footer_id: string | null; // Legacy — used as fallback when no inline section nodes
+  font_family: string | null;
 }
 
 // Content shape stored in document_headers / document_footers
@@ -257,7 +330,7 @@ export async function generateDocument(
   // ── 1. Load template from legal_templates ────────────────────────────────
   const { data: template, error: tplErr } = await db
     .from('legal_templates')
-    .select('id, name, content, organization_id, header_id, footer_id')
+    .select('id, name, content, organization_id, header_id, footer_id, font_family')
     .eq('id', templateId)
     .single() as { data: LegalTemplateRow | null; error: { message: string } | null };
 
@@ -291,11 +364,16 @@ export async function generateDocument(
     ? editedTiptapContent
     : substituteVarsInJson(template.content, data);
 
-  // ── 3. Convert substituted TipTap JSON → HTML ────────────────────────────
+  // ── 3. Extract document sections + convert body to HTML ──────────────────
+  // Header/footer nodes are separated from the body so they can be passed to
+  // Puppeteer as per-page templates. Falls back to legacy header_id/footer_id
+  // when no inline section nodes are found.
+  const { bodyJson, headerHtml: inlineHeaderHtml, footerHtml: inlineFooterHtml } = extractDocumentSections(tiptapContent);
+
   let bodyHtml: string;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    bodyHtml = generateHTML(tiptapContent as any, TIPTAP_EXTENSIONS as any);
+    bodyHtml = generateHTML(bodyJson as any, TIPTAP_EXTENSIONS as any);
   } catch {
     throw new Error(`Error al convertir la plantilla "${template.name}" a HTML.`);
   }
@@ -303,18 +381,31 @@ export async function generateDocument(
   // ── 4. Substitute any remaining tokens in HTML (edge cases) ───────────────
   const resolvedBody = substituteVars(bodyHtml, data);
 
-  // ── 5. Load header/footer and wrap in page layout ────────────────────────
-  // Header/footer are NOT embedded in the body HTML here — they are passed as
-  // Puppeteer headerTemplate / footerTemplate so Puppeteer renders them on
-  // every page (inside the @page margin areas) rather than only on the first
-  // and last pages.
-  const { headerHtml, footerHtml } = await loadHeaderFooterHtml(db, template.header_id, template.footer_id);
-  const fullHtml = wrapWithPageLayout(resolvedBody, template.name);
+  // ── 5. Resolve header/footer and wrap in page layout ─────────────────────
+  // Header/footer are NOT embedded in the body HTML — they are passed as
+  // Puppeteer headerTemplate / footerTemplate to appear on every page.
+  let puppeteerHeaderTemplate: string | undefined;
+  let puppeteerFooterTemplate: string | undefined;
+
+  if (inlineHeaderHtml || inlineFooterHtml) {
+    // Inline section nodes take priority
+    puppeteerHeaderTemplate = inlineHeaderHtml ? buildPuppeteerHeaderTemplate(inlineHeaderHtml) : undefined;
+    puppeteerFooterTemplate = inlineFooterHtml ? buildPuppeteerFooterTemplate(inlineFooterHtml) : undefined;
+  } else {
+    // Legacy fallback: header_id / footer_id
+    const { headerHtml: legacyH, footerHtml: legacyF } = await loadHeaderFooterHtml(db, template.header_id, template.footer_id);
+    puppeteerHeaderTemplate = legacyH ? buildPuppeteerHeaderTemplate(legacyH) : undefined;
+    puppeteerFooterTemplate = legacyF ? buildPuppeteerFooterTemplate(legacyF) : undefined;
+  }
+
+  const fullHtml = wrapWithPageLayout(resolvedBody, template.name, {
+    fontFamily: template.font_family ?? 'Inter',
+  });
 
   // ── 6. Generate PDF ───────────────────────────────────────────────────────
   const buffer = await htmlToPdf(fullHtml, {
-    headerTemplate: headerHtml ? buildPuppeteerHeaderTemplate(headerHtml) : undefined,
-    footerTemplate: footerHtml ? buildPuppeteerFooterTemplate(footerHtml) : undefined,
+    headerTemplate: puppeteerHeaderTemplate,
+    footerTemplate: puppeteerFooterTemplate,
   });
 
   // Normalise a string to ASCII-safe slug (for storage keys)
@@ -447,7 +538,7 @@ export async function generatePreviewHtml(
   // ── 1. Load template ──────────────────────────────────────────────────────
   const { data: template, error: tplErr } = await db
     .from('legal_templates')
-    .select('id, name, content, organization_id, header_id, footer_id')
+    .select('id, name, content, organization_id, header_id, footer_id, font_family')
     .eq('id', templateId)
     .single() as { data: LegalTemplateRow | null; error: { message: string } | null };
 
@@ -472,11 +563,13 @@ export async function generatePreviewHtml(
   // ── 2. Substitute variables in TipTap JSON (for editor) ──────────────────
   const tiptapContent = substituteVarsInJson(template.content, data);
 
-  // ── 3. Convert substituted TipTap JSON → HTML ────────────────────────────
+  // ── 3. Extract document sections + convert body to HTML ──────────────────
+  const { bodyJson, headerHtml: inlineHeaderHtml, footerHtml: inlineFooterHtml } = extractDocumentSections(tiptapContent);
+
   let bodyHtml: string;
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    bodyHtml = generateHTML(tiptapContent as any, TIPTAP_EXTENSIONS as any);
+    bodyHtml = generateHTML(bodyJson as any, TIPTAP_EXTENSIONS as any);
   } catch {
     throw new Error(`Error al convertir la plantilla "${template.name}" a HTML.`);
   }
@@ -484,9 +577,24 @@ export async function generatePreviewHtml(
   // ── 4. Substitute any remaining {{VAR}} tokens in HTML (edge cases) ───────
   const resolvedBody = substituteVars(bodyHtml, data);
 
-  // ── 5. Load header/footer and wrap in page layout ────────────────────────
-  const { headerHtml, footerHtml } = await loadHeaderFooterHtml(db, template.header_id, template.footer_id);
-  const html = wrapWithPageLayout(resolvedBody, template.name, { headerHtml, footerHtml });
+  // ── 5. Resolve header/footer and wrap in page layout ─────────────────────
+  let headerHtml: string;
+  let footerHtml: string;
+
+  if (inlineHeaderHtml || inlineFooterHtml) {
+    headerHtml = inlineHeaderHtml;
+    footerHtml = inlineFooterHtml;
+  } else {
+    const legacy = await loadHeaderFooterHtml(db, template.header_id, template.footer_id);
+    headerHtml = legacy.headerHtml;
+    footerHtml = legacy.footerHtml;
+  }
+
+  const html = wrapWithPageLayout(resolvedBody, template.name, {
+    headerHtml,
+    footerHtml,
+    fontFamily: template.font_family ?? 'Inter',
+  });
 
   return { html, name: template.name, tiptapContent };
 }

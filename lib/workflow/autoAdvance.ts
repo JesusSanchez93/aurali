@@ -143,8 +143,8 @@ export async function autoAdvanceWorkflow(
       : cfg.template_id ? [cfg.template_id] : [];
 
     if (ids.length === 0) {
-      await resumeWorkflow(run.id, { auto_advanced: true, triggered_by_status: newStatus });
-      return { advanced: true };
+      // No pre-configured templates — runtime selection required via WorkflowActionButton
+      return { advanced: false, reason: 'no_blocking_node' };
     }
 
     try {

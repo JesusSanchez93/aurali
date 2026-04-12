@@ -1,18 +1,10 @@
-import { getTemplate, getDocHeaders, getDocFooters } from '../../actions';
-import TemplateForm from '../../_components/template-form';
-import { getAiVariables } from '@/app/[locale]/(dashboard)/settings/ai-variables/actions';
+import { redirect } from 'next/navigation';
 
 interface Props {
-    params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }
 
-export default async function EditTemplatePage({ params }: Props) {
-    const { id } = await params;
-    const [template, headers, footers, aiVariables] = await Promise.all([
-        getTemplate(id),
-        getDocHeaders(),
-        getDocFooters(),
-        getAiVariables(),
-    ]);
-    return <TemplateForm template={template} headers={headers} footers={footers} aiVariables={aiVariables} />;
+export default async function FormatsEditRedirectPage({ params }: Props) {
+  const { id } = await params;
+  redirect(`/settings/document-templates/edit/${id}`);
 }

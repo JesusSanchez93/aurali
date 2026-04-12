@@ -63,7 +63,7 @@ export async function enterOrganizationAction(orgId: string) {
     .eq('id', profile.id)
 
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect('/analytics')
 }
 
 export async function exitOrganizationAction() {

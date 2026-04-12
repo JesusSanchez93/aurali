@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { exitOrganizationAction } from '@/app/[locale]/(dashboard)/admin/clients/actions';
 import type { SessionProfile } from '@/lib/auth/get-session-profile';
 import { Eye, LogOut } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 interface Props {
   profile: SessionProfile;
@@ -12,7 +13,10 @@ export async function SuperAdminBanner({ profile }: Props) {
     return null;
   }
 
-  const supabase = await createClient();
+  const [t, supabase] = await Promise.all([
+    getTranslations('dashboard.superadmin_banner'),
+    createClient(),
+  ]);
   const { data: org } = await supabase
     .from('organizations')
     .select('name')
@@ -24,7 +28,7 @@ export async function SuperAdminBanner({ profile }: Props) {
       <div className="flex items-center gap-2 text-sm font-medium text-amber-950">
         <Eye className="size-4 shrink-0" />
         <span className="hidden sm:inline">
-          Visualizando como:{' '}
+          {t('viewing_as')}{' '}
           <strong className="font-bold">{org?.name ?? profile.current_organization_id}</strong>
         </span>
         <strong className="font-bold sm:hidden">{org?.name ?? profile.current_organization_id}</strong>
@@ -35,7 +39,7 @@ export async function SuperAdminBanner({ profile }: Props) {
           className="flex items-center gap-1.5 rounded-md border border-amber-700/40 bg-amber-300 px-3 py-1 text-xs font-semibold text-amber-950 transition-colors hover:bg-amber-200"
         >
           <LogOut className="size-3.5" />
-          <span className="hidden sm:inline">Regresar a mi perfil</span>
+          <span className="hidden sm:inline">{t('return_profile')}</span>
         </button>
       </form>
     </div>

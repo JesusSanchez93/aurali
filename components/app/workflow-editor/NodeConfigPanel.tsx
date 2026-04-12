@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { FormInput } from '@/components/common/form/form-input';
 import { FormTextarea } from '@/components/common/form/form-textarea';
@@ -14,21 +14,10 @@ import Tiptap from '@/components/common/tip-tap';
 import { NODE_TYPES_CONFIG } from './node-config';
 import type { WorkflowNode, WorkflowNodeType } from './types';
 
-interface DocumentTemplate {
-  id: string;
-  name: string;
-}
-
 interface NodeConfigPanelProps {
   node: WorkflowNode;
   onUpdate: (id: string, data: Partial<WorkflowNode['data']>) => void;
   onClose: () => void;
-  /**
-   * Org document templates for template_multiselect fields.
-   * When undefined (superadmin context) these fields are hidden entirely —
-   * templates are configured per-organization, not globally.
-   */
-  documentTemplates?: DocumentTemplate[];
 }
 
 type FormValues = Record<string, string>;
@@ -40,19 +29,6 @@ function buildRichtextValues(node: WorkflowNode): Record<string, unknown> {
   return Object.fromEntries(richtextKeys.map((key) => [key, config[key] ?? null]));
 }
 
-function buildTemplateMultiValues(node: WorkflowNode): Record<string, string[]> {
-  const config = (node.data.config ?? {}) as Record<string, unknown>;
-  const cfg = NODE_TYPES_CONFIG[node.data.type as WorkflowNodeType];
-  const multiKeys = cfg.configSchema
-    .filter((f) => f.type === 'template_multiselect')
-    .map((f) => f.key);
-  return Object.fromEntries(
-    multiKeys.map((key) => [
-      key,
-      Array.isArray(config[key]) ? (config[key] as string[]) : [],
-    ]),
-  );
-}
 
 function buildBoolValues(node: WorkflowNode): Record<string, boolean> {
   const config = (node.data.config ?? {}) as Record<string, unknown>;
@@ -75,15 +51,13 @@ function buildFormDefaults(node: WorkflowNode): FormValues {
   };
 }
 
-export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: NodeConfigPanelProps) {
+export function NodeConfigPanel({ node, onUpdate, onClose }: NodeConfigPanelProps) {
+  const t = useTranslations('settings.workflow_editor');
   const methods = useForm<FormValues>({ defaultValues: buildFormDefaults(node) });
   const { handleSubmit, reset, control } = methods;
 
   const [richtextValues, setRichtextValues] = useState<Record<string, unknown>>(
     () => buildRichtextValues(node),
-  );
-  const [templateMultiValues, setTemplateMultiValues] = useState<Record<string, string[]>>(
-    () => buildTemplateMultiValues(node),
   );
   const [boolValues, setBoolValues] = useState<Record<string, boolean>>(
     () => buildBoolValues(node),
@@ -92,7 +66,6 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
   useEffect(() => {
     reset(buildFormDefaults(node));
     setRichtextValues(buildRichtextValues(node));
-    setTemplateMultiValues(buildTemplateMultiValues(node));
     setBoolValues(buildBoolValues(node));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.id]);
@@ -108,23 +81,9 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
   );
 
   const visibleConfigFields = useMemo(
-    () => cfg.configSchema.filter((field) => {
-      if (!isFieldVisible(field)) return false;
-      if (field.type === 'template_multiselect' && documentTemplates === undefined) return false;
-      return true;
-    }),
-    [cfg.configSchema, isFieldVisible, documentTemplates],
+    () => cfg.configSchema.filter((field) => isFieldVisible(field)),
+    [cfg.configSchema, isFieldVisible],
   );
-
-  const toggleTemplate = useCallback((fieldKey: string, templateId: string) => {
-    setTemplateMultiValues((prev) => {
-      const current = prev[fieldKey] ?? [];
-      const next = current.includes(templateId)
-        ? current.filter((id) => id !== templateId)
-        : [...current, templateId];
-      return { ...prev, [fieldKey]: next };
-    });
-  }, []);
 
   const handleRichtextChange = useCallback((key: string, v: unknown) => {
     setRichtextValues((prev) => ({ ...prev, [key]: v }));
@@ -142,7 +101,6 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
         ...(node.data.config as object),
         ...configValues,
         ...richtextValues,
-        ...templateMultiValues,
         ...boolValues,
       },
     });
@@ -156,7 +114,7 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
         <div className="flex flex-col gap-4">
           {/* Node ID (read-only) */}
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground">ID del nodo</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('node_id')}</span>
             <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
               {node.id}
             </code>
@@ -168,8 +126,8 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
           <FormInput
             control={control}
             name="title"
-            label="Título del nodo"
-            placeholder="Nombre del nodo"
+            label={t('node_title_label')}
+            placeholder={t('node_title_placeholder')}
           />
 
           {/* Dynamic config fields */}
@@ -177,7 +135,7 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
             <>
               <Separator />
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Configuración
+                {t('config_section')}
               </p>
             </>
           )}
@@ -242,37 +200,6 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
                   </div>
                 )}
 
-                {field.type === 'template_multiselect' && documentTemplates !== undefined && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium">
-                      {field.label}
-                      {field.required && <span className="ml-1 text-destructive">*</span>}
-                    </span>
-                    {documentTemplates.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">
-                        No hay plantillas de documentos creadas.
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-1 rounded-md border p-2">
-                        {documentTemplates.map((tpl) => {
-                          const selected = (templateMultiValues[field.key] ?? []).includes(tpl.id);
-                          return (
-                            <label
-                              key={tpl.id}
-                              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted"
-                            >
-                              <Checkbox
-                                checked={selected}
-                                onCheckedChange={() => toggleTemplate(field.key, tpl.id)}
-                              />
-                              <span className="text-xs">{tpl.name}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             );
           })}
@@ -282,7 +209,7 @@ export function NodeConfigPanel({ node, onUpdate, onClose, documentTemplates }: 
       {/* Footer */}
       <div className="shrink-0 border-t p-4">
         <Button type="submit" size="sm" className="w-full">
-          Aplicar cambios
+          {t('apply_changes')}
         </Button>
       </div>
     </form>

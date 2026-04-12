@@ -3,17 +3,20 @@
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Check } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
-const STEPS = [
-  { key: 'step1', label: 'Perfil' },
-  { key: 'step2', label: 'Empresa' },
-  { key: 'step3', label: 'Bancos' },
-  { key: 'step4', label: 'Documentos' },
-  { key: 'workflow-selection', label: 'Flujo' },
+const STEP_KEYS = [
+  { key: 'step1',              tKey: 'step1' },
+  { key: 'step2',              tKey: 'step2' },
+  { key: 'step3',              tKey: 'step3' },
+  { key: 'step4',              tKey: 'step4' },
+  { key: 'workflow-selection', tKey: 'workflow_selection' },
 ]
 
 export function OnboardingProgress() {
   const pathname = usePathname()
+  const t = useTranslations('onboarding.progress')
+  const STEPS = STEP_KEYS.map(({ key, tKey }) => ({ key, label: t(tKey) }))
   const currentIndex = STEPS.findIndex((s) =>
     pathname.includes(`/onboarding/${s.key}`),
   )
@@ -21,7 +24,7 @@ export function OnboardingProgress() {
   if (currentIndex === -1) return null
 
   return (
-    <nav className="flex items-center" aria-label="Progreso del onboarding">
+    <nav className="flex items-center" aria-label={t('aria_label')}>
       {STEPS.map((step, index) => {
         const isCompleted = index < currentIndex
         const isCurrent = index === currentIndex

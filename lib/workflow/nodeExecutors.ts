@@ -289,7 +289,6 @@ async function executeSendEmail(
     subject?: string;
     body?: unknown;
     attach_enabled?: boolean;
-    attach_document_template_ids?: string[];
   };
 
   const to = substituteVars(cfg.to ?? '', context).trim();
@@ -312,21 +311,29 @@ async function executeSendEmail(
 
   const bodyHtml = substituteVars(cleanedTemplate, context);
 
-  // Build PDF attachments — only when attach_enabled is true
+  // Build PDF attachments — pause for lawyer to select documents when attach_enabled
   const attachments: EmailAttachment[] = [];
-  const templateIds = cfg.attach_enabled ? cfg.attach_document_template_ids : undefined;
-  if (templateIds && templateIds.length > 0) {
+  if (cfg.attach_enabled) {
+    const selectedIds = (context.previousOutput?.selected_document_ids as string[] | undefined) ?? [];
+
+    if (selectedIds.length === 0) {
+      return {
+        status: 'waiting',
+        output: { waitingFor: 'document_attachment_selection' },
+      };
+    }
+
     const { data: docs } = await (supabase as SupabaseClient & Record<string, unknown>)
       .from('generated_documents')
-      .select('file_url, template_id, document_name')
+      .select('file_url, document_name')
       .eq('legal_process_id', context.legalProcess.id)
       .eq('is_preview', false)
-      .in('template_id', templateIds) as {
-        data: { file_url: string; template_id: string; document_name: string }[] | null;
+      .in('id', selectedIds) as {
+        data: { file_url: string; document_name: string }[] | null;
       };
 
     for (const doc of docs ?? []) {
-      const baseName = doc.document_name?.replace(/\.pdf$/i, '') ?? `documento_${doc.template_id}`;
+      const baseName = doc.document_name?.replace(/\.pdf$/i, '') ?? 'documento';
       const filename = `${baseName}.pdf`;
       const att = await fetchAttachment(doc.file_url, filename);
       if (!att) {
@@ -543,6 +550,8 @@ export async function buildDocumentTemplateData(
     fraud_incident_summary: string | null;
     document_slug: string | null;
     document_number: string | null;
+    legal_rep_first_name: string | null;
+    legal_rep_last_name: string | null;
   };
   let bankData: BankRow | null = null;
   {
@@ -551,22 +560,26 @@ export async function buildDocumentTemplateData(
       .select('bank_name, last_4_digits, fraud_incident_summary, bank_id')
       .eq('legal_process_id', legalProcessId)
       .maybeSingle() as {
-        data: (Omit<BankRow, 'document_slug' | 'document_number'> & { bank_id: string | null }) | null;
+        data: (Omit<BankRow, 'document_slug' | 'document_number' | 'legal_rep_first_name' | 'legal_rep_last_name'> & { bank_id: string | null }) | null;
       };
 
     if (lpb) {
       let document_slug: string | null = null;
       let document_number: string | null = null;
+      let legal_rep_first_name: string | null = null;
+      let legal_rep_last_name: string | null = null;
       if (lpb.bank_id) {
         const { data: bank } = await db
           .from('banks')
-          .select('document_slug, document_number')
+          .select('document_slug, document_number, legal_rep_first_name, legal_rep_last_name')
           .eq('id', lpb.bank_id)
-          .maybeSingle() as { data: { document_slug: string | null; document_number: string | null } | null };
+          .maybeSingle() as { data: { document_slug: string | null; document_number: string | null; legal_rep_first_name: string | null; legal_rep_last_name: string | null } | null };
         document_slug = bank?.document_slug ?? null;
         document_number = bank?.document_number ?? null;
+        legal_rep_first_name = bank?.legal_rep_first_name ?? null;
+        legal_rep_last_name = bank?.legal_rep_last_name ?? null;
       }
-      bankData = { ...lpb, document_slug, document_number };
+      bankData = { ...lpb, document_slug, document_number, legal_rep_first_name, legal_rep_last_name };
     }
   }
 
@@ -647,6 +660,8 @@ export async function buildDocumentTemplateData(
     BANK_DOCUMENT_NUMBER: bankData?.document_number ?? '',
     BANK_LAST_4_DIGITS: bankData?.last_4_digits ?? '',
     FRAUD_INCIDENT_SUMMARY: bankData?.fraud_incident_summary ?? '',
+    BANK_LEGAL_REP_FIRST_NAME: bankData?.legal_rep_first_name ?? '',
+    BANK_LEGAL_REP_LAST_NAME: bankData?.legal_rep_last_name ?? '',
     LAWYER_FIRST_NAME: lawyerData?.firstname ?? '',
     LAWYER_LAST_NAME: lawyerData?.lastname ?? '',
     LAWYER_DOCUMENT_TYPE: lawyerData?.document_type ?? '',
@@ -673,26 +688,18 @@ async function executeGenerateDocument(
   context: ExecutionContext,
   supabase: SupabaseClient,
 ): Promise<NodeResult> {
-  const { template_ids, template_id, preview } = node.config as {
-    template_ids?: string[];
-    template_id?: string;
+  const { preview } = node.config as {
     preview?: boolean;
   };
 
-  // Support both legacy single template_id and new multi template_ids
-  const ids = template_ids && template_ids.length > 0
-    ? template_ids
-    : template_id ? [template_id] : [];
+  // Templates are always selected at runtime by the lawyer — never from node config
+  const ids = (context.previousOutput?.template_ids as string[] | undefined) ?? [];
 
   if (ids.length === 0) {
-    // No templates configured — skip gracefully so the workflow continues.
-    // The lawyer will still be able to advance; documents simply won't be attached.
+    // No runtime template selection yet — pause for lawyer to select templates
     return {
-      status: 'completed',
-      output: {
-        documents: [],
-        warning: 'Nodo de generación de documentos sin plantillas configuradas. Configura las plantillas en el editor del flujo.',
-      },
+      status: 'waiting',
+      output: { waitingFor: 'template_selection' },
     };
   }
 
@@ -731,13 +738,15 @@ async function executeGenerateDocument(
     orgRepData2 = adminMember?.profiles ?? null;
   }
 
-  // Fetch bank data (name, last_4_digits, fraud summary, document info)
+  // Fetch bank data (name, last_4_digits, fraud summary, document info, legal rep)
   type BankRow = {
     bank_name: string | null;
     last_4_digits: string | null;
     fraud_incident_summary: string | null;
     document_slug: string | null;
     document_number: string | null;
+    legal_rep_first_name: string | null;
+    legal_rep_last_name: string | null;
   };
   let bankData: BankRow | null = null;
   {
@@ -746,21 +755,25 @@ async function executeGenerateDocument(
       .from('legal_process_banks')
       .select('bank_name, last_4_digits, fraud_incident_summary, bank_id')
       .eq('legal_process_id', context.legalProcess.id)
-      .maybeSingle() as { data: (Omit<BankRow, 'document_slug' | 'document_number'> & { bank_id: string | null }) | null };
+      .maybeSingle() as { data: (Omit<BankRow, 'document_slug' | 'document_number' | 'legal_rep_first_name' | 'legal_rep_last_name'> & { bank_id: string | null }) | null };
 
     if (lpb) {
       let document_slug: string | null = null;
       let document_number: string | null = null;
+      let legal_rep_first_name: string | null = null;
+      let legal_rep_last_name: string | null = null;
       if (lpb.bank_id) {
         const { data: bank } = await db
           .from('banks')
-          .select('document_slug, document_number')
+          .select('document_slug, document_number, legal_rep_first_name, legal_rep_last_name')
           .eq('id', lpb.bank_id)
-          .maybeSingle() as { data: { document_slug: string | null; document_number: string | null } | null };
+          .maybeSingle() as { data: { document_slug: string | null; document_number: string | null; legal_rep_first_name: string | null; legal_rep_last_name: string | null } | null };
         document_slug = bank?.document_slug ?? null;
         document_number = bank?.document_number ?? null;
+        legal_rep_first_name = bank?.legal_rep_first_name ?? null;
+        legal_rep_last_name = bank?.legal_rep_last_name ?? null;
       }
-      bankData = { ...lpb, document_slug, document_number };
+      bankData = { ...lpb, document_slug, document_number, legal_rep_first_name, legal_rep_last_name };
     }
   }
 
@@ -816,6 +829,8 @@ async function executeGenerateDocument(
     BANK_DOCUMENT_NUMBER: bankData?.document_number ?? '',
     BANK_LAST_4_DIGITS: bankData?.last_4_digits ?? '',
     FRAUD_INCIDENT_SUMMARY: bankData?.fraud_incident_summary ?? '',
+    BANK_LEGAL_REP_FIRST_NAME: bankData?.legal_rep_first_name ?? '',
+    BANK_LEGAL_REP_LAST_NAME: bankData?.legal_rep_last_name ?? '',
     // Lawyer
     LAWYER_FIRST_NAME: lawyerData?.firstname ?? '',
     LAWYER_LAST_NAME: lawyerData?.lastname ?? '',

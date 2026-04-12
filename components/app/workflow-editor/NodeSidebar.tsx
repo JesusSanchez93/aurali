@@ -2,6 +2,7 @@
 
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import { NODE_TYPES_CONFIG } from './node-config';
 import type { WorkflowNodeType } from './types';
 
@@ -26,11 +27,12 @@ interface NodeSidebarProps {
 }
 
 export function NodeSidebar({ onDragStart }: NodeSidebarProps) {
+  const t = useTranslations('settings.workflow_editor');
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r bg-card">
       <div className="border-b px-4 py-3">
-        <h2 className="text-sm font-semibold">Nodos</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">Arrastra al canvas</p>
+        <h2 className="text-sm font-semibold">{t('sidebar_title')}</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">{t('sidebar_hint')}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3">

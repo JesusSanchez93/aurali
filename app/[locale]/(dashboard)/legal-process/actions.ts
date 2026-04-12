@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
-import { startWorkflow, resumeWorkflow, retryWorkflow } from '@/lib/workflow/workflowRunner';
+import { startWorkflow, resumeWorkflow, retryWorkflow, executeDocumentWithTemplates, executeEmailWithAttachments } from '@/lib/workflow/workflowRunner';
 import { autoAdvanceWorkflow } from '@/lib/workflow/autoAdvance';
 import { buildDocumentTemplateData } from '@/lib/workflow/nodeExecutors';
 import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
@@ -640,9 +640,11 @@ export async function declineLegalProcess(legalProcessId: string, note?: string)
 }
 
 export type PendingWorkflowAction =
-  | { kind: 'manual_action';    workflowRunId: string; nodeTitle: string; instructions: string | null }
-  | { kind: 'failed';           workflowRunId: string; nodeTitle: string; error: string | null }
-  | { kind: 'document_preview'; workflowRunId: string; nodeTitle: string; previewCount: number };
+  | { kind: 'manual_action';                workflowRunId: string; nodeTitle: string; instructions: string | null }
+  | { kind: 'failed';                       workflowRunId: string; nodeTitle: string; error: string | null }
+  | { kind: 'document_preview';             workflowRunId: string; nodeTitle: string; previewCount: number }
+  | { kind: 'template_selection';           workflowRunId: string; nodeTitle: string }
+  | { kind: 'document_attachment_selection'; workflowRunId: string; nodeTitle: string; availableDocuments: { id: string; name: string }[] };
 
 export async function getPendingManualAction(
   legalProcessId: string,
@@ -692,40 +694,79 @@ export async function getPendingManualAction(
     };
   }
 
-  // ── Running: check for pending manual_action or document_preview ────────────
+  // ── Running: scan all active step_runs (handles fan-out branches) ────────────
   if (run.status !== 'running') return null;
 
-  const { data: node } = await (supabase as any)
-    .from('workflow_nodes')
-    .select('title, config, type')
-    .eq('template_id', run.template_id)
-    .eq('node_id', run.current_node_id)
-    .single();
+  // Fetch ALL running step_runs — current_node_id alone is unreliable in fan-out
+  // workflows where one branch may still be waiting while another has completed.
+  const { data: runningSteps } = await (supabase as any)
+    .from('workflow_step_runs')
+    .select('node_id, output')
+    .eq('workflow_run_id', run.id)
+    .eq('status', 'running') as { data: { node_id: string; output: Record<string, unknown> }[] | null };
 
-  if (!node) return null;
+  if (!runningSteps || runningSteps.length === 0) return null;
 
-  if (node.type === 'manual_action') {
-    return {
-      kind:          'manual_action',
-      workflowRunId: run.id,
-      nodeTitle:     node.title,
-      instructions:  (node.config?.instructions as string | null) ?? null,
-    };
-  }
+  for (const step of runningSteps) {
+    const stepOutput = (step.output ?? {}) as Record<string, unknown>;
 
-  if (node.type === 'generate_document' && (node.config as { preview?: boolean }).preview === true) {
-    const { count } = await (supabase as any)
-      .from('generated_documents')
-      .select('id', { count: 'exact', head: true })
-      .eq('legal_process_id', legalProcessId)
-      .eq('is_preview', true) as { count: number | null };
+    const { data: node } = await (supabase as any)
+      .from('workflow_nodes')
+      .select('title, config, type')
+      .eq('template_id', run.template_id)
+      .eq('node_id', step.node_id)
+      .single();
 
-    return {
-      kind:          'document_preview',
-      workflowRunId: run.id,
-      nodeTitle:     node.title,
-      previewCount:  count ?? 0,
-    };
+    if (!node) continue;
+
+    if (node.type === 'manual_action') {
+      return {
+        kind:          'manual_action',
+        workflowRunId: run.id,
+        nodeTitle:     node.title,
+        instructions:  (node.config?.instructions as string | null) ?? null,
+      };
+    }
+
+    if (node.type === 'send_email' && stepOutput.waitingFor === 'document_attachment_selection') {
+      const { data: docs } = await (supabase as any)
+        .from('generated_documents')
+        .select('id, document_name')
+        .eq('legal_process_id', legalProcessId)
+        .eq('is_preview', false) as { data: { id: string; document_name: string }[] | null };
+
+      return {
+        kind:               'document_attachment_selection',
+        workflowRunId:      run.id,
+        nodeTitle:          node.title,
+        availableDocuments: (docs ?? []).map((d) => ({ id: d.id, name: d.document_name ?? 'Documento sin nombre' })),
+      };
+    }
+
+    if (node.type === 'generate_document') {
+      if (stepOutput.waitingFor === 'template_selection') {
+        return {
+          kind:          'template_selection',
+          workflowRunId: run.id,
+          nodeTitle:     node.title,
+        };
+      }
+
+      if ((node.config as { preview?: boolean }).preview === true) {
+        const { count } = await (supabase as any)
+          .from('generated_documents')
+          .select('id', { count: 'exact', head: true })
+          .eq('legal_process_id', legalProcessId)
+          .eq('is_preview', true) as { count: number | null };
+
+        return {
+          kind:          'document_preview',
+          workflowRunId: run.id,
+          nodeTitle:     node.title,
+          previewCount:  count ?? 0,
+        };
+      }
+    }
   }
 
   return null;
@@ -754,6 +795,48 @@ export async function retryFailedWorkflow(legalProcessId: string): Promise<void>
     entity_id: legalProcessId,
     metadata: { workflow_run_id: lp.workflow_run_id, source: 'manual' },
   });
+
+  revalidatePath('/legal-process');
+}
+
+export async function confirmDocumentTemplates(
+  legalProcessId: string,
+  templateIds: string[],
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('workflow_run_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!lp?.workflow_run_id) throw new Error('No hay flujo de trabajo asociado');
+
+  await executeDocumentWithTemplates(lp.workflow_run_id, templateIds);
+
+  revalidatePath('/legal-process');
+}
+
+export async function confirmEmailAttachments(
+  legalProcessId: string,
+  documentIds: string[],
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('workflow_run_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!lp?.workflow_run_id) throw new Error('No hay flujo de trabajo asociado');
+
+  await executeEmailWithAttachments(lp.workflow_run_id, documentIds);
 
   revalidatePath('/legal-process');
 }
@@ -890,39 +973,28 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
     throw new Error('El flujo no está esperando aprobación de documentos');
   }
 
-  const cfg = node.config as { template_ids?: string[]; template_id?: string };
-  const ids = cfg.template_ids && cfg.template_ids.length > 0
-    ? cfg.template_ids
-    : cfg.template_id ? [cfg.template_id] : [];
-
   // ── 3. Generate final PDFs (using lawyer-edited preview content when available) ──
-  if (ids.length > 0) {
-    const { buildDocumentTemplateData } = await import('@/lib/workflow/nodeExecutors');
-    const { generateDocument } = await import('@/lib/documents/generateDocument');
-    const { templateData, organizationId } = await buildDocumentTemplateData(legalProcessId, supabase);
+  const { buildDocumentTemplateData } = await import('@/lib/workflow/nodeExecutors');
+  const { generateDocument } = await import('@/lib/documents/generateDocument');
+  const { templateData, organizationId } = await buildDocumentTemplateData(legalProcessId, supabase);
 
-    // Fetch preview records so we can honour any edits the lawyer made
-    const { data: previewDocs } = await db
-      .from('generated_documents')
-      .select('template_id, tiptap_content')
-      .eq('legal_process_id', legalProcessId)
-      .eq('is_preview', true) as {
-        data: { template_id: string; tiptap_content: unknown }[] | null;
-      };
+  // Fetch preview records — these contain the selected template IDs AND any edits
+  const { data: previewDocs } = await db
+    .from('generated_documents')
+    .select('template_id, tiptap_content')
+    .eq('legal_process_id', legalProcessId)
+    .eq('is_preview', true) as {
+      data: { template_id: string; tiptap_content: unknown }[] | null;
+    };
 
-    const editedByTemplate = new Map(
-      (previewDocs ?? []).map((d) => [d.template_id, d.tiptap_content]),
-    );
-
-    for (const tid of ids) {
-      await generateDocument({
-        templateId:          tid,
-        data:                templateData,
-        legalProcessId,
-        organizationId:      organizationId ?? undefined,
-        editedTiptapContent: editedByTemplate.get(tid),
-      });
-    }
+  for (const preview of previewDocs ?? []) {
+    await generateDocument({
+      templateId:          preview.template_id,
+      data:                templateData,
+      legalProcessId,
+      organizationId:      organizationId ?? undefined,
+      editedTiptapContent: preview.tiptap_content,
+    });
   }
 
   // ── 4. Remove preview records ─────────────────────────────────────────────
@@ -943,7 +1015,7 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
     action: 'documents_approved',
     entity: 'legal_process',
     entity_id: legalProcessId,
-    metadata: { workflow_run_id: run.id, templates_generated: ids.length },
+    metadata: { workflow_run_id: run.id, templates_generated: previewDocs?.length ?? 0 },
   });
 
   revalidatePath('/legal-process');

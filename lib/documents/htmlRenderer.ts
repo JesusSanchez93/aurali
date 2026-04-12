@@ -156,11 +156,24 @@ export function buildPuppeteerFooterTemplate(footerHtml: string): string {
   return `<style>${PUPPETEER_HF_CSS}</style><div class="hf-wrap hf-footer">${footerHtml}</div>`;
 }
 
+/** Google Fonts import URLs for supported document fonts (system fonts need no import) */
+const GOOGLE_FONT_IMPORTS: Record<string, string> = {
+  'Inter':        "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,700;1,14..32,400&display=swap",
+  'Roboto':       "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Lato':         "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Open Sans':    "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Merriweather': "https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'EB Garamond':  "https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&display=swap",
+  // Times New Roman and Georgia are system fonts — no import needed
+};
+
 export interface PageLayoutOptions {
   /** Pre-rendered HTML for the document header (from document_headers table) */
   headerHtml?: string;
   /** Pre-rendered HTML for the document footer (from document_footers table) */
   footerHtml?: string;
+  /** Font family to apply to the document body (default: Inter) */
+  fontFamily?: string;
 }
 
 /**
@@ -172,7 +185,11 @@ export function wrapWithPageLayout(
   title = 'Documento Legal',
   options: PageLayoutOptions = {},
 ): string {
-  const { headerHtml, footerHtml } = options;
+  const { headerHtml, footerHtml, fontFamily = 'Inter' } = options;
+  const fontImportUrl = GOOGLE_FONT_IMPORTS[fontFamily];
+  const fontImport = fontImportUrl ? `@import url('${fontImportUrl}');` : '';
+  const fontStack = `'${fontFamily}', serif`;
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -181,7 +198,7 @@ export function wrapWithPageLayout(
   <title>${escapeHtml(title)}</title>
   <style>
     /* ── Fonts ──────────────────────────────────────── */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
+    ${fontImport}
 
     /* ── Reset ─────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -196,7 +213,7 @@ export function wrapWithPageLayout(
       width: 21cm;
       background: #ffffff;
       color: #1a1a1a;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: ${fontStack};
       font-size: 11pt;
       line-height: 1.75;
       -webkit-print-color-adjust: exact;
@@ -366,7 +383,7 @@ export function wrapWithPageLayout(
     .document h4 { font-size: 1em;     font-weight: 600; margin: 0.8em 0 0.4em; }
     .document h5, .document h6 { font-size: 0.955em; font-weight: 600; margin: 0.7em 0 0.3em; }
 
-    .document p { margin-bottom: 0.75em; line-height: 1.75; text-align: justify; }
+    .document p { font-size: 11pt; margin-bottom: 0.75em; line-height: 1.75; text-align: justify; }
     .document p:empty,
     .document p:has(> br:only-child) { min-height: 1.75em; margin-bottom: 0; }
 

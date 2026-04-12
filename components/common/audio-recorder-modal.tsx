@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, Pause, Play, Square, AlertCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 type RecorderState = 'idle' | 'recording' | 'paused' | 'processing' | 'error';
 
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
+  const t = useTranslations('common.audio_recorder');
   const [state, setState] = useState<RecorderState>('idle');
   const [elapsed, setElapsed] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
@@ -74,7 +76,7 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
       setState('recording');
       startTimer();
     } catch {
-      setErrorMsg('No se pudo acceder al micrófono. Verifica los permisos.');
+      setErrorMsg(t('mic_error'));
       setState('error');
     }
   }
@@ -144,7 +146,7 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Grabar relato de los hechos</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-6 py-4">
@@ -176,7 +178,7 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
           {state === 'processing' && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Spinner className="h-4 w-4" />
-              Procesando con IA…
+              {t('processing')}
             </div>
           )}
 
@@ -193,7 +195,7 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
             {state === 'idle' && (
               <Button onClick={startRecording} className="gap-2">
                 <Mic className="h-4 w-4" />
-                Iniciar grabación
+                {t('start')}
               </Button>
             )}
 
@@ -201,11 +203,11 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
               <>
                 <Button variant="outline" onClick={pauseRecording} className="gap-2">
                   <Pause className="h-4 w-4" />
-                  Pausar
+                  {t('pause')}
                 </Button>
                 <Button variant="destructive" onClick={finishRecording} className="gap-2">
                   <Square className="h-4 w-4" />
-                  Finalizar
+                  {t('finish')}
                 </Button>
               </>
             )}
@@ -214,18 +216,18 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
               <>
                 <Button variant="outline" onClick={resumeRecording} className="gap-2">
                   <Play className="h-4 w-4" />
-                  Reanudar
+                  {t('resume')}
                 </Button>
                 <Button variant="destructive" onClick={finishRecording} className="gap-2">
                   <Square className="h-4 w-4" />
-                  Finalizar
+                  {t('finish')}
                 </Button>
               </>
             )}
 
             {state === 'error' && (
               <Button variant="outline" onClick={reset}>
-                Reintentar
+                {t('retry')}
               </Button>
             )}
           </div>

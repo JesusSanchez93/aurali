@@ -20,7 +20,7 @@ export default async function OnboardingLayout({
   }
 
   if (profile?.onboarding_status === 'completed') {
-    redirect('/dashboard');
+    redirect('/analytics');
   }
 
   return (

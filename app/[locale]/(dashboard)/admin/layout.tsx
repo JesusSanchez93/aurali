@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: Props) {
   const { profile } = await getSessionProfile()
 
   if (!profile || profile.system_role !== 'SUPERADMIN') {
-    redirect('/dashboard')
+    redirect('/analytics')
   }
 
   return <>{children}</>

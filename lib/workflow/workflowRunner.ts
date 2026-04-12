@@ -206,6 +206,120 @@ export async function resumeWorkflow(
 
 // -----------------------------------------------------------------------------
 
+/**
+ * Re-executes a generate_document node that was waiting for the lawyer to select
+ * document templates at runtime. Deletes the waiting step_run and re-runs the node
+ * with the selected template IDs injected into previousOutput.
+ */
+export async function executeDocumentWithTemplates(
+  workflowRunId: string,
+  templateIds: string[],
+): Promise<void> {
+  const supabase = await createClient({ admin: true });
+  const db = supabase as unknown as Record<string, unknown> & SupabaseClient;
+
+  const { data: run, error: runErr } = await db
+    .from('workflow_runs')
+    .select('*')
+    .eq('id', workflowRunId)
+    .single() as { data: WorkflowRunRow | null; error: { message: string } | null };
+
+  if (runErr || !run) throw new Error(runErr?.message ?? 'workflow_run no encontrado');
+  if (run.status !== 'running') {
+    throw new Error(`No se puede continuar un workflow con estado "${run.status}"`);
+  }
+  if (!run.current_node_id) {
+    throw new Error('El workflow no tiene un nodo actual');
+  }
+
+  // Remove the waiting step_run so it can be re-created on execution
+  await db
+    .from('workflow_step_runs')
+    .delete()
+    .eq('workflow_run_id', workflowRunId)
+    .eq('node_id', run.current_node_id)
+    .eq('status', 'running');
+
+  const { nodes, edges } = await fetchGraph(run.template_id, supabase);
+  const legalProcess = await fetchLegalProcess(run.legal_process_id, supabase);
+  const clientData = await fetchClientData(run.legal_process_id, supabase);
+
+  const currentNode = nodes.find((n) => n.node_id === run.current_node_id);
+  if (!currentNode) throw new Error(`Nodo "${run.current_node_id}" no encontrado en el template`);
+
+  const context: ExecutionContext = {
+    workflowRun: run,
+    legalProcess,
+    previousOutput: { template_ids: templateIds },
+    clientData,
+  };
+
+  await runFromNode(currentNode, nodes, edges, context, supabase, 0);
+}
+
+export async function executeEmailWithAttachments(
+  workflowRunId: string,
+  documentIds: string[],
+): Promise<void> {
+  const supabase = await createClient({ admin: true });
+  const db = supabase as unknown as Record<string, unknown> & SupabaseClient;
+
+  const { data: run, error: runErr } = await db
+    .from('workflow_runs')
+    .select('*')
+    .eq('id', workflowRunId)
+    .single() as { data: WorkflowRunRow | null; error: { message: string } | null };
+
+  if (runErr || !run) throw new Error(runErr?.message ?? 'workflow_run no encontrado');
+  if (run.status !== 'running') {
+    throw new Error(`No se puede continuar un workflow con estado "${run.status}"`);
+  }
+  if (!run.current_node_id) {
+    throw new Error('El workflow no tiene un nodo actual');
+  }
+
+  // Fan-out safe: current_node_id may point to the completed branch (e.g. notify_lawyer)
+  // rather than the send_email node that is still waiting. Fetch the graph and all
+  // running step_runs to find the correct send_email node.
+  const { nodes, edges } = await fetchGraph(run.template_id, supabase);
+
+  const { data: runningSteps } = await db
+    .from('workflow_step_runs')
+    .select('node_id')
+    .eq('workflow_run_id', workflowRunId)
+    .eq('status', 'running') as { data: { node_id: string }[] | null };
+
+  const waitingNodeId =
+    runningSteps
+      ?.map((s) => s.node_id)
+      .find((nid) => nodes.find((n) => n.node_id === nid)?.type === 'send_email')
+    ?? run.current_node_id;
+
+  await db
+    .from('workflow_step_runs')
+    .delete()
+    .eq('workflow_run_id', workflowRunId)
+    .eq('node_id', waitingNodeId)
+    .eq('status', 'running');
+
+  const legalProcess = await fetchLegalProcess(run.legal_process_id, supabase);
+  const clientData = await fetchClientData(run.legal_process_id, supabase);
+
+  const currentNode = nodes.find((n) => n.node_id === waitingNodeId);
+  if (!currentNode) throw new Error(`Nodo "${waitingNodeId}" no encontrado en el template`);
+
+  const context: ExecutionContext = {
+    workflowRun: run,
+    legalProcess,
+    previousOutput: { selected_document_ids: documentIds },
+    clientData,
+  };
+
+  await runFromNode(currentNode, nodes, edges, context, supabase, 0);
+}
+
+// -----------------------------------------------------------------------------
+
 export async function cancelWorkflow(workflowRunId: string): Promise<void> {
   const supabase = await createClient({ admin: true });
 

@@ -16,7 +16,7 @@ import {
 import { FileText, Pencil, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import Tiptap, { type TiptapHandle } from '@/components/common/tip-tap';
-import VariablesPanel from '@/app/[locale]/(dashboard)/legal-process/formats/_components/variables-panel';
+import VariablesPanel from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables-panel';
 import {
   getDocumentPreviews,
   getFinalDocuments,

@@ -28,7 +28,7 @@ export async function getDocumentTemplates(): Promise<{ id: string; name: string
 export async function updateEmailNodeConfig(
   templateId: string,
   nodeId: string,
-  config: { subject?: string; body?: unknown; attach_document_template_ids?: string[] },
+  config: { subject?: string; body?: unknown },
 ) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any;

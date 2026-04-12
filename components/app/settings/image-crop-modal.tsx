@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { cropImageToBase64 } from '@/lib/image-utils';
+import { useTranslations } from 'next-intl';
 
 type AspectRatio = 'square' | 'wide';
 
-const ASPECT_OPTIONS: { value: AspectRatio; label: string; ratio: number }[] = [
-  { value: 'square', label: 'Cuadrado (1:1)', ratio: 1 },
-  { value: 'wide',   label: 'Rectangular (3:1)', ratio: 3 },
+const ASPECT_RATIOS: { value: AspectRatio; ratio: number }[] = [
+  { value: 'square', ratio: 1 },
+  { value: 'wide',   ratio: 3 },
 ];
 
 interface Props {
@@ -23,9 +24,16 @@ interface Props {
 }
 
 export function ImageCropModal({ src, onConfirm, onCancel }: Props) {
+  const t = useTranslations('common.image_crop');
+  const tCommon = useTranslations('common');
   const [aspect, setAspect] = useState<AspectRatio>('wide');
   const [crop, setCrop] = useState<Crop>();
   const imgRef = useRef<HTMLImageElement>(null);
+
+  const ASPECT_OPTIONS = ASPECT_RATIOS.map((o) => ({
+    ...o,
+    label: t(o.value),
+  }));
 
   const currentRatio = ASPECT_OPTIONS.find((o) => o.value === aspect)!.ratio;
 
@@ -64,13 +72,13 @@ export function ImageCropModal({ src, onConfirm, onCancel }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CropIcon className="h-4 w-4" />
-            Recortar imagen
+            {t('title')}
           </DialogTitle>
         </DialogHeader>
 
         {/* Aspect ratio selector */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Relación de aspecto:</span>
+          <span className="text-sm text-muted-foreground">{t('aspect_ratio')}</span>
           {ASPECT_OPTIONS.map((o) => (
             <button
               key={o.value}
@@ -100,7 +108,7 @@ export function ImageCropModal({ src, onConfirm, onCancel }: Props) {
             <img
               ref={imgRef}
               src={src}
-              alt="Recorte"
+              alt={t('alt')}
               onLoad={onImageLoad}
               style={{ maxHeight: '380px', maxWidth: '100%', objectFit: 'contain' }}
             />
@@ -108,9 +116,9 @@ export function ImageCropModal({ src, onConfirm, onCancel }: Props) {
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+          <Button type="button" variant="outline" onClick={onCancel}>{tCommon('cancel')}</Button>
           <Button type="button" onClick={handleConfirm} disabled={!crop}>
-            Aplicar recorte
+            {t('apply')}
           </Button>
         </DialogFooter>
       </DialogContent>

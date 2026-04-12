@@ -9,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { WorkflowEditor } from '@/components/app/workflow-editor/WorkflowEditor'
 import { WorkflowSelector } from './workflow-selector'
 import { getAvailableWorkflows } from '@/app/[locale]/onboarding/workflow-selection/actions'
-import { updateEmailNodeConfig, getDocumentTemplates } from './actions'
+import { updateEmailNodeConfig } from './actions'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Supabase = any
@@ -126,8 +126,8 @@ export default async function WorkflowsPage() {
     return <WorkflowSelector workflows={workflows} />
   }
 
-  // Load nodes, edges and org document templates in parallel
-  const [{ data: dbNodes }, { data: dbEdges }, documentTemplates] = await Promise.all([
+  // Load nodes and edges in parallel
+  const [{ data: dbNodes }, { data: dbEdges }] = await Promise.all([
     db
       .from('workflow_nodes')
       .select('*')
@@ -137,7 +137,6 @@ export default async function WorkflowsPage() {
       .from('workflow_edges')
       .select('*')
       .eq('template_id', template.id) as Promise<{ data: DbWorkflowEdge[] | null }>,
-    getDocumentTemplates(),
   ])
 
   const nodes = (dbNodes ?? []).map((n) => ({
@@ -187,7 +186,6 @@ export default async function WorkflowsPage() {
               readOnly
               backHref="/settings/workflows"
               onNodeEdit={updateEmailNodeConfig}
-              documentTemplates={documentTemplates}
             />
           </div>
         </CardContent>

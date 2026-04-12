@@ -26,12 +26,7 @@ import type { WorkflowNode, WorkflowEdge, WorkflowNodeType } from './types';
 import { NODE_TYPES_CONFIG } from './node-config';
 import { saveWorkflow } from '@/app/[locale]/(dashboard)/settings/workflows/[id]/actions';
 
-const EDITABLE_NODE_TYPES: WorkflowNodeType[] = ['send_email', 'send_documents', 'generate_document'];
-
-export interface DocumentTemplate {
-  id: string;
-  name: string;
-}
+const EDITABLE_NODE_TYPES: WorkflowNodeType[] = ['send_email', 'send_documents'];
 
 interface WorkflowEditorProps {
   templateId: string;
@@ -51,10 +46,8 @@ interface WorkflowEditorProps {
   onNodeEdit?: (
     templateId: string,
     nodeId: string,
-    config: { subject?: string; body?: unknown; attach_document_template_ids?: string[] },
+    config: { subject?: string; body?: unknown },
   ) => Promise<void>;
-  /** Org document templates available for attachment selection. */
-  documentTemplates?: DocumentTemplate[];
 }
 
 function WorkflowEditorInner({
@@ -66,7 +59,6 @@ function WorkflowEditorInner({
   onSave,
   backHref = '/settings/workflows',
   onNodeEdit,
-  documentTemplates,
 }: WorkflowEditorProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(initialEdges);
@@ -95,7 +87,7 @@ function WorkflowEditorInner({
     async (
       tid: string,
       nodeId: string,
-      config: { subject?: string; body?: unknown; attach_document_template_ids?: string[] },
+      config: { subject?: string; body?: unknown },
     ) => {
       if (!onNodeEdit) return;
       await onNodeEdit(tid, nodeId, config);
@@ -299,7 +291,6 @@ function WorkflowEditorInner({
                 node={selectedNode}
                 onUpdate={onUpdateNode}
                 onClose={() => setSelectedNode(null)}
-                documentTemplates={documentTemplates}
               />
             }
           />
@@ -312,7 +303,6 @@ function WorkflowEditorInner({
           templateId={templateId}
           onClose={() => setEditNode(null)}
           onSave={handleNodeEdit}
-          documentTemplates={documentTemplates}
         />
       )}
     </div>

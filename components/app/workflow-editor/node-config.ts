@@ -3,7 +3,7 @@ import type { WorkflowNodeType } from './types';
 export interface ConfigField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'richtext' | 'template_multiselect' | 'switch';
+  type: 'text' | 'textarea' | 'select' | 'richtext' | 'switch';
   options?: { value: string; label: string }[];
   placeholder?: string;
   required?: boolean;
@@ -61,18 +61,12 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
     colorClass:   'bg-blue-500',
     borderClass:  'border-blue-500',
     defaultTitle: 'Enviar Correo',
-    defaultConfig: { to: '', subject: '', body: '', attach_enabled: false, attach_document_template_ids: [] },
+    defaultConfig: { to: '', subject: '', body: '', attach_enabled: false },
     configSchema: [
       { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{{process.email}}', required: true },
       { key: 'subject', label: 'Asunto',  type: 'text',     placeholder: 'Asunto del correo', required: true },
       { key: 'body',    label: 'Cuerpo',  type: 'richtext' },
-      { key: 'attach_enabled', label: 'Adjuntar documentos PDF', type: 'switch' },
-      {
-        key: 'attach_document_template_ids',
-        label: 'Plantillas a adjuntar',
-        type: 'template_multiselect',
-        dependsOn: { key: 'attach_enabled', value: true },
-      },
+      { key: 'attach_enabled', label: 'Adjuntar documentos PDF generados', type: 'switch' },
     ],
     hasSourceHandle: true,
     hasTargetHandle: true,
@@ -145,15 +139,14 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
   // ── generate_document ────────────────────────────────────────────────────
   generate_document: {
     label:        'Generar Documento',
-    description:  'Renderiza un PDF desde una plantilla y lo sube a Storage',
+    description:  'El abogado selecciona las plantillas al ejecutar el paso',
     icon:         'FilePlus',
     colorClass:   'bg-orange-500',
     borderClass:  'border-orange-500',
     defaultTitle: 'Generar Documento',
-    defaultConfig: { template_ids: [], preview: false },
+    defaultConfig: { preview: false },
     configSchema: [
-      { key: 'preview',      label: 'Modo vista previa (el admin revisa antes de generar los PDFs)', type: 'switch' },
-      { key: 'template_ids', label: 'Plantillas a generar', type: 'template_multiselect', required: true },
+      { key: 'preview', label: 'Modo vista previa (el admin revisa antes de generar los PDFs)', type: 'switch' },
     ],
     hasSourceHandle: true,
     hasTargetHandle: true,

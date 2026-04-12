@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/react';
-import { VARIABLE_GROUPS } from '@/app/[locale]/(dashboard)/legal-process/formats/_components/variables';
+import { VARIABLE_GROUPS } from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 

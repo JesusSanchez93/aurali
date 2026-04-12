@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { markWorkflowGuideSeen } from '@/app/[locale]/(dashboard)/actions/workflow-guide'
+import { useTranslations } from 'next-intl'
 import {
   CheckCircle2,
   FileText,
@@ -28,19 +29,13 @@ import {
   Phone,
 } from 'lucide-react'
 
-// ─── Step definitions ────────────────────────────────────────────────────────
+// ─── Step IDs (labels resolved via translations) ─────────────────────────────
 
-const STEPS = [
-  { id: 'welcome',    label: 'Bienvenida'  },
-  { id: 'templates',  label: 'Plantillas'  },
-  { id: 'email-nodes',label: 'Correos'     },
-  { id: 'doc-nodes',  label: 'Documentos'  },
-  { id: 'preview',    label: 'Procesos'    },
-] as const
 
 // ─── Step illustrations ───────────────────────────────────────────────────────
 
 function WelcomeIllustration() {
+  const t = useTranslations('dashboard.workflow_guide.illustrations.welcome')
   return (
     <div className="flex flex-col items-center justify-center gap-4 sm:gap-5">
       <div className="relative flex h-16 w-16 items-center justify-center rounded-3xl bg-foreground text-background shadow-lg sm:h-20 sm:w-20">
@@ -51,9 +46,9 @@ function WelcomeIllustration() {
       </div>
       <div className="grid w-full grid-cols-3 gap-2">
         {[
-          { icon: FileText,  label: 'Plantillas' },
-          { icon: Mail,      label: 'Correos'    },
-          { icon: GitBranch, label: 'Flujo'      },
+          { icon: FileText,  label: t('templates') },
+          { icon: Mail,      label: t('emails')     },
+          { icon: GitBranch, label: t('flow')       },
         ].map(({ icon: Icon, label }) => (
           <div
             key={label}
@@ -71,7 +66,8 @@ function WelcomeIllustration() {
 }
 
 function TemplatesIllustration() {
-  const docs = ['Poder Notarial', 'Contrato de Servicios', 'Carta Autorización']
+  const t = useTranslations('dashboard.workflow_guide.illustrations.templates')
+  const docs = [t('doc1'), t('doc2'), t('doc3')]
   return (
     <div className="w-full space-y-2 px-5">
       {docs.map((name, i) => (
@@ -92,7 +88,7 @@ function TemplatesIllustration() {
             {name}
           </span>
           {i === 0 && (
-            <Badge variant="secondary" className="text-[10px]">Nueva</Badge>
+            <Badge variant="secondary" className="text-[10px]">{t('new_badge')}</Badge>
           )}
         </div>
       ))}
@@ -101,9 +97,10 @@ function TemplatesIllustration() {
 }
 
 function EmailNodesIllustration() {
+  const t = useTranslations('dashboard.workflow_guide.illustrations.email_nodes')
   const nodes = [
-    { label: 'Enviar formulario al cliente', configured: true  },
-    { label: 'Enviar documentos al cliente', configured: false },
+    { label: t('node1'), configured: true  },
+    { label: t('node2'), configured: false },
   ]
   return (
     <div className="w-full space-y-2 px-5">
@@ -127,30 +124,31 @@ function EmailNodesIllustration() {
         </div>
       ))}
       <p className="pt-1 text-center text-[11px] text-muted-foreground">
-        Configuración → Flujos de trabajo
+        {t('settings_path')}
       </p>
     </div>
   )
 }
 
 function DocNodesIllustration() {
+  const t = useTranslations('dashboard.workflow_guide.illustrations.doc_nodes')
   return (
     <div className="w-full space-y-3 px-5">
       <div className="flex items-center gap-3 rounded-xl border bg-background px-3 py-2.5 shadow-sm">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dashed border-muted-foreground bg-muted/40">
           <FileText className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
-        <span className="flex-1 text-sm">Generar documentos</span>
+        <span className="flex-1 text-sm">{t('generate')}</span>
         <Settings className="h-4 w-4 animate-pulse text-muted-foreground" />
       </div>
 
       <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
         <LinkIcon className="h-3 w-3" />
-        <span>Enlazar plantillas al nodo</span>
+        <span>{t('link')}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {['Poder Notarial', 'Contrato de Servicios'].map((name) => (
+        {[t('doc1'), t('doc2')].map((name) => (
           <div
             key={name}
             className="flex items-center gap-2 rounded-lg border border-dashed bg-background px-2.5 py-2"
@@ -164,15 +162,16 @@ function DocNodesIllustration() {
   )
 }
 
-const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  draft:          { label: 'Borrador',      className: 'bg-muted text-muted-foreground'              },
-  completed:      { label: 'Completo',      className: 'bg-blue-50 text-blue-700 border-blue-200'    },
-  approved:       { label: 'Aprobado',      className: 'bg-green-50 text-green-700 border-green-200' },
-  documents_sent: { label: 'Docs enviados', className: 'bg-purple-50 text-purple-700 border-purple-200' },
-  finished:       { label: 'Finalizado',    className: 'bg-foreground text-background'               },
+const STATUS_CLASSES: Record<string, string> = {
+  draft:          'bg-muted text-muted-foreground',
+  completed:      'bg-blue-50 text-blue-700 border-blue-200',
+  approved:       'bg-green-50 text-green-700 border-green-200',
+  documents_sent: 'bg-purple-50 text-purple-700 border-purple-200',
+  finished:       'bg-foreground text-background',
 }
 
 function ProcessPreviewIllustration() {
+  const t = useTranslations('dashboard.workflow_guide')
   const processes = [
     { number: '0012', name: 'Proceso no iniciado', email: 'jdavidsanchez1993+client@gmail.com', phone: '',             date: '02 abr 2026', status: 'draft'          },
     { number: '0011', name: 'Carlos Rodríguez P.', email: 'jdavidsanchez1993+client2@gmail.com', phone: '+573042455392', date: '02 abr 2026', status: 'completed'      },
@@ -182,7 +181,8 @@ function ProcessPreviewIllustration() {
   return (
     <div className="w-full space-y-6">
       {processes.map((p, index) => {
-        const s = STATUS_CONFIG[p.status]
+        const statusLabel = t(`status.${p.status}`)
+        const statusClass = STATUS_CLASSES[p.status]
         return (
           <div
             key={p.number}
@@ -207,8 +207,8 @@ function ProcessPreviewIllustration() {
                   <span className=" rounded-md bg-muted px-2 py-1 font-mono text-[10px] font-semibold text-muted-foreground">
                     #{p.number}
                   </span>
-                  <span className={cn('rounded-md border px-2 py-1 text-[10px] font-medium', s.className)}>
-                    {s.label}
+                  <span className={cn('rounded-md border px-2 py-1 text-[10px] font-medium', statusClass)}>
+                    {statusLabel}
                   </span>
                 </div>
                 <div className="space-y-2.5">
@@ -230,7 +230,7 @@ function ProcessPreviewIllustration() {
                 <div className="flex w-[88px] shrink-0 flex-col items-end gap-2">
                   <div className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-50 px-2 py-2 text-[11px] font-medium text-blue-700">
                     <History className="h-3.5 w-3.5" />
-                    Historial
+                    {t('illustrations.preview.history')}
                   </div>
                   <div className="inline-flex h-8 w-8 items-center justify-center self-end rounded-lg bg-muted text-muted-foreground">
                     <MoreHorizontal className="h-4 w-4" />
@@ -245,56 +245,14 @@ function ProcessPreviewIllustration() {
   )
 }
 
-// ─── Step content ─────────────────────────────────────────────────────────────
-
-const STEP_CONTENT = [
-  {
-    title: '¡Tu espacio de trabajo está listo!',
-    description:
-      'Completaste la configuración inicial. Antes de crear tu primer proceso legal, hay algunas configuraciones clave que harán que el flujo de trabajo opere correctamente.',
-    illustration: <WelcomeIllustration />,
-    requirements: [
-      'Crear al menos una plantilla de documento',
-      'Configurar los nodos de correo electrónico',
-      'Enlazar plantillas a los nodos de generación',
-    ],
-  },
-  {
-    title: 'Crea tus plantillas de documentos',
-    description:
-      'Las plantillas son los documentos base (poderes, contratos, cartas) que el flujo genera automáticamente para cada proceso. Puedes usar variables como {{client.first_name}} que se reemplazan con los datos reales del cliente.',
-    illustration: <TemplatesIllustration />,
-    tip: 'Ve a Configuración → Plantillas de documentos para crear tu primera plantilla.',
-  },
-  {
-    title: 'Configura los nodos de correo',
-    description:
-      'El flujo de trabajo contiene nodos que envían emails automáticamente: uno para enviar el formulario al cliente y otro para enviar los documentos finales. Verifica el asunto, cuerpo y archivos adjuntos de cada uno.',
-    illustration: <EmailNodesIllustration />,
-    tip: 'Abre el editor en Configuración → Flujos de trabajo y haz clic en cada nodo de correo para configurarlo.',
-  },
-  {
-    title: 'Enlaza plantillas al flujo de trabajo',
-    description:
-      'El nodo "Generar documentos" necesita saber qué plantillas producir. Una vez creadas tus plantillas, ábrelas en el editor del flujo y selecciónelas dentro del nodo.',
-    illustration: <DocNodesIllustration />,
-    tip: 'En el editor del flujo, haz clic en el nodo "Generar documentos" y selecciona las plantillas desde el panel de configuración.',
-  },
-  {
-    title: 'Así se ve la sección de procesos',
-    description:
-      'Cada fila es un proceso legal con su número, cliente, documento de identidad y estado actual. El flujo avanza automáticamente entre estados a medida que completas las acciones requeridas.',
-    illustration: <ProcessPreviewIllustration />,
-    tip: 'Crea tu primer proceso desde el botón "Nuevo proceso" en la sección de Procesos Legales.',
-  },
-]
+// STEP_CONTENT is built inside WorkflowGuideModal to access useTranslations
 
 // ─── Stepper ──────────────────────────────────────────────────────────────────
 
-function Stepper({ current }: { current: number }) {
+function Stepper({ current, total }: { current: number; total: number }) {
   return (
     <div className="flex items-center gap-1.5">
-      {STEPS.map((_, i) => (
+      {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
           className={cn(
@@ -318,9 +276,52 @@ interface WorkflowGuideModalProps {
 }
 
 export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalProps) {
+  const t  = useTranslations('dashboard.workflow_guide')
+  const tc = useTranslations('dashboard.workflow_guide.content')
   const [open, setOpen]              = useState(defaultOpen)
   const [step, setStep]              = useState(0)
   const [isPending, startTransition] = useTransition()
+
+  const STEPS = [
+    { id: 'welcome',     label: t('steps.welcome')     },
+    { id: 'templates',   label: t('steps.templates')   },
+    { id: 'email-nodes', label: t('steps.email_nodes') },
+    { id: 'doc-nodes',   label: t('steps.doc_nodes')   },
+    { id: 'preview',     label: t('steps.preview')     },
+  ]
+
+  const STEP_CONTENT = [
+    {
+      title: tc('welcome.title'),
+      description: tc('welcome.description'),
+      illustration: <WelcomeIllustration />,
+      requirements: [tc('welcome.req1'), tc('welcome.req2'), tc('welcome.req3')],
+    },
+    {
+      title: tc('templates.title'),
+      description: tc('templates.description'),
+      illustration: <TemplatesIllustration />,
+      tip: tc('templates.tip'),
+    },
+    {
+      title: tc('email_nodes.title'),
+      description: tc('email_nodes.description'),
+      illustration: <EmailNodesIllustration />,
+      tip: tc('email_nodes.tip'),
+    },
+    {
+      title: tc('doc_nodes.title'),
+      description: tc('doc_nodes.description'),
+      illustration: <DocNodesIllustration />,
+      tip: tc('doc_nodes.tip'),
+    },
+    {
+      title: tc('preview.title'),
+      description: tc('preview.description'),
+      illustration: <ProcessPreviewIllustration />,
+      tip: tc('preview.tip'),
+    },
+  ]
 
   const isFirst = step === 0
   const isLast  = step === STEPS.length - 1
@@ -344,7 +345,7 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between border-b px-4 py-3 sm:px-6 sm:py-3.5">
           <div className="flex items-center gap-3">
-            <Stepper current={step} />
+            <Stepper current={step} total={STEPS.length} />
             <span className="text-xs font-medium text-muted-foreground">
               {STEPS[step].label}
             </span>
@@ -354,7 +355,7 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
             disabled={isPending}
             className="text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
           >
-            Omitir
+            {t('skip')}
           </button>
         </div>
 
@@ -369,7 +370,7 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
           {/* Right — text content */}
           <div className="overflow-y-auto px-5 py-5 sm:col-span-3 sm:px-8 sm:py-7">
             <p className="mb-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
-              Paso {step + 1} de {STEPS.length}
+              {t('step_counter', { current: step + 1, total: STEPS.length })}
             </p>
             <h2 className="mb-3 text-base font-semibold leading-snug tracking-tight sm:text-lg">
               {content.title}
@@ -414,7 +415,7 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
             className="gap-1.5 px-2 text-muted-foreground hover:text-foreground sm:px-3"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Atrás</span>
+            <span className="hidden sm:inline">{t('back')}</span>
           </Button>
 
           <span className="text-xs tabular-nums text-muted-foreground">
@@ -424,11 +425,11 @@ export function WorkflowGuideModal({ defaultOpen = false }: WorkflowGuideModalPr
           {isLast ? (
             <Button size="sm" onClick={dismiss} disabled={isPending} className="gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Finalizar</span>
+              <span className="hidden sm:inline">{t('finish')}</span>
             </Button>
           ) : (
             <Button size="sm" onClick={() => setStep((s) => s + 1)} disabled={isPending} className="gap-1.5">
-              <span className="hidden sm:inline">Siguiente</span>
+              <span className="hidden sm:inline">{t('next')}</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           )}

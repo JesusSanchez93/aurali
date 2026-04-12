@@ -37,7 +37,7 @@ export async function saveOrgBanks(selectedIds: string[]) {
   // Fetch selected catalog banks
   const { data: catalogBanks, error: fetchError } = await supabase
     .from('catalog_banks')
-    .select('name, code, slug')
+    .select('name, code, slug, legal_rep_first_name, legal_rep_last_name')
     .in('id', selectedIds);
 
   if (fetchError || !catalogBanks) throw new Error('Error al obtener los bancos seleccionados');
@@ -45,11 +45,15 @@ export async function saveOrgBanks(selectedIds: string[]) {
   // Replace org banks entirely
   await supabase.from('banks').delete().eq('organization_id', orgId);
 
-  const { error: insertError } = await supabase.from('banks').insert(
-    catalogBanks.map((b) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: insertError } = await (supabase as any).from('banks').insert(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (catalogBanks as any[]).map((b) => ({
       name: b.name,
       code: b.code,
       slug: b.slug,
+      legal_rep_first_name: b.legal_rep_first_name ?? null,
+      legal_rep_last_name:  b.legal_rep_last_name ?? null,
       organization_id: orgId,
       created_by: user.id,
     }))
