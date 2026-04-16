@@ -641,7 +641,7 @@
       "pills": {
         "one": "100% digital",
         "two": "Multiusuario",
-        "three": "Generación IA de documentos"
+        "three": "Control financiero integrado"
       }
     },
     "problem": {
@@ -673,8 +673,8 @@
           "description": "Define una vez cómo funciona tu proceso. Aurali lo ejecuta solo."
         },
         "documents": {
-          "title": "Documentos en segundos",
-          "description": "Genera cartas, poderes y escritos con datos reales del cliente automáticamente."
+          "title": "Editor profesional de documentos",
+          "description": "Crea plantillas con cabecera, pie de página, columnas y espacios de firma. Genera documentos completos con variables reales del caso en segundos."
         },
         "ai": {
           "title": "Inteligencia artificial",
@@ -689,8 +689,8 @@
           "description": "El cliente recibe actualizaciones automáticas en cada etapa del proceso."
         },
         "visibility": {
-          "title": "Visibilidad total",
-          "description": "Panel en tiempo real con el estado de cada proceso, cliente y abogado."
+          "title": "Analíticas y control financiero",
+          "description": "Panel en tiempo real con el estado de cada proceso, métricas de honorarios facturados, cobrados y pendientes, y tasa de cobro del despacho."
         }
       }
     },
@@ -727,7 +727,7 @@
         "manual": "documentos redactados manualmente"
       },
       "list": {
-        "one": "Se adapta a tu flujo, no al revés.",
+        "one": "Se adapta a tu flujo y tu estructura: bancos, tipos de documento y configuración por organización.",
         "two": "Sin curva de aprendizaje: intuitivo desde el día 1.",
         "three": "Seguro y confidencial: tus datos y tus procesos siguen bajo tu control.",
         "four": "Actualizaciones continuas basadas en lo que realmente necesita tu operación."
@@ -768,7 +768,7 @@
         "terms": "Términos",
         "contact": "Contacto"
       },
-      "copy": "© 2025 Aurali. Todos los derechos reservados."
+      "copy": "© 2026 Aurali. Todos los derechos reservados."
     }
   },
   "settings": {

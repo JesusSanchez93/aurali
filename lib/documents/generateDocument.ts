@@ -32,6 +32,14 @@ import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import {
+  getImageBoxStyle,
+  getImageOuterStyle,
+  normalizeImageAlign,
+  normalizeImageLayout,
+  parseImageWidth,
+  styleObjectToString,
+} from '@/lib/tiptap/image-layout';
 
 // ─── Server-safe custom extensions (no React / NodeView) ──────────────────────
 // These mirror the editor extensions but omit addNodeView() since generateHTML
@@ -121,6 +129,52 @@ const VariableNodeServer = Node.create({
   },
 });
 
+const ImageExtensionServer = Node.create({
+  name: 'image',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      src:   { default: null },
+      alt:   { default: '' },
+      width: { default: 50 },
+      align: { default: 'center' },
+      layout: { default: 'inline' },
+    };
+  },
+  parseHTML() { return [{ tag: 'img[src]' }]; },
+  renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
+    const width = parseImageWidth(HTMLAttributes.width);
+    const align = normalizeImageAlign(HTMLAttributes.align);
+    const layout = normalizeImageLayout(HTMLAttributes.layout, Boolean(HTMLAttributes.layout));
+    const outerStyle = styleObjectToString(getImageOuterStyle({ width, align, layout }));
+    const boxStyle = styleObjectToString(getImageBoxStyle({ width, align, layout }));
+
+    return [
+      'div',
+      {
+        'data-image-wrap': 'true',
+        'data-align': align,
+        'data-layout': layout,
+        'data-width': String(width),
+        style: outerStyle,
+      },
+      [
+        'div',
+        { 'data-image-box': 'true', style: boxStyle },
+        [
+          'img',
+          {
+            src: HTMLAttributes.src,
+            alt: HTMLAttributes.alt ?? '',
+            style: 'width:100%;max-width:100%;display:block;border-radius:2px',
+          },
+        ],
+      ],
+    ];
+  },
+});
+
 // Server-safe document section nodes (no React NodeView)
 const DocumentHeaderServer = Node.create({
   name: 'documentHeader',
@@ -155,6 +209,7 @@ const TIPTAP_EXTENSIONS = [
   ColumnExtensionServer,
   TwoColumnExtensionServer,
   VariableNodeServer,
+  ImageExtensionServer,
   DocumentHeaderServer,
   DocumentFooterServer,
   Table.configure({ resizable: false }),
@@ -507,6 +562,20 @@ export function tiptapJsonToHtml(content: unknown, templateName: string): string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const bodyHtml = generateHTML(content as any, TIPTAP_EXTENSIONS as any);
   return wrapWithPageLayout(bodyHtml, templateName);
+}
+
+/**
+ * Builds a full HTML preview document from raw TipTap JSON.
+ * Used by the template editor preview endpoint — no DB access, no PDF.
+ */
+export function buildPreviewHtml(
+  content: unknown,
+  templateName: string,
+  fontFamily?: string,
+): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bodyHtml = generateHTML(content as any, TIPTAP_EXTENSIONS as any);
+  return wrapWithPageLayout(bodyHtml, templateName, { fontFamily: fontFamily ?? 'Inter' });
 }
 
 // ─── Preview HTML generation ───────────────────────────────────────────────────

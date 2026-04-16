@@ -14,6 +14,14 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import { wrapWithPageLayout, type PageLayoutOptions } from './htmlRenderer';
+import {
+  getImageBoxStyle,
+  getImageOuterStyle,
+  normalizeImageAlign,
+  normalizeImageLayout,
+  parseImageWidth,
+  styleObjectToString,
+} from '@/lib/tiptap/image-layout';
 
 // ─── Server-safe custom extensions (no React / NodeView) ──────────────────────
 
@@ -105,24 +113,41 @@ const ImageExtensionServer = Node.create({
     return {
       src:   { default: null },
       alt:   { default: '' },
-      width: { default: null },
-      align: { default: 'block' },
+      width: { default: 50 },
+      align: { default: 'center' },
+      layout: { default: 'inline' },
     };
   },
   parseHTML() { return [{ tag: 'img[src]' }]; },
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    const style = HTMLAttributes.align === 'left'
-      ? 'float:left;margin-right:16px;'
-      : HTMLAttributes.align === 'right'
-        ? 'float:right;margin-left:16px;'
-        : 'display:block;margin:0 auto;';
-    const attrs: Record<string, unknown> = {
-      src: HTMLAttributes.src,
-      alt: HTMLAttributes.alt ?? '',
-      style,
-    };
-    if (HTMLAttributes.width) attrs.width = HTMLAttributes.width;
-    return ['img', attrs];
+    const width = parseImageWidth(HTMLAttributes.width);
+    const align = normalizeImageAlign(HTMLAttributes.align);
+    const layout = normalizeImageLayout(HTMLAttributes.layout, Boolean(HTMLAttributes.layout));
+    const outerStyle = styleObjectToString(getImageOuterStyle({ width, align, layout }));
+    const boxStyle = styleObjectToString(getImageBoxStyle({ width, align, layout }));
+
+    return [
+      'div',
+      {
+        'data-image-wrap': 'true',
+        'data-align': align,
+        'data-layout': layout,
+        'data-width': String(width),
+        style: outerStyle,
+      },
+      [
+        'div',
+        { 'data-image-box': 'true', style: boxStyle },
+        [
+          'img',
+          {
+            src: HTMLAttributes.src,
+            alt: HTMLAttributes.alt ?? '',
+            style: 'width:100%;max-width:100%;display:block;border-radius:2px',
+          },
+        ],
+      ],
+    ];
   },
 });
 

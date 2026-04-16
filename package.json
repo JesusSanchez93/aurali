@@ -74,6 +74,7 @@
     "signature_pad": "^5.1.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.0",
+    "tiptap-pagination-plus": "^3.0.6",
     "vaul": "^1.1.2",
     "zod": "^3.25.76"
   },

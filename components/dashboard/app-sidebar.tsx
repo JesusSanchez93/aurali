@@ -28,7 +28,8 @@ import {
   Collapsible,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Link, usePathname } from '@/i18n/routing';
+import { Link } from '@/i18n/routing';
+import { usePathname as useNextPathname } from 'next/navigation';
 import { NavUser } from './nav-user';
 import { useTranslations } from 'next-intl';
 import { useProfile } from '@/components/providers/profile-provider';
@@ -192,7 +193,10 @@ function NavCollapsibleItem({ item, pathname, t, isMobile, setOpenMobile }: Coll
 // ── AppSidebar ─────────────────────────────────────────────────────────────────
 
 export function AppSidebar() {
-  const pathname = usePathname();
+  // next/navigation returns the full path including locale prefix (e.g. /es/settings)
+  // Strip it so URL comparisons match the item.url values (e.g. /settings)
+  const rawPathname = useNextPathname();
+  const pathname = rawPathname.replace(/^\/(es|en)(\/|$)/, '/').replace(/\/$/, '') || '/';
   const t = useTranslations('common.nav');
   const profile = useProfile();
   const { setOpenMobile, isMobile } = useSidebar();

@@ -1,144 +1,243 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
 import type { NodeViewProps } from '@tiptap/react';
-import { Trash2, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+    clampImageWidth,
+    detectImageLayoutFromDom,
+    getImageBoxStyle,
+    getImageOuterStyle,
+    normalizeImageAlign,
+    normalizeImageLayout,
+    parseImageWidth,
+    styleObjectToString,
+    type ImageAlign,
+    type ImageLayout,
+} from '@/lib/tiptap/image-layout';
 
 // ─── TypeScript command augmentation ─────────────────────────────────────────
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
         image: {
-            insertImage: (attrs: { src: string; alt?: string; width?: number; align?: ImageAlign }) => ReturnType;
+            insertImage: (attrs: { src: string; alt?: string; width?: number; align?: ImageAlign; layout?: ImageLayout }) => ReturnType;
         };
     }
 }
 
-type ImageAlign = 'block' | 'left' | 'right';
+// ─── Resize handle ────────────────────────────────────────────────────────────
+interface HandleProps {
+    onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
+    style: React.CSSProperties;
+}
+
+function Handle({ onMouseDown, style }: HandleProps) {
+    return (
+        <div
+            onMouseDown={onMouseDown}
+            style={{
+                position: 'absolute',
+                width: 8,
+                height: 8,
+                background: '#fff',
+                border: '1px solid hsl(var(--primary))',
+                borderRadius: '50%',
+                zIndex: 10,
+                ...style,
+            }}
+        />
+    );
+}
 
 // ─── NodeView component ───────────────────────────────────────────────────────
 function ImageComponent({ node, updateAttributes, deleteNode, selected }: NodeViewProps) {
-    const [hovered, setHovered] = useState(false);
-    const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    function handleEnter() {
-        if (leaveTimer.current) clearTimeout(leaveTimer.current);
-        setHovered(true);
-    }
-
-    function handleLeave() {
-        leaveTimer.current = setTimeout(() => setHovered(false), 120);
-    }
-
-    // Show controls on hover (mouse) OR when the node is selected (keyboard/touch)
-    const showControls = hovered || selected;
-
-    const { src, alt, width, align } = node.attrs as {
+    const { src, alt, width, align, layout } = node.attrs as {
         src: string;
         alt: string;
-        width: number;
+        width: number; // percentage 5–100
         align: ImageAlign;
+        layout: ImageLayout;
     };
 
-    // Float/block layout lives on the wrapper so text flows around the image correctly.
-    const wrapperStyle: React.CSSProperties =
-        align === 'left'
-            ? { float: 'left', width: `${width}%`, marginRight: '1em', marginBottom: '0.5em' }
-            : align === 'right'
-              ? { float: 'right', width: `${width}%`, marginLeft: '1em', marginBottom: '0.5em' }
-              : { display: 'block', width: `${width}%`, margin: '0.5em auto' };
+    const containerRef = useRef<HTMLDivElement>(null);
+    const boxRef = useRef<HTMLDivElement>(null);
+
+    // startResize: `fromLeft` = handle is on the left side (drag left → grows)
+    const startResize = useCallback((e: React.MouseEvent, fromLeft: boolean) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const box = boxRef.current;
+        const container = containerRef.current;
+        if (!box || !container) return;
+
+        const parentWidth = container.getBoundingClientRect().width;
+        if (!parentWidth) return;
+
+        const startX = e.clientX;
+        const startPct = width;
+        const startPx = (startPct / 100) * parentWidth;
+
+        const onMove = (ev: MouseEvent) => {
+            const delta = ev.clientX - startX;
+            const effective = fromLeft ? -delta : delta;
+
+            const newPx = Math.max(30, startPx + effective);
+            const newPct = clampImageWidth((newPx / parentWidth) * 100);
+
+            console.log({ newPct });
+            
+            updateAttributes({ width: newPct });
+        };
+        const onUp = () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    }, [updateAttributes]);
+
+    const outerStyle = getImageOuterStyle({ align, layout, width }) as React.CSSProperties;
+    const boxStyle = getImageBoxStyle({ align, layout, width }) as React.CSSProperties;
+    const isOverlayLayout = layout === 'behind' || layout === 'front';
+    const layoutOptions: Array<{ value: ImageLayout; label: string; title: string }> = [
+        { value: 'inline', label: 'Intercalado', title: 'Intercalado con el texto' },
+        { value: 'wrap', label: 'Ajustar', title: 'Ajustar texto alrededor' },
+        { value: 'break', label: 'Dividir', title: 'Dividir texto arriba y abajo' },
+        { value: 'behind', label: 'Detrás', title: 'Detrás del texto' },
+        { value: 'front', label: 'Delante', title: 'Delante del texto' },
+    ];
 
     return (
-        <NodeViewWrapper style={wrapperStyle}>
-            {/* Inner div provides the positioning context for the toolbar overlay */}
+        <NodeViewWrapper
+            data-image-layout={layout}
+            data-image-align={align}
+            style={outerStyle}
+        >
             <div
+                ref={containerRef}
                 contentEditable={false}
-                style={{ position: 'relative' }}
-                onMouseEnter={handleEnter}
-                onMouseLeave={handleLeave}
+                style={{
+                    position: 'relative',
+                    width: '100%',
+                    maxWidth: '100%',
+                    overflow: 'visible',
+                }}
             >
-                <img
-                    src={src}
-                    alt={alt || ''}
-                    style={{ width: '100%', maxWidth: '100%', display: 'block', borderRadius: '4px' }}
-                    draggable={false}
-                />
+                <div
+                    ref={boxRef}
+                    style={boxStyle}
+                >
+                    {/* Tiptap NodeViews need a plain img element for resize/selection behavior. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={src}
+                        alt={alt || ''}
+                        style={{
+                            display: 'block',
+                            width: '100%',
+                            maxWidth: '100%',
+                            borderRadius: '2px',
+                            outline: selected ? '2px solid hsl(var(--primary))' : 'none',
+                            outlineOffset: '1px',
+                            userSelect: 'none',
+                            pointerEvents: 'auto',
+                        }}
+                        draggable={false}
+                    />
 
-                {/* ── Floating toolbar (below image) ── */}
-                {showControls && (
-                    <div
-                        contentEditable={false}
-                        onMouseEnter={handleEnter}
-                        onMouseLeave={handleLeave}
-                        className="absolute top-[calc(100%+6px)] left-0 z-30 flex items-center gap-0.5 whitespace-nowrap rounded-md border bg-background px-1 py-0.5 shadow-md"
-                    >
-                        {/* Alignment */}
-                        <button
-                            type="button"
-                            aria-label="Flotar a la izquierda"
-                            aria-pressed={align === 'left'}
-                            onClick={() => updateAttributes({ align: 'left' })}
-                            className={cn('rounded p-1.5 transition-colors hover:bg-muted', align === 'left' && 'bg-muted')}
-                        >
-                            <AlignLeft className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                            type="button"
-                            aria-label="Centrar"
-                            aria-pressed={align === 'block'}
-                            onClick={() => updateAttributes({ align: 'block' })}
-                            className={cn('rounded p-1.5 transition-colors hover:bg-muted', align === 'block' && 'bg-muted')}
-                        >
-                            <AlignCenter className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                            type="button"
-                            aria-label="Flotar a la derecha"
-                            aria-pressed={align === 'right'}
-                            onClick={() => updateAttributes({ align: 'right' })}
-                            className={cn('rounded p-1.5 transition-colors hover:bg-muted', align === 'right' && 'bg-muted')}
-                        >
-                            <AlignRight className="h-3.5 w-3.5" />
-                        </button>
-
-                        <span className="mx-1 h-4 w-px shrink-0 bg-border" />
-
-                        {/* Width slider */}
-                        <span className="flex items-center gap-1.5 px-1">
-                            <span className="text-[10px] text-muted-foreground">Ancho</span>
-                            <input
-                                type="range"
-                                min={10}
-                                max={100}
-                                step={5}
-                                value={width}
-                                aria-label={`Ancho de imagen: ${width}%`}
-                                onChange={(e) => updateAttributes({ width: Number(e.target.value) })}
-                                className="h-1 w-20 cursor-pointer accent-foreground"
+                    {selected && (
+                        <>
+                            {/* ── Side handles ── */}
+                            <div
+                                onMouseDown={(e) => startResize(e, true)}
+                                style={{
+                                    position: 'absolute',
+                                    left: -4,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    width: 8,
+                                    height: 24,
+                                    background: '#fff',
+                                    border: '1px solid hsl(var(--primary))',
+                                    borderRadius: 3,
+                                    cursor: 'ew-resize',
+                                    zIndex: 10
+                                }}
                             />
-                            <span className="w-7 text-right text-[10px] tabular-nums text-muted-foreground">
-                                {width}%
-                            </span>
-                        </span>
-                    </div>
-                )}
+                            <div
+                                onMouseDown={(e) => startResize(e, false)}
+                                style={{
+                                    position: 'absolute',
+                                    right: -4,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    width: 8,
+                                    height: 24,
+                                    background: '#fff',
+                                    border: '1px solid hsl(var(--primary))',
+                                    borderRadius: 3,
+                                    cursor: 'ew-resize',
+                                    zIndex: 10,
+                                }}
+                            />
 
-                {/* ── Delete button (top-right) ── */}
-                {showControls && (
-                    <button
-                        type="button"
-                        aria-label="Eliminar imagen"
-                        contentEditable={false}
-                        onClick={deleteNode}
-                        onMouseEnter={handleEnter}
-                        onMouseLeave={handleLeave}
-                        className="absolute -right-2 -top-2 z-30 flex h-6 w-6 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:text-destructive"
-                    >
-                        <Trash2 className="h-3 w-3" />
-                    </button>
-                )}
+                            {/* ── Corner handles ── */}
+                            <Handle onMouseDown={(e) => startResize(e, true)}  style={{ top: -4, left: -4, cursor: 'nwse-resize' }} />
+                            <Handle onMouseDown={(e) => startResize(e, false)} style={{ top: -4, right: -4, cursor: 'nesw-resize' }} />
+                            <Handle onMouseDown={(e) => startResize(e, true)}  style={{ bottom: -4, left: -4, cursor: 'nesw-resize' }} />
+                            <Handle onMouseDown={(e) => startResize(e, false)} style={{ bottom: -4, right: -4, cursor: 'nwse-resize' }} />
+
+                            {/* ── Floating toolbar (below image) ── */}
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    top: isOverlayLayout ? 'calc(100% + 12px)' : 'calc(100% + 8px)',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    zIndex: 20,
+                                }}
+                                className="flex items-center gap-1 whitespace-nowrap rounded-md border bg-background px-1 py-1 shadow-md"
+                            >
+                                <div className="flex items-center gap-1 rounded-md bg-muted/40 p-0.5">
+                                    {layoutOptions.map((option) => (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            title={option.title}
+                                            onClick={() => updateAttributes({ layout: option.value })}
+                                            className={cn(
+                                                'rounded px-2 py-1 text-[10px] font-medium transition-colors hover:bg-background',
+                                                layout === option.value && 'bg-background shadow-sm',
+                                            )}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <span className="mx-1 h-4 w-px shrink-0 bg-border" />
+
+                                <span className="min-w-[2.5rem] text-center text-[10px] tabular-nums text-muted-foreground">
+                                    {width}%
+                                </span>
+
+                                <span className="mx-1 h-4 w-px shrink-0 bg-border" />
+
+                                <button
+                                    type="button"
+                                    title="Eliminar imagen"
+                                    onClick={deleteNode}
+                                    className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </NodeViewWrapper>
     );
@@ -156,28 +255,84 @@ export const ImageExtension = Node.create({
             src:   { default: null },
             alt:   { default: '' },
             width: { default: 50 },
-            align: { default: 'block' },
+            align: { default: 'center' },
+            layout: { default: 'inline' },
         };
     },
 
     parseHTML() {
-        return [{ tag: 'img[src]' }];
+        return [
+            {
+                tag: 'div[data-image-wrap]',
+                getAttrs: (el) => {
+                    const div = el as HTMLElement;
+                    const img = div.querySelector('img');
+                    const hasExplicitLayout = Boolean(div.dataset.layout);
+                    const legacyAlign = div.dataset.align;
+                    return {
+                        src:   img?.getAttribute('src') ?? null,
+                        alt:   img?.getAttribute('alt') ?? '',
+                        width: parseImageWidth(div.dataset.width ?? div.style.width),
+                        align: normalizeImageAlign(legacyAlign),
+                        layout: normalizeImageLayout(
+                            hasExplicitLayout ? detectImageLayoutFromDom(div) : undefined,
+                            hasExplicitLayout,
+                        ),
+                    };
+                },
+            },
+            {
+                tag: 'img[src]',
+                getAttrs: (el) => {
+                    const img = el as HTMLImageElement;
+                    const style = img.getAttribute('style') ?? '';
+                    const isAbsolute = style.includes('position:absolute');
+                    const isFloat = style.includes('float:left') || style.includes('float:right');
+                    const align = style.includes('float:right')
+                        ? 'right'
+                        : style.includes('margin-left:auto') && style.includes('margin-right:auto')
+                            ? 'center'
+                            : 'left';
+                    const layout = isAbsolute
+                        ? style.includes('z-index:10') ? 'front' : 'behind'
+                        : isFloat ? 'wrap' : 'inline';
+                    return {
+                        src: img.getAttribute('src'),
+                        alt: img.getAttribute('alt') ?? '',
+                        width: parseImageWidth(img.getAttribute('width')),
+                        align,
+                        layout,
+                    };
+                },
+            },
+        ];
     },
 
     renderHTML({ HTMLAttributes }) {
-        const { width = 50, align = 'block', ...rest } = HTMLAttributes;
+        const width = parseImageWidth(HTMLAttributes.width);
+        const align = normalizeImageAlign(HTMLAttributes.align);
+        const layout = normalizeImageLayout(HTMLAttributes.layout, Boolean(HTMLAttributes.layout));
+        // Exclude node-specific attrs from img — width/align/layout are encoded in
+        // the wrapper styles. Leaving width="60" on <img> would be interpreted as
+        // 60px (not 60%) when PaginationPlus renders the header as raw HTML.
+        const { src, alt, width: _w, align: _a, layout: _l, ...rest } = HTMLAttributes;
+        const outerStyle = styleObjectToString(getImageOuterStyle({ width, align, layout }));
+        const boxStyle = styleObjectToString(getImageBoxStyle({ width, align, layout }));
 
-        let wrapperStyle: string;
-        if (align === 'left') {
-            wrapperStyle = `float:left;width:${width}%;margin-right:1em;margin-bottom:0.5em`;
-        } else if (align === 'right') {
-            wrapperStyle = `float:right;width:${width}%;margin-left:1em;margin-bottom:0.5em`;
-        } else {
-            wrapperStyle = `display:block;width:${width}%;margin:0.5em auto`;
-        }
-
-        return ['div', { style: wrapperStyle, 'data-align': align },
-            ['img', mergeAttributes(rest, { style: 'width:100%;max-width:100%;border-radius:4px;display:block' })],
+        return [
+            'div',
+            {
+                'data-image-wrap': 'true',
+                'data-align': align,
+                'data-layout': layout,
+                'data-width': String(width),
+                style: outerStyle,
+            },
+            [
+                'div',
+                { 'data-image-box': 'true', style: boxStyle },
+                ['img', mergeAttributes(rest, { src, alt: alt || '', style: 'width:100%;max-width:100%;display:block;border-radius:2px' })],
+            ],
         ];
     },
 
@@ -193,7 +348,7 @@ export const ImageExtension = Node.create({
                 ({ commands }) =>
                     commands.insertContent({
                         type: 'image',
-                        attrs: { width: 50, align: 'block', ...attrs },
+                        attrs: { width: 50, align: 'center', layout: 'inline', ...attrs },
                     }),
         };
     },

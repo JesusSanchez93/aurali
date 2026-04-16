@@ -187,7 +187,7 @@ export function wrapWithPageLayout(
 ): string {
   const { headerHtml, footerHtml, fontFamily = 'Inter' } = options;
   const fontImportUrl = GOOGLE_FONT_IMPORTS[fontFamily];
-  const fontImport = fontImportUrl ? `@import url('${fontImportUrl}');` : '';
+  const fontLinkTag = fontImportUrl ? `<link rel="stylesheet" href="${fontImportUrl}" />` : '';
   const fontStack = `'${fontFamily}', serif`;
 
   return `<!DOCTYPE html>
@@ -196,10 +196,8 @@ export function wrapWithPageLayout(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(title)}</title>
+  ${fontLinkTag}
   <style>
-    /* ── Fonts ──────────────────────────────────────── */
-    ${fontImport}
-
     /* ── Reset ─────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -372,6 +370,25 @@ export function wrapWithPageLayout(
     .page-break { page-break-before: always; }
     .no-break   { page-break-inside: avoid; }
 
+    /* ── Screen preview: A4 page on gray canvas ──────── */
+    @media screen {
+      html, body {
+        width: auto;
+        background: #e8e8e8;
+        padding: 32px 16px;
+        min-height: 100vh;
+      }
+      .document {
+        background: #ffffff;
+        width: 21cm;
+        min-height: 29.7cm;
+        margin: 0 auto;
+        padding: 2.5cm 3cm;
+        box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+        border-radius: 2px;
+      }
+    }
+
     strong { font-weight: bold; }
     em     { font-style: italic; }
 
@@ -445,6 +462,10 @@ export function wrapWithPageLayout(
     /* TipTap two-column layout */
     .document [data-type="two-column"] { display: flex; gap: 20px; margin: 0.75em 0; }
     .document [data-type="column"] { flex: 1; min-width: 0; }
+
+    /* TipTap inline images */
+    .document [data-image-wrap] { display: block; margin-top: 0.5em; margin-bottom: 0.5em; }
+    .document [data-image-wrap] img { width: 100%; max-width: 100%; display: block; border-radius: 2px; }
   </style>
 </head>
 <body>

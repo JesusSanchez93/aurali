@@ -333,3 +333,155 @@
   color: #93c5fd;
   background-color: color-mix(in srgb, #3b82f6 15%, transparent);
 }
+/* ── Document canvas — light background with dot grid ───────────────────────*/
+.tiptap-canvas {
+  background-color: #f0f0f0;
+  background-image: radial-gradient(circle, #b0b0b0 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ── tiptap-pagination-plus: A4 page visual ─────────────────────────────────
+   .rm-with-pagination is added by PaginationPlus to the ProseMirror contenteditable.
+   Render it as a centered white A4 sheet on top of the gray canvas wrapper.     */
+.rm-with-pagination {
+  background: #ffffff;
+  box-shadow: none;
+  margin: 0 auto;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a1a;
+}
+
+.rm-pagination-gap {
+  background-color: #f0f0f0 !important;
+  background-image: radial-gradient(circle, #b0b0b0 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+}
+
+/* Single-column header/footer: left cell spans full width, right cell hidden.
+   - position:relative → overflow:hidden can clip abs-pos children (behind/front image layout)
+   - margin:0 !important → resets margin-left PaginationPlus injects on pages 2+; with
+     width:100% that would push the cell past the right page edge
+   - padding-left/right → aligns cell content with the document margins, matching the
+     overlay editor which applies the same padding when editing */
+.rm-page-header-left,
+.rm-page-footer-left {
+  float: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding-left: var(--rm-margin-left) !important;
+  padding-right: var(--rm-margin-right) !important;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.rm-page-header-left {
+  min-height: 47px !important;
+}
+
+/* Page 1: .rm-first-page-header already applies padding-left/right on the parent
+   element itself — don't double-add it on the inner cell. */
+.rm-with-pagination .rm-first-page-header .rm-page-header-left {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Constrain raw/legacy images (no wrapper) to the available header/footer zone. */
+.rm-page-header-left img,
+.rm-page-footer-left img {
+  max-height: 43px !important;
+  width: auto !important;
+  max-width: 100% !important;
+  object-fit: contain;
+  display: block !important;
+  height: auto !important;
+}
+
+/* Images inside our [data-image-box] wrapper: respect the percentage width
+   set by the outer [data-image-wrap] — override the raw-img rule above. */
+.rm-page-header-left [data-image-box] img,
+.rm-page-footer-left [data-image-box] img {
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  height: auto !important;
+  object-fit: fill !important;
+}
+
+/* Prevent the image wrapper's bottom margin from inflating the header cell.
+   Left/right auto margins must stay for alignment (center = margin:0 auto). */
+.rm-page-header-left [data-image-wrap],
+.rm-page-footer-left [data-image-wrap] {
+  margin-bottom: 0 !important;
+}
+
+.rm-with-pagination .rm-page-header.rm-page-header {
+  padding-top: calc(var(--rm-margin-top, 95px) - 47px) !important;
+}
+
+.rm-with-pagination .rm-page-footer.rm-page-footer {
+  padding-bottom: calc(var(--rm-margin-top, 95px) - 47px) !important;
+}
+
+.rm-page-header-right,
+.rm-page-footer-right {
+  display: none !important;
+}
+
+/* Reset paragraph margins inside PaginationPlus header/footer decorations */
+.rm-page-header-left p,
+.rm-page-footer-left p {
+  margin: 0;
+  padding: 0;
+}
+
+/* First-page header sits inside the padded ProseMirror editor, so its width is
+   pageWidth − marginLeft − marginRight (narrower than subsequent pages).
+   Fix: extend to full page width with negative margins, then use padding on the
+   element itself to keep child content at the correct document margin position.
+   We use padding (not child margins) because PaginationPlus injects
+   `margin: 0 !important` on the children via a later <style> tag — padding on
+   the parent is unaffected by that rule. */
+.rm-with-pagination .rm-first-page-header {
+  margin-left:  calc(-1 * var(--rm-margin-left))  !important;
+  margin-right: calc(-1 * var(--rm-margin-right)) !important;
+  width:        calc(100% + var(--rm-margin-left) + var(--rm-margin-right)) !important;
+  padding-left:  var(--rm-margin-left)  !important;
+  padding-right: var(--rm-margin-right) !important;
+  box-sizing: border-box;
+}
+
+/* Header/footer are double-clickable to trigger inline editing */
+.rm-page-header,
+.rm-page-footer {
+  cursor: default;
+}
+
+/* PaginationPlus injects overflow-y:hidden on header/footer to cap their height.
+   Override to allow front-layout images (position:absolute, z-index:10) to render
+   outside the header zone without being clipped. */
+.rm-with-pagination .rm-page-header,
+.rm-with-pagination .rm-page-footer {
+  overflow-y: visible !important;
+}
+
+/* Remove overflow clipping from header/footer content so front-layout images
+   positioned absolutely can escape the content zone boundaries. */
+.rm-page-header-content,
+.rm-page-footer-content {
+  overflow: visible !important;
+}
+
+/* Front-layout images inside header/footer need -48px margin-top to offset
+   the ProseMirror padding-top and sit flush at the top of the header zone. */
+[data-image-wrap][data-layout="front"] {
+  margin-top: -48px !important;
+}
+
+/* Hide the decoration content while the React overlay is rendering over it.
+   The overlay is added via the parent .tiptap-editing-header / .tiptap-editing-footer class
+   set by the Tiptap component when an overlay is active. */
+.tiptap-editing-header .rm-page-header-content,
+.tiptap-editing-footer .rm-page-footer-content {
+  visibility: hidden;
+}

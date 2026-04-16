@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { useEditorState } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
 import type { Node } from '@tiptap/pm/model';
+import { NodeSelection } from '@tiptap/pm/state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
@@ -22,7 +23,6 @@ import {
   Italic,
   List,
   ListOrdered,
-  Pilcrow,
   Strikethrough,
   AlignLeft,
   AlignRight,
@@ -220,7 +220,7 @@ function TextTypeMenu({ editor, editorState }: {
 // ─── Align dropdown ───────────────────────────────────────────────────────────
 function AlignMenu({ editor, editorState }: {
   editor: Editor;
-  editorState: { isAlignLeft: boolean; isAlignCenter: boolean; isAlignRight: boolean };
+  editorState: { isAlignLeft: boolean; isAlignCenter: boolean; isAlignRight: boolean; isImageSelected: boolean };
 }) {
   const ActiveIcon = editorState.isAlignCenter ? AlignCenter
     : editorState.isAlignRight ? AlignRight
@@ -243,7 +243,9 @@ function AlignMenu({ editor, editorState }: {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         <DropdownMenuItem
-          onSelect={() => editor.chain().focus().setTextAlign('left').run()}
+          onSelect={() => editorState.isImageSelected
+            ? editor.chain().focus().updateAttributes('image', { align: 'left' }).run()
+            : editor.chain().focus().setTextAlign('left').run()}
           className={editorState.isAlignLeft ? 'bg-accent' : ''}
         >
           <AlignLeft className="mr-2 h-4 w-4" />
@@ -251,7 +253,9 @@ function AlignMenu({ editor, editorState }: {
           <kbd className="text-[10px] text-muted-foreground">⌘⇧L</kbd>
         </DropdownMenuItem>
         <DropdownMenuItem
-          onSelect={() => editor.chain().focus().setTextAlign('center').run()}
+          onSelect={() => editorState.isImageSelected
+            ? editor.chain().focus().updateAttributes('image', { align: 'center' }).run()
+            : editor.chain().focus().setTextAlign('center').run()}
           className={editorState.isAlignCenter ? 'bg-accent' : ''}
         >
           <AlignCenter className="mr-2 h-4 w-4" />
@@ -259,7 +263,9 @@ function AlignMenu({ editor, editorState }: {
           <kbd className="text-[10px] text-muted-foreground">⌘⇧E</kbd>
         </DropdownMenuItem>
         <DropdownMenuItem
-          onSelect={() => editor.chain().focus().setTextAlign('right').run()}
+          onSelect={() => editorState.isImageSelected
+            ? editor.chain().focus().updateAttributes('image', { align: 'right' }).run()
+            : editor.chain().focus().setTextAlign('right').run()}
           className={editorState.isAlignRight ? 'bg-accent' : ''}
         >
           <AlignRight className="mr-2 h-4 w-4" />
@@ -606,9 +612,11 @@ function ImageMenu({ editor }: { editor: Editor }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function insertImageNode(src: string) {
-    editor.chain().focus().insertContent({
-      type: 'image',
-      attrs: { src, width: 50, align: 'block' },
+    editor.chain().focus().insertImage({
+      src,
+      width: 50,
+      align: 'center',
+      layout: 'inline',
     }).run();
   }
 
@@ -718,9 +726,25 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
       isHeading6: ctx.editor.isActive('heading', { level: 6 }) ?? false,
       isBulletList: ctx.editor.isActive('bulletList') ?? false,
       isOrderedList: ctx.editor.isActive('orderedList') ?? false,
-      isAlignLeft: ctx.editor.isActive({ textAlign: 'left' }) ?? false,
-      isAlignCenter: ctx.editor.isActive({ textAlign: 'center' }) ?? false,
-      isAlignRight: ctx.editor.isActive({ textAlign: 'right' }) ?? false,
+      isAlignLeft: (() => {
+        const sel = ctx.editor.state.selection;
+        if (sel instanceof NodeSelection && sel.node.type.name === 'image') return sel.node.attrs.align === 'left';
+        return ctx.editor.isActive({ textAlign: 'left' }) ?? false;
+      })(),
+      isAlignCenter: (() => {
+        const sel = ctx.editor.state.selection;
+        if (sel instanceof NodeSelection && sel.node.type.name === 'image') return sel.node.attrs.align === 'center';
+        return ctx.editor.isActive({ textAlign: 'center' }) ?? false;
+      })(),
+      isAlignRight: (() => {
+        const sel = ctx.editor.state.selection;
+        if (sel instanceof NodeSelection && sel.node.type.name === 'image') return sel.node.attrs.align === 'right';
+        return ctx.editor.isActive({ textAlign: 'right' }) ?? false;
+      })(),
+      isImageSelected: (() => {
+        const sel = ctx.editor.state.selection;
+        return sel instanceof NodeSelection && sel.node.type.name === 'image';
+      })(),
       isUppercase: ctx.editor.isActive('uppercase') ?? false,
       hasHeader: (() => { let found = false; ctx.editor.state.doc.forEach((n) => { if (n.type.name === 'documentHeader') found = true; }); return found; })(),
       hasFooter: (() => { let found = false; ctx.editor.state.doc.forEach((n) => { if (n.type.name === 'documentFooter') found = true; }); return found; })(),
@@ -784,7 +808,8 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
         {/* Table */}
         <TableMenu editor={editor} />
 
-        {/* Document sections */}
+        {/* Document sections — block-node header/footer only in non-document mode */}
+        {!pageSizeProps && (<>
         <div className="mx-1 w-px self-stretch bg-border" />
         <Button
           variant="ghost"
@@ -812,6 +837,8 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
           <PanelBottom className="h-3.5 w-3.5" />
           Pie
         </Button>
+        </>)}
+        <div className="mx-1 w-px self-stretch bg-border" />
         <Button
           variant="ghost"
           size="sm"

@@ -31,7 +31,17 @@ export async function getTemplate(id: string) {
 }
 
 
-export async function createTemplate(input: { name: string; content: unknown; font_family?: string }) {
+type TemplateInput = {
+    name: string;
+    content: unknown;
+    font_family?: string;
+    header_left?: string;
+    header_right?: string;
+    footer_left?: string;
+    footer_right?: string;
+};
+
+export async function createTemplate(input: TemplateInput) {
     const { supabase, organizationId } = await getOrgAndUser();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,6 +52,10 @@ export async function createTemplate(input: { name: string; content: unknown; fo
             content: input.content,
             organization_id: organizationId,
             font_family: input.font_family ?? 'Inter',
+            header_left: input.header_left ?? '',
+            header_right: input.header_right ?? '',
+            footer_left: input.footer_left ?? '',
+            footer_right: input.footer_right ?? '',
         })
         .select('id')
         .single();
@@ -51,7 +65,7 @@ export async function createTemplate(input: { name: string; content: unknown; fo
     return data;
 }
 
-export async function updateTemplate(id: string, input: { name: string; content: unknown; font_family?: string }) {
+export async function updateTemplate(id: string, input: TemplateInput) {
     const { supabase, organizationId } = await getOrgAndUser();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,6 +75,10 @@ export async function updateTemplate(id: string, input: { name: string; content:
             name: input.name,
             content: input.content,
             font_family: input.font_family ?? 'Inter',
+            header_left: input.header_left ?? '',
+            header_right: input.header_right ?? '',
+            footer_left: input.footer_left ?? '',
+            footer_right: input.footer_right ?? '',
         })
         .eq('id', id)
         .eq('organization_id', organizationId);
