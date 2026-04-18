@@ -53,7 +53,8 @@
       "banks": "Banks",
       "document_types": "Document Types",
       "ai_variables": "AI Variables",
-      "formats": "Document Templates"
+      "formats": "Document Templates",
+      "google_docs": "Google Docs"
     },
     "upload": {
       "click_to_upload": "Click to upload a document",

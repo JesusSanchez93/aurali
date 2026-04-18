@@ -2,7 +2,7 @@
 
 import {
   Home, Scale, Settings, Users, ShieldCheck, BookOpen,
-  Sparkles, Building2, FileText, ChevronRight, Workflow, IdCard,
+  Sparkles, Building2, FileText, ChevronRight, Workflow, IdCard, Globe,
 } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -43,8 +43,8 @@ type NavItem = {
 
 const SETTINGS_SUB = [
   { titleKey: 'workflows',   url: '/settings/workflows',    icon: Workflow  },
-  { titleKey: 'formats',     url: '/settings/document-templates', icon: FileText  },
-  { titleKey: 'ai_variables',url: '/settings/ai-variables', icon: Sparkles  },
+  { titleKey: 'ai_variables',url: '/settings/ai-variables',     icon: Sparkles  },
+  { titleKey: 'google_docs', url: '/settings/google-templates', icon: Globe     },
   { titleKey: 'banks',           url: '/settings/banks',        icon: Building2 },
   { titleKey: 'document_types', url: '/settings/documents',    icon: IdCard    },
 ];

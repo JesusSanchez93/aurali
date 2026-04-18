@@ -27,6 +27,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { render } from '@react-email/render';
 import { resend } from '@/lib/resend';
 import { generateDocument, generatePreviewHtml } from '@/lib/documents/generateDocument';
+import { generateFromGoogleDoc, generateGoogleDocPreviewHtml } from '@/lib/google/generateFromDoc';
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
@@ -41,6 +42,19 @@ import type {
   NodeResult,
   ProfileRow,
 } from './types';
+
+function mapGeneratedDocumentsSchemaError(message: string): string {
+  if (
+    message.includes("Could not find the 'google_doc_template_id' column of 'generated_documents' in the schema cache")
+  ) {
+    return (
+      'La base de datos no tiene disponible la columna generated_documents.google_doc_template_id. ' +
+      'Aplica la migracion 20260416000003_generated_documents_google_doc_template.sql y refresca la schema cache de Supabase/PostgREST.'
+    );
+  }
+
+  return message;
+}
 
 // ─── Public: main dispatcher ───────────────────────────────────────────────────
 
@@ -848,42 +862,78 @@ async function executeGenerateDocument(
     ORG_REP_EMAIL: orgRepData2?.email ?? '',
   };
 
+  const db = supabase as SupabaseClient & Record<string, unknown>;
+
   // ── Preview mode: generate HTML previews, pause workflow ──────────────────
   if (preview === true) {
-    const db = supabase as SupabaseClient & Record<string, unknown>;
     type PreviewRow = { id: string; document_name: string };
     const previews: PreviewRow[] = [];
 
     for (const tid of ids) {
       let html: string;
       let name: string;
-      let tiptapContent: unknown;
+      let tiptapContent: unknown = null;
+      let isGoogleDoc = false;
+
       try {
-        ({ html, name, tiptapContent } = await generatePreviewHtml(tid, templateData, {
-          legalProcessId: context.legalProcess.id,
-          organizationId: context.legalProcess.organization_id ?? undefined,
-        }));
+        // Detect whether the ID belongs to a Google Doc template or a TipTap template
+        const { data: googleTpl } = await db
+          .from('google_doc_templates')
+          .select('id')
+          .eq('id', tid)
+          .maybeSingle() as { data: { id: string } | null };
+
+        isGoogleDoc = !!googleTpl;
+
+        if (isGoogleDoc) {
+          ({ html, name } = await generateGoogleDocPreviewHtml(
+            tid,
+            templateData,
+            context.legalProcess.organization_id ?? '',
+          ));
+        } else {
+          ({ html, name, tiptapContent } = await generatePreviewHtml(tid, templateData, {
+            legalProcessId: context.legalProcess.id,
+            organizationId: context.legalProcess.organization_id ?? undefined,
+          }));
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         return { status: 'failed', output: {}, error: `Error generando vista previa ${tid}: ${message}` };
       }
 
+      const insertPayload = isGoogleDoc
+        ? {
+            legal_process_id:       context.legalProcess.id,
+            template_id:            null,
+            google_doc_template_id: tid,
+            is_preview:             true,
+            html_content:           html,
+            tiptap_content:         null,
+            document_name:          name,
+            file_url:               null,
+          }
+        : {
+            legal_process_id: context.legalProcess.id,
+            template_id:      tid,
+            is_preview:       true,
+            html_content:     html,
+            tiptap_content:   tiptapContent,
+            document_name:    name,
+            file_url:         null,
+          };
+
       const { data: inserted, error: insertErr } = await db
         .from('generated_documents')
-        .insert({
-          legal_process_id: context.legalProcess.id,
-          template_id:      tid,
-          is_preview:       true,
-          html_content:     html,
-          tiptap_content:   tiptapContent,
-          document_name:    name,
-          file_url:         null,
-        })
+        .insert(insertPayload)
         .select('id, document_name')
         .single() as { data: PreviewRow | null; error: { message: string } | null };
 
       if (insertErr || !inserted) {
-        return { status: 'failed', output: {}, error: `Error guardando vista previa: ${insertErr?.message}` };
+        const message = mapGeneratedDocumentsSchemaError(
+          insertErr?.message ?? 'No se pudo insertar la vista previa',
+        );
+        return { status: 'failed', output: {}, error: `Error guardando vista previa: ${message}` };
       }
       previews.push(inserted);
     }
@@ -921,12 +971,31 @@ async function executeGenerateDocument(
 
   for (const tid of ids) {
     try {
-      const result = await generateDocument({
-        templateId: tid,
-        data: templateData,
-        legalProcessId: context.legalProcess.id,
-        organizationId: context.legalProcess.organization_id ?? undefined,
-      });
+      // Detect whether the ID belongs to a Google Doc template or a TipTap template
+      const { data: googleTpl } = await db
+        .from('google_doc_templates')
+        .select('id')
+        .eq('id', tid)
+        .maybeSingle() as { data: { id: string } | null };
+
+      let result: { documentId?: string; fileName?: string; fileUrl?: string; storagePath?: string };
+
+      if (googleTpl) {
+        result = await generateFromGoogleDoc({
+          googleDocTemplateId: tid,
+          data: templateData,
+          organizationId: context.legalProcess.organization_id ?? '',
+          legalProcessId: context.legalProcess.id,
+        });
+      } else {
+        result = await generateDocument({
+          templateId: tid,
+          data: templateData,
+          legalProcessId: context.legalProcess.id,
+          organizationId: context.legalProcess.organization_id ?? undefined,
+        });
+      }
+
       documents.push({
         document_id: result.documentId ?? '',
         document_name: result.fileName ?? '',

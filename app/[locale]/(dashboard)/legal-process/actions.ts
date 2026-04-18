@@ -14,6 +14,19 @@ type LocalizedString = {
   en?: string;
 };
 
+function mapGeneratedDocumentsSchemaError(message: string): string {
+  if (
+    message.includes("Could not find the 'google_doc_template_id' column of 'generated_documents' in the schema cache")
+  ) {
+    return (
+      'La base de datos no tiene disponible la columna generated_documents.google_doc_template_id. ' +
+      'Aplica la migracion 20260416000003_generated_documents_google_doc_template.sql y refresca la schema cache de Supabase/PostgREST.'
+    );
+  }
+
+  return message;
+}
+
 function revalidateLegalProcessPaths() {
   revalidatePath('/legal-process');
   revalidatePath('/es/legal-process');
@@ -976,25 +989,40 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
   // ── 3. Generate final PDFs (using lawyer-edited preview content when available) ──
   const { buildDocumentTemplateData } = await import('@/lib/workflow/nodeExecutors');
   const { generateDocument } = await import('@/lib/documents/generateDocument');
+  const { generateFromGoogleDoc } = await import('@/lib/google/generateFromDoc');
   const { templateData, organizationId } = await buildDocumentTemplateData(legalProcessId, supabase);
 
   // Fetch preview records — these contain the selected template IDs AND any edits
-  const { data: previewDocs } = await db
+  const { data: previewDocs, error: previewDocsError } = await db
     .from('generated_documents')
-    .select('template_id, tiptap_content')
+    .select('template_id, google_doc_template_id, tiptap_content')
     .eq('legal_process_id', legalProcessId)
     .eq('is_preview', true) as {
-      data: { template_id: string; tiptap_content: unknown }[] | null;
+      data: { template_id: string | null; google_doc_template_id: string | null; tiptap_content: unknown }[] | null;
+      error: { message: string } | null;
     };
 
+  if (previewDocsError) {
+    throw new Error(mapGeneratedDocumentsSchemaError(previewDocsError.message));
+  }
+
   for (const preview of previewDocs ?? []) {
-    await generateDocument({
-      templateId:          preview.template_id,
-      data:                templateData,
-      legalProcessId,
-      organizationId:      organizationId ?? undefined,
-      editedTiptapContent: preview.tiptap_content,
-    });
+    if (preview.google_doc_template_id) {
+      await generateFromGoogleDoc({
+        googleDocTemplateId: preview.google_doc_template_id,
+        data:                templateData,
+        organizationId:      organizationId ?? '',
+        legalProcessId,
+      });
+    } else if (preview.template_id) {
+      await generateDocument({
+        templateId:          preview.template_id,
+        data:                templateData,
+        legalProcessId,
+        organizationId:      organizationId ?? undefined,
+        editedTiptapContent: preview.tiptap_content,
+      });
+    }
   }
 
   // ── 4. Remove preview records ─────────────────────────────────────────────

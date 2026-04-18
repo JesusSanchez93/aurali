@@ -455,6 +455,7 @@ export async function generateDocument(
 
   const fullHtml = wrapWithPageLayout(resolvedBody, template.name, {
     fontFamily: template.font_family ?? 'Inter',
+    suppressTopBottomPageMargin: !!(puppeteerHeaderTemplate || puppeteerFooterTemplate),
   });
 
   // ── 6. Generate PDF ───────────────────────────────────────────────────────

@@ -25,6 +25,16 @@ export interface PdfOptions {
    * enabled and the footer renders inside the bottom @page margin area.
    */
   footerTemplate?: string;
+  /**
+   * Top Puppeteer margin (space reserved for the header). Default: '2.5cm'.
+   * Pass the document's actual top margin so the header zone matches the doc.
+   */
+  topMargin?: string;
+  /**
+   * Bottom Puppeteer margin (space reserved for the footer). Default: '2.5cm'.
+   * Pass the document's actual bottom margin so the footer zone matches the doc.
+   */
+  bottomMargin?: string;
 }
 
 /**
@@ -33,7 +43,7 @@ export interface PdfOptions {
  * The browser is always closed after generation, even on error.
  */
 export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise<Buffer> {
-  const { format = 'A4', printBackground = true, headerTemplate, footerTemplate } = options;
+  const { format = 'A4', printBackground = true, headerTemplate, footerTemplate, topMargin = '2.5cm', bottomMargin = '2.5cm' } = options;
   const hasHeaderFooter = !!(headerTemplate || footerTemplate);
 
   const browser = await getBrowser();
@@ -51,9 +61,15 @@ export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise
     const pdfBytes = await page.pdf({
       format,
       printBackground,
-      // These margins are already defined by @page CSS inside the template,
-      // so we set them to zero here to avoid double-margin.
-      margin: { top: '0', right: '0', bottom: '0', left: '0' },
+      // When displayHeaderFooter is active, Puppeteer renders the header/footer
+      // templates inside the JS margin area (not the CSS @page margin). We set
+      // top/bottom margins here so Puppeteer allocates space for them on every
+      // page. The CSS @page top/bottom margins are suppressed via
+      // suppressTopBottomPageMargin in wrapWithPageLayout to avoid double-margin.
+      // Left/right margins are still handled by CSS @page (3cm each side).
+      margin: hasHeaderFooter
+        ? { top: topMargin, right: '0', bottom: bottomMargin, left: '0' }
+        : { top: '0', right: '0', bottom: '0', left: '0' },
       // When header/footer templates are provided, Puppeteer renders them on
       // every page inside the @page margin areas. An empty <span> placeholder
       // is required for the absent slot so Puppeteer doesn't inject defaults.

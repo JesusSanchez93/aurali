@@ -115,15 +115,18 @@ export function renderHeaderFooterHtml(
  * These templates are rendered in an isolated frame — no external stylesheets apply,
  * so all styles must be inlined here. Padding matches the document's @page margins.
  */
+// Placeholders replaced dynamically in buildPuppeteerHeaderTemplate/Footer:
+//   __HF_PADDING__   → e.g. "4px 2.54cm 4px 2.54cm"
+//   __HF_FONT__      → e.g. "'Arial', sans-serif"
 const PUPPETEER_HF_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-size: 0; }
   .hf-wrap {
     display: block;
     width: 100%;
-    padding: 4px 3cm;
+    padding: __HF_PADDING__;
     font-size: 9pt;
-    font-family: Inter, Arial, Helvetica, sans-serif;
+    font-family: __HF_FONT__;
     color: #444;
     line-height: 1.4;
   }
@@ -132,7 +135,7 @@ const PUPPETEER_HF_CSS = `
   .template-header-img-left,  .template-footer-img-left  { text-align: left;   margin-bottom: 3px; }
   .template-header-img-center,.template-footer-img-center { text-align: center; margin-bottom: 3px; }
   .template-header-img-right, .template-footer-img-right  { text-align: right;  margin-bottom: 3px; }
-  img { max-height: 36px; max-width: 160px; object-fit: contain; display: inline-block; }
+  img { max-height: 80px; max-width: 100%; object-fit: contain; display: inline-block; }
   p { margin-bottom: 0.15em; font-size: 8.5pt; }
   strong { font-weight: bold; }
   em { font-style: italic; }
@@ -142,29 +145,82 @@ const PUPPETEER_HF_CSS = `
  * Wraps the pre-rendered header HTML fragment in a self-contained Puppeteer
  * headerTemplate (with embedded CSS). The template is rendered in an isolated
  * frame on every PDF page — within the top @page margin area.
+ *
+ * @param paddingLeft  - Left padding (default '3cm'). Pass the document's actual left margin.
+ * @param paddingRight - Right padding (default '3cm'). Pass the document's actual right margin.
+ * @param fontFamily   - Primary font family of the document (default 'Arial').
  */
-export function buildPuppeteerHeaderTemplate(headerHtml: string): string {
-  return `<style>${PUPPETEER_HF_CSS}</style><div class="hf-wrap hf-header">${headerHtml}</div>`;
+export function buildPuppeteerHeaderTemplate(
+  headerHtml: string,
+  paddingLeft = '3cm',
+  paddingRight = '3cm',
+  fontFamily = 'Arial',
+): string {
+  const css = PUPPETEER_HF_CSS
+    .replace('__HF_PADDING__', `4px ${paddingRight} 4px ${paddingLeft}`)
+    .replace('__HF_FONT__', `'${fontFamily}', Arial, sans-serif`);
+  return `<style>${css}</style><div class="hf-wrap hf-header">${headerHtml}</div>`;
 }
 
 /**
  * Wraps the pre-rendered footer HTML fragment in a self-contained Puppeteer
  * footerTemplate (with embedded CSS). The template is rendered in an isolated
  * frame on every PDF page — within the bottom @page margin area.
+ *
+ * @param paddingLeft  - Left padding (default '3cm'). Pass the document's actual left margin.
+ * @param paddingRight - Right padding (default '3cm'). Pass the document's actual right margin.
+ * @param fontFamily   - Primary font family of the document (default 'Arial').
  */
-export function buildPuppeteerFooterTemplate(footerHtml: string): string {
-  return `<style>${PUPPETEER_HF_CSS}</style><div class="hf-wrap hf-footer">${footerHtml}</div>`;
+export function buildPuppeteerFooterTemplate(
+  footerHtml: string,
+  paddingLeft = '3cm',
+  paddingRight = '3cm',
+  fontFamily = 'Arial',
+): string {
+  const css = PUPPETEER_HF_CSS
+    .replace('__HF_PADDING__', `4px ${paddingRight} 4px ${paddingLeft}`)
+    .replace('__HF_FONT__', `'${fontFamily}', Arial, sans-serif`);
+  return `<style>${css}</style><div class="hf-wrap hf-footer">${footerHtml}</div>`;
 }
 
-/** Google Fonts import URLs for supported document fonts (system fonts need no import) */
+/**
+ * System fonts available on all platforms (macOS, Linux, Windows) without CDN.
+ * These should NOT have a Google Fonts import generated for them.
+ */
+const SYSTEM_FONTS = new Set([
+  'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Courier New',
+  'Courier', 'Verdana', 'Trebuchet MS', 'Impact', 'Comic Sans MS',
+  // Calibri / Cambria are Windows-only but treating as system avoids broken Google Fonts request
+  'Calibri', 'Cambria',
+]);
+
+/**
+ * Fonts that should fall back to `serif` (all others fall back to `sans-serif`).
+ */
+const SERIF_FONTS = new Set([
+  'Times New Roman', 'Georgia', 'EB Garamond', 'Merriweather', 'Garamond',
+  'Palatino', 'Book Antiqua', 'Cambria', 'Lora', 'Playfair Display',
+]);
+
+/**
+ * Explicit Google Fonts import URLs for common fonts (optimized weight subsets).
+ * For any font not listed here that is also not a system font, a dynamic URL is generated.
+ */
 const GOOGLE_FONT_IMPORTS: Record<string, string> = {
-  'Inter':        "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,700;1,14..32,400&display=swap",
-  'Roboto':       "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,700;1,400&display=swap",
-  'Lato':         "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap",
-  'Open Sans':    "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,700;1,400&display=swap",
-  'Merriweather': "https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap",
-  'EB Garamond':  "https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&display=swap",
-  // Times New Roman and Georgia are system fonts — no import needed
+  'Inter':             "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,700;1,14..32,400&display=swap",
+  'Roboto':            "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Lato':              "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Open Sans':         "https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Merriweather':      "https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'EB Garamond':       "https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&display=swap",
+  'Nunito':            "https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Montserrat':        "https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Poppins':           "https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Source Sans Pro':   "https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'Noto Sans':         "https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,700;1,400&display=swap",
+  'PT Sans':           "https://fonts.googleapis.com/css2?family=PT+Sans:ital,wght@0,400;0,700;1,400&display=swap",
+  'Lora':              "https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap",
+  'Playfair Display':  "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap",
 };
 
 export interface PageLayoutOptions {
@@ -174,6 +230,17 @@ export interface PageLayoutOptions {
   footerHtml?: string;
   /** Font family to apply to the document body (default: Inter) */
   fontFamily?: string;
+  /**
+   * When true, the CSS @page top and bottom margins are set to 0.
+   * Use this when Puppeteer's displayHeaderFooter is active — Puppeteer's JS
+   * margin allocates the actual top/bottom space so the @page CSS must not
+   * double it.
+   */
+  suppressTopBottomPageMargin?: boolean;
+  /** Left margin in cm (default 3cm) */
+  marginLeft?: number;
+  /** Right margin in cm (default 3cm) */
+  marginRight?: number;
 }
 
 /**
@@ -185,10 +252,17 @@ export function wrapWithPageLayout(
   title = 'Documento Legal',
   options: PageLayoutOptions = {},
 ): string {
-  const { headerHtml, footerHtml, fontFamily = 'Inter' } = options;
-  const fontImportUrl = GOOGLE_FONT_IMPORTS[fontFamily];
+  const { headerHtml, footerHtml, fontFamily = 'Inter', suppressTopBottomPageMargin = false, marginLeft = 3, marginRight = 3 } = options;
+  const topBottomMargin = suppressTopBottomPageMargin ? '0' : '2.5cm';
+  // Determine font import: explicit entry, dynamic Google Fonts URL, or nothing for system fonts
+  const fontImportUrl = GOOGLE_FONT_IMPORTS[fontFamily]
+    ?? (!SYSTEM_FONTS.has(fontFamily)
+      ? `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:ital,wght@0,400;0,700;1,400&display=swap`
+      : undefined);
   const fontLinkTag = fontImportUrl ? `<link rel="stylesheet" href="${fontImportUrl}" />` : '';
-  const fontStack = `'${fontFamily}', serif`;
+  // Use correct fallback category (serif vs sans-serif) so Puppeteer picks the right generic
+  const fallback = SERIF_FONTS.has(fontFamily) ? 'serif' : 'sans-serif';
+  const fontStack = `'${fontFamily}', ${fallback}`;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -204,7 +278,7 @@ export function wrapWithPageLayout(
     /* ── Page setup ─────────────────────────────────── */
     @page {
       size: A4;
-      margin: 2.5cm 3cm 2.5cm 3cm;
+      margin: ${topBottomMargin} ${marginRight}cm ${topBottomMargin} ${marginLeft}cm;
     }
 
     html, body {
@@ -213,7 +287,7 @@ export function wrapWithPageLayout(
       color: #1a1a1a;
       font-family: ${fontStack};
       font-size: 11pt;
-      line-height: 1.75;
+      line-height: 1.15;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }

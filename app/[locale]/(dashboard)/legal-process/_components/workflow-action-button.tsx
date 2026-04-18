@@ -15,7 +15,7 @@ import {
   confirmEmailAttachments,
   type PendingWorkflowAction,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
-import { getDocumentTemplates } from '@/app/[locale]/(dashboard)/settings/workflows/actions';
+import { getGoogleDocTemplates } from '@/app/[locale]/(dashboard)/settings/google-templates/actions';
 
 interface Props {
   legalProcessId: string;
@@ -96,7 +96,7 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
 
   useEffect(() => {
     if (action?.kind === 'template_selection') {
-      getDocumentTemplates()
+      getGoogleDocTemplates()
         .then((t) => dispatch({ type: 'SET_TEMPLATES', templates: t }))
         .catch(console.error);
     }

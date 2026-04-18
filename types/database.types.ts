@@ -142,6 +142,7 @@ export type Database = {
           document_number: string | null
           document_slug: string | null
           id: string
+          is_active: boolean
           legal_rep_first_name: string | null
           legal_rep_last_name: string | null
           name: string | null
@@ -156,6 +157,7 @@ export type Database = {
           document_number?: string | null
           document_slug?: string | null
           id?: string
+          is_active?: boolean
           legal_rep_first_name?: string | null
           legal_rep_last_name?: string | null
           name?: string | null
@@ -170,6 +172,7 @@ export type Database = {
           document_number?: string | null
           document_slug?: string | null
           id?: string
+          is_active?: boolean
           legal_rep_first_name?: string | null
           legal_rep_last_name?: string | null
           name?: string | null
@@ -496,6 +499,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          is_active: boolean
           name: Json | null
           organization_id: string | null
           slug: string | null
@@ -504,6 +508,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_active?: boolean
           name?: Json | null
           organization_id?: string | null
           slug?: string | null
@@ -512,6 +517,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          is_active?: boolean
           name?: Json | null
           organization_id?: string | null
           slug?: string | null
@@ -531,6 +537,7 @@ export type Database = {
           created_at: string
           document_name: string | null
           file_url: string | null
+          google_doc_template_id: string | null
           html_content: string | null
           id: string
           is_preview: boolean
@@ -543,6 +550,7 @@ export type Database = {
           created_at?: string
           document_name?: string | null
           file_url?: string | null
+          google_doc_template_id?: string | null
           html_content?: string | null
           id?: string
           is_preview?: boolean
@@ -555,6 +563,7 @@ export type Database = {
           created_at?: string
           document_name?: string | null
           file_url?: string | null
+          google_doc_template_id?: string | null
           html_content?: string | null
           id?: string
           is_preview?: boolean
@@ -564,6 +573,13 @@ export type Database = {
           tiptap_content?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "generated_documents_google_doc_template_id_fkey"
+            columns: ["google_doc_template_id"]
+            isOneToOne: false
+            referencedRelation: "google_doc_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "generated_documents_legal_process_id_fkey"
             columns: ["legal_process_id"]
@@ -576,6 +592,105 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "legal_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_doc_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          google_doc_id: string
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          google_doc_id: string
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          google_doc_id?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_doc_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_doc_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_oauth_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          google_email: string | null
+          id: string
+          organization_id: string | null
+          refresh_token: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          google_email?: string | null
+          id?: string
+          organization_id?: string | null
+          refresh_token: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          google_email?: string | null
+          id?: string
+          organization_id?: string | null
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_oauth_tokens_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_oauth_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -988,8 +1103,14 @@ export type Database = {
           created_at: string
           created_by: string | null
           font_family: string
+          footer_content: Json | null
           footer_id: string | null
+          footer_left: string
+          footer_right: string
+          header_content: Json | null
           header_id: string | null
+          header_left: string
+          header_right: string
           id: string
           name: string | null
           organization_id: string | null
@@ -1000,8 +1121,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           font_family?: string
+          footer_content?: Json | null
           footer_id?: string | null
+          footer_left?: string
+          footer_right?: string
+          header_content?: Json | null
           header_id?: string | null
+          header_left?: string
+          header_right?: string
           id?: string
           name?: string | null
           organization_id?: string | null
@@ -1012,8 +1139,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           font_family?: string
+          footer_content?: Json | null
           footer_id?: string | null
+          footer_left?: string
+          footer_right?: string
+          header_content?: Json | null
           header_id?: string | null
+          header_left?: string
+          header_right?: string
           id?: string
           name?: string | null
           organization_id?: string | null
