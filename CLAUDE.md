@@ -45,14 +45,15 @@ Auth lives at `app/[locale]/auth/`. API routes at `app/api/` (PDF generation, wo
 ### Key Subsystems
 
 **Document Generation** (`lib/documents/`)
-- `generateDocument.ts` orchestrates the pipeline
-- `htmlRenderer.ts` converts TipTap editor content to HTML
-- `pdfGenerator.ts` uses Puppeteer + `@sparticuz/chromium-min` for PDF output
+- `generateDocument.ts` orchestrates the TipTap-based pipeline: TipTap JSON → HTML → PDF → Supabase Storage
+- `htmlRenderer.ts` converts TipTap JSON to HTML; `pdfGenerator.ts` renders HTML to PDF via Puppeteer + `@sparticuz/chromium-min`
+- Google Docs pipeline: `generateFromGoogleDoc()` exports HTML from the Docs API, substitutes variables, then passes through the same PDF step
+- Variable tokens use `{GROUP.TYPE}` format — e.g. `{CLIENT.FIRST_NAME}`, `{PROCESS.ID}`. Defined in `app/[locale]/(dashboard)/settings/document-templates/_components/variables.ts`
 - Templates stored in Supabase Storage; signed URLs returned on generation
 
 **Workflow Engine** (`lib/workflow/`)
-- `workflowRunner.ts` executes node graphs
-- `nodeExecutors.ts` handles each node type (conditional, document, email, HTTP, decision)
+- `workflowRunner.ts` executes node graphs; supports fan-out (Promise.all) and suspension (`waiting` status)
+- `nodeExecutors.ts` handles each node type: `start`, `send_email`, `client_form`, `notify_lawyer`, `manual_action`, `generate_document`, `send_documents`, `status_update`, `end`
 - `autoAdvance.ts` handles automatic step progression
 - Workflow state and audit logs persisted in Supabase
 
@@ -77,6 +78,12 @@ Feature components live in `components/app/`, `components/auth/`, `components/da
 **Common components** (`components/common/`) — reusable wrappers over shadcn primitives. Always use these instead of the raw `components/ui/` equivalents:
 - `components/common/sheet.tsx` — Sheet wrapper with `title`, `body`, `footer`, `size`, `stickyHeader`, `stickyFooter` props. Use `size="3xl"` for wide forms. **Never import directly from `@/components/ui/sheet` in feature components.**
 
+**TipTap editor** (`components/common/tip-tap/`) — rich-text + paginated document editor.
+- `index.tsx` — main component. Key props: `mode` (`default` | `document`), `variableGroups?: VariableGroup[]`, `aiVariableKeys?: string[]`, `menuBarExtras?: MenuBarExtra[]` (values: `'image' | 'columns' | 'table'`, default `[]`)
+- `variable-types.ts` — shared types `VariableGroup` / `VariableDef`. Import from here, never from domain folders.
+- **Rule:** `components/common/tip-tap/` must have zero imports from `app/`. Pass domain data (variable groups) via props from callers.
+- Variable token format: `{GROUP.TYPE}` (e.g. `{CLIENT.FIRST_NAME}`). Groups defined in `app/[locale]/(dashboard)/settings/document-templates/_components/variables.ts`.
+
 ## Commit Conventions
 
 - **Spanish** for domain logic (features, fixes, business refactors)
@@ -88,14 +95,151 @@ Feature components live in `components/app/`, `components/auth/`, `components/da
 
 ## Migration Conventions
 
-Every new table migration must include:
-1. DDL (CREATE/ALTER TABLE)
-2. `ALTER TABLE public.<table> ENABLE ROW LEVEL SECURITY`
-3. RLS policies for SELECT/INSERT/UPDATE (org members) and DELETE (org admin or superadmin only)
-4. `GRANT ALL ON TABLE public.<table> TO anon, authenticated, service_role`
+### Standard Migration Structure
 
-Special cases: public/catalog tables use `USING (true)` for SELECT. Junction tables without `organization_id` check via parent table subquery.
+Every migration must follow this exact order:
 
-**Migrations must be additive and forward-only.** Never use `DROP`, `TRUNCATE`, or destructive `ALTER` that would require a `db reset`. Every migration must apply cleanly on top of existing data with `supabase migration up` — both locally and on the cloud — without resetting the database. Use `ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, `CREATE POLICY IF NOT EXISTS`, and conditional logic to avoid conflicts with previously applied migrations.
+```sql
+-- ============================================
+-- MIGRATION: <descriptive_name>
+-- Description: <what this migration does>
+-- Date: YYYY-MM-DD
+-- ============================================
 
-After applying: run `supabase migration up` (local and remote), then regenerate types.
+-- 1. CREATE TABLE
+-- 2. ENABLE RLS
+-- 3. CREATE INDEXES
+-- 4. CREATE POLICIES
+-- 5. GRANT PERMISSIONS
+```
+
+### 1. Table Creation
+
+```sql
+CREATE TABLE IF NOT EXISTS public.<table_name> (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Foreign keys first
+  organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  created_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  
+  -- Business fields
+  name text NOT NULL,
+  status text NOT NULL DEFAULT 'active',
+  
+  -- Timestamps always last
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+### 2. Enable RLS
+
+```sql
+ALTER TABLE public.<table_name> ENABLE ROW LEVEL SECURITY;
+```
+
+### 3. Create Indexes
+
+**Index naming convention:** `idx_<table>_<columns>_[<condition>]`
+
+**Always index:**
+- Foreign keys (PostgreSQL doesn't auto-index FKs)
+- Columns in frequent WHERE clauses
+- Columns used in ORDER BY
+- Composite indexes for common query patterns
+
+```sql
+-- 3.1 Foreign Keys (ALWAYS)
+CREATE INDEX IF NOT EXISTS idx_<table>_organization_id 
+  ON public.<table_name>(organization_id);
+
+-- 3.2 Common queries (WHERE conditions)
+CREATE INDEX IF NOT EXISTS idx_<table>_org_status 
+  ON public.<table_name>(organization_id, status);
+
+-- 3.3 Timestamps (for ORDER BY DESC)
+CREATE INDEX IF NOT EXISTS idx_<table>_created_at 
+  ON public.<table_name>(organization_id, created_at DESC);
+
+-- 3.4 Partial indexes (for constant filters)
+CREATE INDEX IF NOT EXISTS idx_<table>_active 
+  ON public.<table_name>(organization_id) 
+  WHERE status = 'active';
+
+-- 3.5 Text search (if searchable fields exist)
+CREATE EXTENSION IF NOT EXISTS pg_trgm; -- once per database
+CREATE INDEX IF NOT EXISTS idx_<table>_name_trgm 
+  ON public.<table_name> USING gin(name gin_trgm_ops);
+```
+
+**Index checklist per table:**
+- [ ] Does it have `organization_id`? → Index it
+- [ ] Does it have other FKs? → Index each one
+- [ ] What WHERE conditions are common? → Composite index
+- [ ] Is it sorted by timestamp? → Index with DESC
+- [ ] Does it have text search? → GIN trigram index
+- [ ] Are there constant filters (status='active')? → Partial index
+
+### 4. Create RLS Policies
+
+```sql
+-- SELECT: is_org_member
+CREATE POLICY IF NOT EXISTS "Users can view <table> from their organization"
+  ON public.<table_name>
+  FOR SELECT
+  USING (is_org_member(organization_id));
+
+-- INSERT: is_org_member
+CREATE POLICY IF NOT EXISTS "Users can create <table> in their organization"
+  ON public.<table_name>
+  FOR INSERT
+  WITH CHECK (is_org_member(organization_id));
+
+-- UPDATE: is_org_member
+CREATE POLICY IF NOT EXISTS "Users can update <table> in their organization"
+  ON public.<table_name>
+  FOR UPDATE
+  USING (is_org_member(organization_id))
+  WITH CHECK (is_org_member(organization_id));
+
+-- DELETE: is_org_admin OR is_superadmin
+CREATE POLICY IF NOT EXISTS "Org admins can delete <table>"
+  ON public.<table_name>
+  FOR DELETE
+  USING (is_org_admin(organization_id) OR is_superadmin());
+```
+
+**Special cases:**
+- Public/catalog tables: use `USING (true)` for SELECT
+- Junction tables without `organization_id`: check via parent table subquery
+
+### 5. Grant Permissions
+
+```sql
+GRANT ALL ON TABLE public.<table_name> TO anon, authenticated, service_role;
+```
+
+### Migration Rules
+
+**Migrations must be additive and forward-only.** Never use `DROP`, `TRUNCATE`, or destructive `ALTER` that would require a `db reset`. Every migration must apply cleanly on top of existing data with `supabase migration up` — both locally and on the cloud — without resetting the database.
+
+Use:
+- `CREATE TABLE IF NOT EXISTS`
+- `ADD COLUMN IF NOT EXISTS`
+- `CREATE INDEX IF NOT EXISTS`
+- `CREATE POLICY IF NOT EXISTS`
+- Conditional logic to avoid conflicts
+
+After applying migrations:
+1. Run `supabase migration up` (local)
+2. Run `supabase migration up` (remote/cloud if needed)
+3. Regenerate types: `supabase gen types typescript --local > types/database.types.ts`
+
+## Reference Documentation
+
+When working with migrations and database optimization:
+- Read `MIGRATION_STANDARDS.md` for complete migration template
+- Read `INDEX_BEST_PRACTICES.md` for indexing guidelines and examples
+- These docs contain detailed patterns for indexes, RLS policies, and performance optimization
+- Read `TECHNICAL.md` for full project architecture, subsystems, database schema, API routes, and key design decisions
