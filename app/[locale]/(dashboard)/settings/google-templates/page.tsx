@@ -1,5 +1,6 @@
 import { getGoogleDocTemplates, getGoogleConnectionStatus } from './actions';
 import { GoogleTemplatesSection } from './_components/google-templates-section';
+import { VARIABLE_GROUPS } from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables';
 import { GoogleSetupGuide } from './_components/google-setup-guide';
 import { GoogleConnection } from '@/components/app/settings/google-connection';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
@@ -70,6 +71,7 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
         templates={templates}
         connection={connection}
         locale={locale}
+        variableGroups={VARIABLE_GROUPS}
       />
     </div>
   );

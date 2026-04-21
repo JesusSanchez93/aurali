@@ -174,40 +174,39 @@ function resolveField(field: string, context: ExecutionContext): unknown {
 // ─── Template variable substitution ───────────────────────────────────────────
 
 /**
- * Replaces {placeholder} and {{placeholder}} tokens in a string.
- * Both single and double brace formats are supported.
+ * Replaces {PLACEHOLDER} tokens in a string. Case-insensitive.
  *
  * Available tokens:
- *   {process.id} / {{process.id}}, {process.email}, {process.status}, ...
- *   {client.first_name} / {{client.first_name}}, {client.email}, ...
- *   {output.*} / {{output.*}} — any key from previousOutput
+ *   {CLIENT.FIRST_NAME}, {CLIENT.LAST_NAME}, {CLIENT.EMAIL}, ...
+ *   {PROCESS.ID}, {PROCESS.DATE}, {PROCESS.STATUS}, {PROCESS.FEE_AMOUNT}
+ *   {OUTPUT.*} — any key from previousOutput
  */
 function substituteVars(template: string, context: ExecutionContext): string {
   if (!template) return template;
 
   const vals: Record<string, string> = {};
 
-  // process.*
+  // process.* / PROCESS.*
   for (const [k, v] of Object.entries(context.legalProcess)) {
     const str = v != null ? String(v) : '';
     vals[`process.${k}`] = str;
     vals[k] = str;
   }
 
-  // client.*
+  // client.* / CLIENT.*
   for (const [k, v] of Object.entries(context.clientData)) {
     vals[`client.${k}`] = v != null ? String(v) : '';
   }
 
-  // output.*
+  // output.* / OUTPUT.*
   for (const [k, v] of Object.entries(context.previousOutput)) {
     vals[`output.${k}`] = v != null ? String(v) : '';
   }
 
-  // Replace {{key}} first (longer match), then {key}
+  // Replace {{key}} first (longer match), then {key} — case-insensitive key lookup
   return template
-    .replace(/\{\{([\w.]+)\}\}/g, (match, key: string) => vals[key] ?? match)
-    .replace(/\{([\w.]+)\}/g,   (match, key: string) => vals[key] ?? match);
+    .replace(/\{\{([\w.]+)\}\}/g, (match, key: string) => vals[key.toLowerCase()] ?? match)
+    .replace(/\{([\w.]+)\}/g,   (match, key: string) => vals[key.toLowerCase()] ?? match);
 }
 
 // ─── TipTap → HTML converter ───────────────────────────────────────────────────
@@ -644,52 +643,55 @@ export async function buildDocumentTemplateData(
     ...Object.fromEntries(
       Object.entries(legalProcess).map(([k, v]) => [k, v != null ? String(v) : '']),
     ),
-    // Uppercase variables
-    FIRST_NAME: String((client as { first_name?: string | null }).first_name ?? ''),
-    LAST_NAME: String((client as { last_name?: string | null }).last_name ?? ''),
-    DOCUMENT_TYPE: String((client as { document_slug?: string | null }).document_slug ?? ''),
-    DOCUMENT_NAME: String(
+    // CLIENT.*
+    'CLIENT.FIRST_NAME': String((client as { first_name?: string | null }).first_name ?? ''),
+    'CLIENT.LAST_NAME': String((client as { last_name?: string | null }).last_name ?? ''),
+    'CLIENT.DOCUMENT_TYPE': String((client as { document_slug?: string | null }).document_slug ?? ''),
+    'CLIENT.DOCUMENT_NAME': String(
       (client as { document_name?: string | null }).document_name ??
       (client as { document_slug?: string | null }).document_slug ?? '',
     ),
-    DOCUMENT_NUMBER: String(
+    'CLIENT.DOCUMENT_NUMBER': String(
       (client as { document_number?: string | null }).document_number ??
       legalProcess.document_number ?? '',
     ),
-    EMAIL: String((client as { email?: string | null }).email ?? legalProcess.email ?? ''),
-    PHONE: String((client as { phone?: string | null }).phone ?? ''),
-    ADDRESS: String((client as { address?: string | null }).address ?? ''),
-    PROCESS_ID: legalProcess.id,
-    PROCESS_DATE: new Date().toLocaleDateString('es-CO', {
+    'CLIENT.EMAIL': String((client as { email?: string | null }).email ?? legalProcess.email ?? ''),
+    'CLIENT.PHONE': String((client as { phone?: string | null }).phone ?? ''),
+    'CLIENT.ADDRESS': String((client as { address?: string | null }).address ?? ''),
+    // PROCESS.*
+    'PROCESS.ID': legalProcess.id,
+    'PROCESS.DATE': new Date().toLocaleDateString('es-CO', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     }),
-    PROCESS_STATUS: String(legalProcess.status ?? ''),
-    FEE_AMOUNT: feeRow?.total_amount != null
+    'PROCESS.STATUS': String(legalProcess.status ?? ''),
+    'PROCESS.FEE_AMOUNT': feeRow?.total_amount != null
       ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(feeRow.total_amount))
       : '',
-    BANK_NAME: bankData?.bank_name ?? '',
-    BANK_DOCUMENT_SLUG: bankData?.document_slug ?? '',
-    BANK_DOCUMENT_NUMBER: bankData?.document_number ?? '',
-    BANK_LAST_4_DIGITS: bankData?.last_4_digits ?? '',
-    FRAUD_INCIDENT_SUMMARY: bankData?.fraud_incident_summary ?? '',
-    BANK_LEGAL_REP_FIRST_NAME: bankData?.legal_rep_first_name ?? '',
-    BANK_LEGAL_REP_LAST_NAME: bankData?.legal_rep_last_name ?? '',
-    LAWYER_FIRST_NAME: lawyerData?.firstname ?? '',
-    LAWYER_LAST_NAME: lawyerData?.lastname ?? '',
-    LAWYER_DOCUMENT_TYPE: lawyerData?.document_type ?? '',
-    LAWYER_DOCUMENT_NAME: lawyerData?.document_type ?? '',
-    LAWYER_DOCUMENT_NUMBER: lawyerData?.document_number ?? '',
-    LAWYER_SIGNATURE: lawyerData?.signature_url ?? '',
-    // Organization representative
-    ORG_NAME: orgData?.name ?? '',
-    ORG_REP_FIRST_NAME: orgRepData?.firstname ?? '',
-    ORG_REP_LAST_NAME: orgRepData?.lastname ?? '',
-    ORG_REP_DOCUMENT_TYPE: orgRepData?.document_type ?? '',
-    ORG_REP_DOCUMENT_NAME: orgRepData?.document_type ?? '',
-    ORG_REP_DOCUMENT_NUMBER: orgRepData?.document_number ?? '',
-    ORG_REP_EMAIL: orgRepData?.email ?? '',
+    // BANKING.*
+    'BANKING.NAME': bankData?.bank_name ?? '',
+    'BANKING.DOCUMENT_SLUG': bankData?.document_slug ?? '',
+    'BANKING.DOCUMENT_NUMBER': bankData?.document_number ?? '',
+    'BANKING.LAST_4_DIGITS': bankData?.last_4_digits ?? '',
+    'BANKING.FRAUD_INCIDENT_SUMMARY': bankData?.fraud_incident_summary ?? '',
+    'BANKING.LEGAL_REP_FIRST_NAME': bankData?.legal_rep_first_name ?? '',
+    'BANKING.LEGAL_REP_LAST_NAME': bankData?.legal_rep_last_name ?? '',
+    // LAWYER.*
+    'LAWYER.FIRST_NAME': lawyerData?.firstname ?? '',
+    'LAWYER.LAST_NAME': lawyerData?.lastname ?? '',
+    'LAWYER.DOCUMENT_TYPE': lawyerData?.document_type ?? '',
+    'LAWYER.DOCUMENT_NAME': lawyerData?.document_type ?? '',
+    'LAWYER.DOCUMENT_NUMBER': lawyerData?.document_number ?? '',
+    'LAWYER.SIGNATURE': lawyerData?.signature_url ?? '',
+    // ORG_REP.*
+    'ORG_REP.NAME': orgData?.name ?? '',
+    'ORG_REP.FIRST_NAME': orgRepData?.firstname ?? '',
+    'ORG_REP.LAST_NAME': orgRepData?.lastname ?? '',
+    'ORG_REP.DOCUMENT_TYPE': orgRepData?.document_type ?? '',
+    'ORG_REP.DOCUMENT_NAME': orgRepData?.document_type ?? '',
+    'ORG_REP.DOCUMENT_NUMBER': orgRepData?.document_number ?? '',
+    'ORG_REP.EMAIL': orgRepData?.email ?? '',
   };
 
   return { templateData, organizationId: legalProcess.organization_id };
@@ -818,48 +820,47 @@ async function executeGenerateDocument(
     ...Object.fromEntries(
       Object.entries(context.previousOutput).map(([k, v]) => [k, v != null ? String(v) : '']),
     ),
-    // ── Uppercase variables used in legal_templates ──────────────────────────
-    // Client
-    FIRST_NAME: String(context.clientData.first_name ?? ''),
-    LAST_NAME: String(context.clientData.last_name ?? ''),
-    DOCUMENT_TYPE: String(context.clientData.document_slug ?? ''),
-    DOCUMENT_NAME: String(context.clientData.document_name ?? context.clientData.document_slug ?? ''),
-    DOCUMENT_NUMBER: String(context.clientData.document_number ?? context.legalProcess.document_number ?? ''),
-    EMAIL: String(context.clientData.email ?? context.legalProcess.email ?? ''),
-    PHONE: String(context.clientData.phone ?? ''),
-    ADDRESS: String(context.clientData.address ?? ''),
-    // Process
-    PROCESS_ID: context.legalProcess.id,
-    PROCESS_DATE: context.legalProcess.id
+    // CLIENT.*
+    'CLIENT.FIRST_NAME': String(context.clientData.first_name ?? ''),
+    'CLIENT.LAST_NAME': String(context.clientData.last_name ?? ''),
+    'CLIENT.DOCUMENT_TYPE': String(context.clientData.document_slug ?? ''),
+    'CLIENT.DOCUMENT_NAME': String(context.clientData.document_name ?? context.clientData.document_slug ?? ''),
+    'CLIENT.DOCUMENT_NUMBER': String(context.clientData.document_number ?? context.legalProcess.document_number ?? ''),
+    'CLIENT.EMAIL': String(context.clientData.email ?? context.legalProcess.email ?? ''),
+    'CLIENT.PHONE': String(context.clientData.phone ?? ''),
+    'CLIENT.ADDRESS': String(context.clientData.address ?? ''),
+    // PROCESS.*
+    'PROCESS.ID': context.legalProcess.id,
+    'PROCESS.DATE': context.legalProcess.id
       ? new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })
       : '',
-    PROCESS_STATUS: String(context.legalProcess.status ?? ''),
-    FEE_AMOUNT: feeRow2?.total_amount != null
+    'PROCESS.STATUS': String(context.legalProcess.status ?? ''),
+    'PROCESS.FEE_AMOUNT': feeRow2?.total_amount != null
       ? new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(feeRow2.total_amount))
       : '',
-    // Banking
-    BANK_NAME: bankData?.bank_name ?? '',
-    BANK_DOCUMENT_SLUG: bankData?.document_slug ?? '',
-    BANK_DOCUMENT_NUMBER: bankData?.document_number ?? '',
-    BANK_LAST_4_DIGITS: bankData?.last_4_digits ?? '',
-    FRAUD_INCIDENT_SUMMARY: bankData?.fraud_incident_summary ?? '',
-    BANK_LEGAL_REP_FIRST_NAME: bankData?.legal_rep_first_name ?? '',
-    BANK_LEGAL_REP_LAST_NAME: bankData?.legal_rep_last_name ?? '',
-    // Lawyer
-    LAWYER_FIRST_NAME: lawyerData?.firstname ?? '',
-    LAWYER_LAST_NAME: lawyerData?.lastname ?? '',
-    LAWYER_DOCUMENT_TYPE: lawyerData?.document_type ?? '',
-    LAWYER_DOCUMENT_NAME: lawyerData?.document_type ?? '',
-    LAWYER_DOCUMENT_NUMBER: lawyerData?.document_number ?? '',
-    LAWYER_SIGNATURE: lawyerData?.signature_url ?? '',
-    // Organization representative
-    ORG_NAME: orgData2?.name ?? '',
-    ORG_REP_FIRST_NAME: orgRepData2?.firstname ?? '',
-    ORG_REP_LAST_NAME: orgRepData2?.lastname ?? '',
-    ORG_REP_DOCUMENT_TYPE: orgRepData2?.document_type ?? '',
-    ORG_REP_DOCUMENT_NAME: orgRepData2?.document_type ?? '',
-    ORG_REP_DOCUMENT_NUMBER: orgRepData2?.document_number ?? '',
-    ORG_REP_EMAIL: orgRepData2?.email ?? '',
+    // BANKING.*
+    'BANKING.NAME': bankData?.bank_name ?? '',
+    'BANKING.DOCUMENT_SLUG': bankData?.document_slug ?? '',
+    'BANKING.DOCUMENT_NUMBER': bankData?.document_number ?? '',
+    'BANKING.LAST_4_DIGITS': bankData?.last_4_digits ?? '',
+    'BANKING.FRAUD_INCIDENT_SUMMARY': bankData?.fraud_incident_summary ?? '',
+    'BANKING.LEGAL_REP_FIRST_NAME': bankData?.legal_rep_first_name ?? '',
+    'BANKING.LEGAL_REP_LAST_NAME': bankData?.legal_rep_last_name ?? '',
+    // LAWYER.*
+    'LAWYER.FIRST_NAME': lawyerData?.firstname ?? '',
+    'LAWYER.LAST_NAME': lawyerData?.lastname ?? '',
+    'LAWYER.DOCUMENT_TYPE': lawyerData?.document_type ?? '',
+    'LAWYER.DOCUMENT_NAME': lawyerData?.document_type ?? '',
+    'LAWYER.DOCUMENT_NUMBER': lawyerData?.document_number ?? '',
+    'LAWYER.SIGNATURE': lawyerData?.signature_url ?? '',
+    // ORG_REP.*
+    'ORG_REP.NAME': orgData2?.name ?? '',
+    'ORG_REP.FIRST_NAME': orgRepData2?.firstname ?? '',
+    'ORG_REP.LAST_NAME': orgRepData2?.lastname ?? '',
+    'ORG_REP.DOCUMENT_TYPE': orgRepData2?.document_type ?? '',
+    'ORG_REP.DOCUMENT_NAME': orgRepData2?.document_type ?? '',
+    'ORG_REP.DOCUMENT_NUMBER': orgRepData2?.document_number ?? '',
+    'ORG_REP.EMAIL': orgRepData2?.email ?? '',
   };
 
   const db = supabase as SupabaseClient & Record<string, unknown>;

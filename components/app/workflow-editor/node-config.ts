@@ -63,7 +63,7 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
     defaultTitle: 'Enviar Correo',
     defaultConfig: { to: '', subject: '', body: '', attach_enabled: false },
     configSchema: [
-      { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{{process.email}}', required: true },
+      { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{PROCESS.EMAIL}', required: true },
       { key: 'subject', label: 'Asunto',  type: 'text',     placeholder: 'Asunto del correo', required: true },
       { key: 'body',    label: 'Cuerpo',  type: 'richtext' },
       { key: 'attach_enabled', label: 'Adjuntar documentos PDF generados', type: 'switch' },
@@ -161,12 +161,12 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
     borderClass:  'border-indigo-500',
     defaultTitle: 'Enviar Documentos',
     defaultConfig: {
-      to:      '{{process.email}}',
+      to:      '{PROCESS.EMAIL}',
       subject: 'Sus documentos legales están listos',
-      body:    'Sus documentos están disponibles en: {{output.document_url}}',
+      body:    'Sus documentos están disponibles en: {OUTPUT.DOCUMENT_URL}',
     },
     configSchema: [
-      { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{{process.email}}',           required: true },
+      { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{PROCESS.EMAIL}',           required: true },
       { key: 'subject', label: 'Asunto',  type: 'text',     placeholder: 'Sus documentos están listos', required: true },
       { key: 'body',    label: 'Cuerpo',  type: 'richtext' },
     ],

@@ -18,65 +18,7 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { FileText, Plus, Pencil, Trash2, ExternalLink, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
-// ─── Variables de plantilla disponibles ───────────────────────────────────────
-
-const TEMPLATE_VARIABLE_GROUPS = [
-  {
-    label: 'Cliente',
-    vars: [
-      { key: 'FIRST_NAME',      desc: 'Nombre' },
-      { key: 'LAST_NAME',       desc: 'Apellido' },
-      { key: 'client_name',     desc: 'Nombre completo' },
-      { key: 'DOCUMENT_TYPE',   desc: 'Tipo de documento (sigla)' },
-      { key: 'DOCUMENT_NUMBER', desc: 'Número de documento' },
-      { key: 'EMAIL',           desc: 'Correo electrónico' },
-      { key: 'PHONE',           desc: 'Teléfono' },
-      { key: 'ADDRESS',         desc: 'Dirección' },
-    ],
-  },
-  {
-    label: 'Proceso',
-    vars: [
-      { key: 'PROCESS_ID',     desc: 'ID del proceso' },
-      { key: 'PROCESS_DATE',   desc: 'Fecha de generación (largo)' },
-      { key: 'PROCESS_STATUS', desc: 'Estado del proceso' },
-      { key: 'FEE_AMOUNT',     desc: 'Honorarios (formato COP)' },
-    ],
-  },
-  {
-    label: 'Abogado',
-    vars: [
-      { key: 'LAWYER_FIRST_NAME',      desc: 'Nombre' },
-      { key: 'LAWYER_LAST_NAME',       desc: 'Apellido' },
-      { key: 'LAWYER_DOCUMENT_TYPE',   desc: 'Tipo de documento' },
-      { key: 'LAWYER_DOCUMENT_NUMBER', desc: 'Número de documento' },
-      { key: 'LAWYER_SIGNATURE',       desc: 'URL de la firma' },
-    ],
-  },
-  {
-    label: 'Organización',
-    vars: [
-      { key: 'ORG_NAME',                desc: 'Nombre de la organización' },
-      { key: 'ORG_REP_FIRST_NAME',      desc: 'Nombre del representante' },
-      { key: 'ORG_REP_LAST_NAME',       desc: 'Apellido del representante' },
-      { key: 'ORG_REP_DOCUMENT_TYPE',   desc: 'Tipo de doc. del representante' },
-      { key: 'ORG_REP_DOCUMENT_NUMBER', desc: 'Número de doc. del representante' },
-      { key: 'ORG_REP_EMAIL',           desc: 'Correo del representante' },
-    ],
-  },
-  {
-    label: 'Banco',
-    vars: [
-      { key: 'BANK_NAME',                 desc: 'Nombre del banco' },
-      { key: 'BANK_DOCUMENT_SLUG',        desc: 'Tipo de doc. del banco' },
-      { key: 'BANK_DOCUMENT_NUMBER',      desc: 'NIT / documento del banco' },
-      { key: 'BANK_LAST_4_DIGITS',        desc: 'Últimos 4 dígitos de tarjeta' },
-      { key: 'FRAUD_INCIDENT_SUMMARY',    desc: 'Resumen del incidente de fraude' },
-      { key: 'BANK_LEGAL_REP_FIRST_NAME', desc: 'Nombre rep. legal del banco' },
-      { key: 'BANK_LEGAL_REP_LAST_NAME',  desc: 'Apellido rep. legal del banco' },
-    ],
-  },
-];
+import type { VariableGroup } from '@/components/common/tip-tap/variable-types';
 import {
   type GoogleDocTemplate,
   type GoogleConnectionStatus,
@@ -89,6 +31,7 @@ interface Props {
   templates: GoogleDocTemplate[];
   connection: GoogleConnectionStatus;
   locale: string;
+  variableGroups?: VariableGroup[];
 }
 
 interface FormState {
@@ -103,7 +46,7 @@ const emptyForm: FormState = {
   description: '',
 };
 
-export function GoogleTemplatesSection({ templates, connection, locale }: Props) {
+export function GoogleTemplatesSection({ templates, connection, locale, variableGroups = [] }: Props) {
   const [isPending, startTransition] = useTransition();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<GoogleDocTemplate | null>(null);
@@ -180,7 +123,7 @@ export function GoogleTemplatesSection({ templates, connection, locale }: Props)
         <div>
           <h2 className="text-xl font-semibold">Plantillas de Google Docs</h2>
           <p className="text-sm text-muted-foreground">
-            Usa Google Docs como plantilla. Las variables <code className="rounded bg-muted px-1 text-xs">{'{VARIABLE_NOMBRE}'}</code> se sustituyen al generar el PDF.
+            Usa Google Docs como plantilla. Las variables <code className="rounded bg-muted px-1 text-xs">{'{GRUPO.VARIABLE}'}</code> se sustituyen al generar el PDF.
           </p>
         </div>
         <Button size="sm" onClick={openNew} disabled={!connection.connected}>
@@ -279,7 +222,7 @@ export function GoogleTemplatesSection({ templates, connection, locale }: Props)
         {varsOpen && (
           <div className="border-t px-4 py-4 space-y-3">
             <p className="text-xs text-muted-foreground">
-              Usa <code className="rounded bg-muted px-1 font-mono">{'{NOMBRE_VARIABLE}'}</code> en tu Google Doc. Haz clic en una variable para copiarla.
+              Usa <code className="rounded bg-muted px-1 font-mono">{'{GRUPO.VARIABLE}'}</code> en tu Google Doc. Haz clic en una variable para copiarla.
             </p>
             <Input
               placeholder="Buscar variable…"
@@ -288,34 +231,37 @@ export function GoogleTemplatesSection({ templates, connection, locale }: Props)
               className="h-8 text-sm"
             />
             <div className="space-y-4">
-              {TEMPLATE_VARIABLE_GROUPS.map((group) => {
+              {variableGroups.map((group) => {
                 const q = varsSearch.toLowerCase();
-                const filtered = group.vars.filter(
-                  ({ key, desc }) =>
-                    key.toLowerCase().includes(q) || desc.toLowerCase().includes(q),
+                const filtered = group.variables.filter(
+                  ({ key, label }) =>
+                    key.toLowerCase().includes(q) || label.toLowerCase().includes(q),
                 );
                 if (filtered.length === 0) return null;
                 return (
-                  <div key={group.label}>
+                  <div key={group.key}>
                     <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       {group.label}
                     </p>
                     <div className="flex flex-col gap-0.5">
-                      {filtered.map(({ key, desc }) => (
+                      {filtered.map(({ key, label }) => {
+                        const fullKey = `${group.key.toUpperCase()}.${key}`;
+                        return (
                         <button
                           key={key}
                           type="button"
-                          title={`Copiar {${key}}`}
+                          title={`Copiar {${fullKey}}`}
                           onClick={() => {
-                            void navigator.clipboard.writeText(`{${key}}`);
-                            toast.success(`{${key}} copiado`);
+                            void navigator.clipboard.writeText(`{${fullKey}}`);
+                            toast.success(`{${fullKey}} copiado`);
                           }}
                           className="group flex items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-muted transition-colors"
                         >
-                          <code className="shrink-0 font-mono text-[11px] text-foreground">{`{${key}}`}</code>
-                          <span className="text-xs text-muted-foreground group-hover:text-foreground">{desc}</span>
+                          <code className="shrink-0 font-mono text-[11px] text-foreground">{`{${fullKey}}`}</code>
+                          <span className="text-xs text-muted-foreground group-hover:text-foreground">{label}</span>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );

@@ -17,6 +17,7 @@ import { DocumentPreview } from '@/components/common/tip-tap/document-preview';
 import type { AiVariable } from '@/app/[locale]/(dashboard)/settings/ai-variables/actions';
 import { createTemplate, updateTemplate } from '../actions';
 import VariablesPanel from './variables-panel';
+import { VARIABLE_GROUPS } from './variables';
 
 // ─── Font options ─────────────────────────────────────────────────────────────
 const FONT_OPTIONS = [
@@ -110,38 +111,38 @@ export default function TemplateForm({ template, aiVariables = EMPTY_AI_VARIABLE
         if (!content) { toast.error('El editor está vacío'); return; }
 
         const fakeData: Record<string, string> = {
-            FIRST_NAME: 'Juan',
-            LAST_NAME: 'Pérez García',
-            DOCUMENT_TYPE: 'DNI',
-            DOCUMENT_NAME: 'DNI',
-            DOCUMENT_NUMBER: '12.345.678',
-            EMAIL: 'juan.perez@email.com',
-            PHONE: '+54 9 11 1234-5678',
-            ADDRESS: 'Av. Corrientes 1234, CABA',
-            PROCESS_ID: 'PROC-2026-0001',
-            PROCESS_DATE: '11/04/2026',
-            PROCESS_STATUS: 'En proceso',
-            FEE_AMOUNT: '$150.000',
-            BANK_NAME: 'Banco Ejemplo S.A.',
-            BANK_DOCUMENT_SLUG: 'CUIT',
-            BANK_DOCUMENT_NUMBER: '30-12345678-9',
-            BANK_LAST_4_DIGITS: '4567',
-            FRAUD_INCIDENT_SUMMARY: 'Se detectó una transacción no autorizada por $50.000 el 01/04/2026.',
-            BANK_LEGAL_REP_FIRST_NAME: 'Carlos',
-            BANK_LEGAL_REP_LAST_NAME: 'Rodríguez',
-            LAWYER_FIRST_NAME: 'María',
-            LAWYER_LAST_NAME: 'González López',
-            LAWYER_DOCUMENT_TYPE: 'DNI',
-            LAWYER_DOCUMENT_NAME: 'DNI',
-            LAWYER_DOCUMENT_NUMBER: '98.765.432',
-            LAWYER_SIGNATURE: '[Firma del abogado]',
-            ORG_REP_FIRST_NAME: 'Roberto',
-            ORG_REP_LAST_NAME: 'Martínez',
-            ORG_REP_DOCUMENT_TYPE: 'DNI',
-            ORG_REP_DOCUMENT_NAME: 'DNI',
-            ORG_REP_DOCUMENT_NUMBER: '45.678.901',
-            ORG_REP_EMAIL: 'representante@bufete.com',
-            ORG_NAME: 'Estudio Jurídico Ejemplo',
+            'CLIENT.FIRST_NAME': 'Juan',
+            'CLIENT.LAST_NAME': 'Pérez García',
+            'CLIENT.DOCUMENT_TYPE': 'DNI',
+            'CLIENT.DOCUMENT_NAME': 'DNI',
+            'CLIENT.DOCUMENT_NUMBER': '12.345.678',
+            'CLIENT.EMAIL': 'juan.perez@email.com',
+            'CLIENT.PHONE': '+54 9 11 1234-5678',
+            'CLIENT.ADDRESS': 'Av. Corrientes 1234, CABA',
+            'PROCESS.ID': 'PROC-2026-0001',
+            'PROCESS.DATE': '11/04/2026',
+            'PROCESS.STATUS': 'En proceso',
+            'PROCESS.FEE_AMOUNT': '$150.000',
+            'BANKING.NAME': 'Banco Ejemplo S.A.',
+            'BANKING.DOCUMENT_SLUG': 'CUIT',
+            'BANKING.DOCUMENT_NUMBER': '30-12345678-9',
+            'BANKING.LAST_4_DIGITS': '4567',
+            'BANKING.FRAUD_INCIDENT_SUMMARY': 'Se detectó una transacción no autorizada por $50.000 el 01/04/2026.',
+            'BANKING.LEGAL_REP_FIRST_NAME': 'Carlos',
+            'BANKING.LEGAL_REP_LAST_NAME': 'Rodríguez',
+            'LAWYER.FIRST_NAME': 'María',
+            'LAWYER.LAST_NAME': 'González López',
+            'LAWYER.DOCUMENT_TYPE': 'DNI',
+            'LAWYER.DOCUMENT_NAME': 'DNI',
+            'LAWYER.DOCUMENT_NUMBER': '98.765.432',
+            'LAWYER.SIGNATURE': '[Firma del abogado]',
+            'ORG_REP.NAME': 'Estudio Jurídico Ejemplo',
+            'ORG_REP.FIRST_NAME': 'Roberto',
+            'ORG_REP.LAST_NAME': 'Martínez',
+            'ORG_REP.DOCUMENT_TYPE': 'DNI',
+            'ORG_REP.DOCUMENT_NAME': 'DNI',
+            'ORG_REP.DOCUMENT_NUMBER': '45.678.901',
+            'ORG_REP.EMAIL': 'representante@bufete.com',
         };
 
         // Substitute variables directly in TipTap JSON (text nodes + legacy atom nodes).
@@ -157,7 +158,7 @@ export default function TemplateForm({ template, aiVariables = EMPTY_AI_VARIABLE
             }
             // Text node → replace {KEY} patterns; skip if result is empty (ProseMirror forbids empty text nodes)
             if (typeof node.text === 'string') {
-                const text = node.text.replace(/\{(\w+)\}/g, (_m: string, k: string) => fakeData[k] ?? _m);
+                const text = node.text.replace(/\{([\w.]+)\}/g, (_m: string, k: string) => fakeData[k] ?? _m);
                 return text ? { ...node, text } : null;
             }
             // Container node → recurse and filter out null children
@@ -253,6 +254,7 @@ export default function TemplateForm({ template, aiVariables = EMPTY_AI_VARIABLE
                                                 value={field.value}
                                                 onChange={field.onChange}
                                                 mode="document"
+                                                variableGroups={VARIABLE_GROUPS}
                                                 aiVariableKeys={aiVariables?.map((v) => v.key)}
                                                 header={headerValue}
                                                 footer={footerValue}
@@ -291,6 +293,7 @@ export default function TemplateForm({ template, aiVariables = EMPTY_AI_VARIABLE
 
                         <VariablesPanel
                             onInsert={(variable) => tiptapRef.current?.insertVariable(variable)}
+                            variableGroups={VARIABLE_GROUPS}
                             aiVariables={aiVariables}
                         />
                     </div>

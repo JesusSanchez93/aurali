@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { VARIABLE_GROUPS } from './variables';
+import type { VariableGroup } from '@/components/common/tip-tap/variable-types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Braces, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
@@ -10,12 +10,13 @@ import type { AiVariable } from '@/app/[locale]/(dashboard)/settings/ai-variable
 
 interface Props {
     onInsert: (variable: string) => void;
+    variableGroups?: VariableGroup[];
     aiVariables?: AiVariable[];
 }
 
-export default function VariablesPanel({ onInsert, aiVariables }: Props) {
+export default function VariablesPanel({ onInsert, variableGroups = [], aiVariables }: Props) {
     const t = useTranslations('formats.variables');
-    const [openGroups, setOpenGroups] = useState<string[]>(['client', 'process', 'banking']);
+    const [openGroups, setOpenGroups] = useState<string[]>(() => variableGroups.slice(0, 3).map((g) => g.key));
 
     const toggleGroup = (key: string) => {
         setOpenGroups((prev) =>
@@ -37,7 +38,7 @@ export default function VariablesPanel({ onInsert, aiVariables }: Props) {
 
             <ScrollArea className="flex-1 p-3">
                 <div className="space-y-2">
-                    {VARIABLE_GROUPS.map((group) => {
+                    {variableGroups.map((group) => {
                         const isOpen = openGroups.includes(group.key);
                         return (
                             <div key={group.key} className="rounded-md border">
@@ -56,11 +57,13 @@ export default function VariablesPanel({ onInsert, aiVariables }: Props) {
 
                                 {isOpen && (
                                     <div className="border-t px-3 py-2 space-y-1.5">
-                                        {group.variables.map((v) => (
+                                        {group.variables.map((v) => {
+                                            const fullKey = `${group.key.toUpperCase()}.${v.key}`;
+                                            return (
                                             <button
                                                 key={v.key}
                                                 type="button"
-                                                onClick={() => onInsert(v.key)}
+                                                onClick={() => onInsert(fullKey)}
                                                 className="group flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left hover:bg-muted transition-colors flex-wrap"
                                             >
                                                 <span className="text-xs text-foreground">
@@ -70,10 +73,11 @@ export default function VariablesPanel({ onInsert, aiVariables }: Props) {
                                                     variant="secondary"
                                                     className="ml-2 shrink-0 font-mono text-[10px] opacity-70 group-hover:opacity-100"
                                                 >
-                                                    {`{${v.key}}`}
+                                                    {`{${fullKey}}`}
                                                 </Badge>
                                             </button>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

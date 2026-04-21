@@ -17,7 +17,7 @@ export function DocumentPreview({ content, fontFamily = 'Inter', header = '', fo
     const editor = useEditor({
         extensions: [
             ...BASE_EXTENSIONS,
-            VariableHighlight.configure({ extraKeys: [] }),
+            VariableHighlight.configure({ validKeys: new Set() }),
             PaginationPlus.configure({
                 ...PP_PAGE_SIZES.A4,
                 pageGap: 1,

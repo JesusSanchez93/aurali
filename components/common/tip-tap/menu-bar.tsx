@@ -705,7 +705,14 @@ function ImageMenu({ editor }: { editor: Editor }) {
 interface PageSizeOption { value: string; label: string; }
 interface PageSizeProps { value: string; options: PageSizeOption[]; onChange: (v: string) => void; }
 
-function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSizeProps?: PageSizeProps; stickyTop?: string }) {
+export type MenuBarExtra = 'image' | 'columns' | 'table';
+
+function MenuBar({ editor, pageSizeProps, stickyTop, extras = [] }: {
+  editor: Editor;
+  pageSizeProps?: PageSizeProps;
+  stickyTop?: string;
+  extras?: MenuBarExtra[];
+}) {
   const editorState = useEditorState({
     editor,
     selector: (ctx) => ({
@@ -771,10 +778,10 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
         <AlignMenu editor={editor} editorState={editorState} />
 
         {/* Image */}
-        <ImageMenu editor={editor} />
+        {extras.includes('image') && <ImageMenu editor={editor} />}
 
         {/* Column layout picker */}
-        <DropdownMenu>
+        {extras.includes('columns') && <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" type="button" className="h-8 gap-1 px-2" title="Insertar columnas">
               <LayoutTemplate className="h-4 w-4" />
@@ -803,13 +810,13 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
               </div>
             </div>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu>}
 
         {/* Table */}
-        <TableMenu editor={editor} />
+        {extras.includes('table') && <TableMenu editor={editor} />}
 
-        {/* Document sections — block-node header/footer only in non-document mode */}
-        {!pageSizeProps && (<>
+        {/* TODO: re-enable header/footer/signature buttons when feature is ready */}
+        {false && !pageSizeProps && (<>
         <div className="mx-1 w-px self-stretch bg-border" />
         <Button
           variant="ghost"
@@ -838,6 +845,7 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
           Pie
         </Button>
         </>)}
+        {false && (<>
         <div className="mx-1 w-px self-stretch bg-border" />
         <Button
           variant="ghost"
@@ -851,6 +859,7 @@ function MenuBar({ editor, pageSizeProps, stickyTop }: { editor: Editor; pageSiz
           <PenLine className="h-3.5 w-3.5" />
           Firma
         </Button>
+        </>)}
         </div>
 
         {pageSizeProps && (

@@ -71,7 +71,7 @@ export function NodeEditDialog({
     const cfg = node.data.config as Record<string, unknown>;
     reset({ subject: String(cfg.subject ?? '') });
     setBodyContent(resolveInitialBody(node));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node?.id]);
 
   const onSubmit = async (values: FormValues) => {
@@ -93,7 +93,7 @@ export function NodeEditDialog({
   };
 
   const hasAttachments = (node?.data.config as Record<string, unknown>)?.attach_enabled === true;
-  const VARIABLES = ['{{client.first_name}}', '{{client.last_name}}', '{{form_url}}', '{{process.id}}'];
+  // const VARIABLES = ['{CLIENT.FIRST_NAME}', '{CLIENT.LAST_NAME}', '{FORM_URL}', '{PROCESS.ID}'];
 
   return (
     <Dialog open={!!node} onOpenChange={(open) => !open && onClose()}>
@@ -105,26 +105,26 @@ export function NodeEditDialog({
         </DialogHeader>
 
         <FormProvider {...form}>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
 
-          {hasAttachments && (
-            <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2.5 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
-              <Paperclip className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <p className="text-xs">{t('email_attachment_hint')}</p>
-            </div>
-          )}
+            {hasAttachments && (
+              <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2.5 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+                <Paperclip className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <p className="text-xs">{t('email_attachment_hint')}</p>
+              </div>
+            )}
 
-          <FormInput
-            control={control}
-            name="subject"
-            label={t('email_subject_label')}
-            placeholder={t('email_subject_placeholder')}
-          />
+            <FormInput
+              control={control}
+              name="subject"
+              label={t('email_subject_label')}
+              placeholder={t('email_subject_placeholder')}
+            />
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t('email_body_label')}</span>
-            <Tiptap key={node?.id} value={bodyContent} onChange={setBodyContent} menuBarStickyTop='-1px' />
-            <div className="flex flex-wrap gap-1 pt-1">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">{t('email_body_label')}</span>
+              <Tiptap key={node?.id} value={bodyContent} onChange={setBodyContent} menuBarStickyTop='-1px' />
+              {/* <div className="flex flex-wrap gap-1 pt-1">
               {VARIABLES.map((v) => (
                 <code
                   key={v}
@@ -133,19 +133,19 @@ export function NodeEditDialog({
                   {v}
                 </code>
               ))}
+            </div> */}
             </div>
-          </div>
 
-          <DialogFooter className="mt-auto pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
-              {tCommon('cancel')}
-            </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tCommon('save')}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter className="mt-auto pt-2">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+                {tCommon('cancel')}
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {tCommon('save')}
+              </Button>
+            </DialogFooter>
+          </form>
         </FormProvider>
       </DialogContent>
     </Dialog>

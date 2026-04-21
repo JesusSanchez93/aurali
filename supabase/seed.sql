@@ -101,7 +101,7 @@ BEGIN
         "body": {
           "type": "doc",
           "content": [
-            {"type": "paragraph", "content": [{"text": "Estimado/a {{client.first_name}},", "type": "text"}]},
+            {"type": "paragraph", "content": [{"text": "Estimado/a {CLIENT.FIRST_NAME},", "type": "text"}]},
             {"type": "paragraph"},
             {"type": "paragraph", "content": [{"text": "Hemos iniciado su proceso legal. Por favor complete el formulario en el siguiente enlace:", "type": "text"}]},
             {"type": "paragraph"},
@@ -136,7 +136,7 @@ BEGIN
     (v_template_id, 'node-notify-lawyer', 'notify_lawyer', 'Notificar al abogado', 541, 524,
       '{
         "recipients": "lawyer",
-        "message": "El cliente {{client.first_name}} {{client.last_name}} completó el formulario del proceso {{process.id}}.\n\nPor favor revise los datos y apruebe para continuar."
+        "message": "El cliente {CLIENT.FIRST_NAME} {CLIENT.LAST_NAME} completó el formulario del proceso {PROCESS.ID}.\n\nPor favor revise los datos y apruebe para continuar."
       }'::jsonb),
 
     -- 7. Manual review (lawyer)
@@ -172,7 +172,7 @@ BEGIN
           "type": "doc",
           "content": [
             {"type": "paragraph"},
-            {"type": "paragraph", "content": [{"text": "Estimado/a {{client.first_name}},", "type": "text"}]},
+            {"type": "paragraph", "content": [{"text": "Estimado/a {CLIENT.FIRST_NAME},", "type": "text"}]},
             {"type": "paragraph", "content": [
               {"text": "Sus documentos legales han sido preparados. Puede encontrarlos adjuntos a este correo para su descarga y firma.", "type": "text"},
               {"type": "hardBreak"},

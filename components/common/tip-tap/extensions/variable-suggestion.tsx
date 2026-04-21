@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/react';
-import { VARIABLE_GROUPS } from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables';
+import type { VariableGroup } from '../variable-types';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 
@@ -17,8 +17,12 @@ function normalize(s: string): string {
 }
 
 // ─── Extension ────────────────────────────────────────────────────────────────
-export const VariableSuggestionExtension = Extension.create({
+export const VariableSuggestionExtension = Extension.create<{ groups: VariableGroup[] }>({
     name: 'variableSuggestion',
+
+    addOptions() {
+        return { groups: [] };
+    },
 
     addStorage() {
         return {
@@ -142,7 +146,7 @@ export const VariableSuggestionExtension = Extension.create({
 });
 
 // ─── Dropdown component ───────────────────────────────────────────────────────
-export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
+export function VariableSuggestionDropdown({ editor, groups }: { editor: Editor; groups: VariableGroup[] }) {
     const [, setTick] = useState(0);
     const t = useTranslations('formats.variables');
 
@@ -161,15 +165,15 @@ export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
     if (!storage?.active) return null;
 
     const rawQuery = storage.query as string;
-    // Two modes: uppercase match on key, normalized match on label
     const queryUpper = rawQuery.toUpperCase();
     const queryNorm  = normalize(rawQuery);
 
     type Item = { group: string; key: string; label: string };
     const filtered: Item[] = [];
-    for (const group of VARIABLE_GROUPS) {
+    for (const group of groups) {
         for (const v of group.variables) {
-            const keyMatch   = v.key.includes(queryUpper);
+            const fullKey    = `${group.key.toUpperCase()}.${v.key}`;
+            const keyMatch   = fullKey.includes(queryUpper) || v.key.includes(queryUpper);
             const labelMatch = normalize(v.label).includes(queryNorm);
             if (keyMatch || labelMatch) {
                 filtered.push({ group: group.key, key: v.key, label: v.label });
@@ -179,27 +183,25 @@ export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
 
     if (filtered.length === 0) return null;
 
-    // Clamp selected index
     const selectedIdx = Math.min(storage.selectedIndex as number, filtered.length - 1);
 
-    function insertVariable(key: string) {
-        editor
-            .chain()
+    function insertVariable(group: string, key: string) {
+        const fullKey = `${group.toUpperCase()}.${key}`;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (editor.chain() as any)
             .focus()
             .deleteRange({ from: storage.from as number, to: storage.to as number })
-            .insertContent({ type: 'variable', attrs: { variable: key } })
+            .insertVariable(fullKey)
             .run();
         storage.active = false;
         storage._onStateChange?.();
     }
 
-    // Register confirm callback for keyboard shortcuts
     storage._confirmSelection = () => {
         const selected = filtered[selectedIdx];
-        if (selected) insertVariable(selected.key);
+        if (selected) insertVariable(selected.group, selected.key);
     };
 
-    // Dropdown position (below the `{` character)
     let top = 0;
     let left = 0;
     try {
@@ -210,8 +212,7 @@ export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
         return null;
     }
 
-    // Re-group filtered results for display
-    const groupedFiltered = VARIABLE_GROUPS
+    const groupedFiltered = groups
         .map((group) => ({
             key: group.key,
             groupLabel: t(`groups.${group.key}`),
@@ -231,10 +232,13 @@ export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
                             {group.groupLabel}
                         </div>
                         {group.items.map((item) => {
-                            const globalIdx = filtered.findIndex((f) => f.key === item.key);
+                            const fullKey = `${group.key.toUpperCase()}.${item.key}`;
+                            const globalIdx = filtered.findIndex(
+                                (f) => f.group === item.group && f.key === item.key,
+                            );
                             return (
                                 <button
-                                    key={item.key}
+                                    key={fullKey}
                                     type="button"
                                     className={cn(
                                         'flex w-full flex-col rounded-sm px-2 py-1.5 text-left transition-colors',
@@ -243,14 +247,13 @@ export function VariableSuggestionDropdown({ editor }: { editor: Editor }) {
                                             : 'hover:bg-muted',
                                     )}
                                     onMouseDown={(e) => {
-                                        // Prevent editor from losing focus
                                         e.preventDefault();
-                                        insertVariable(item.key);
+                                        insertVariable(item.group, item.key);
                                     }}
                                 >
                                     <span className="text-xs">{item.label}</span>
                                     <span className="font-mono text-[10px] opacity-50">
-                                        {`{${item.key}}`}
+                                        {`{${fullKey}}`}
                                     </span>
                                 </button>
                             );

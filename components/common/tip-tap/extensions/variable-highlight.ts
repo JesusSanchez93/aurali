@@ -2,10 +2,9 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Node } from '@tiptap/pm/model';
-import { STATIC_VARIABLE_KEYS } from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables';
 
-/** Matches {VARIABLE_NAME} — uppercase letters, digits, underscores */
-const VARIABLE_RE = /\{[A-Z_][A-Z0-9_]*\}/g;
+/** Matches {GROUP.TYPE} — uppercase letters, digits, underscores, one dot separator */
+const VARIABLE_RE = /\{[A-Z_][A-Z0-9_.]*\}/g;
 
 const pluginKey = new PluginKey<DecorationSet>('variableHighlight');
 
@@ -48,18 +47,15 @@ function buildDecorations(doc: Node, validKeys: Set<string>): DecorationSet {
  * a visual decoration. Only keys present in the valid set (static + AI variables)
  * are highlighted. The text remains fully editable.
  */
-export const VariableHighlight = Extension.create<{ extraKeys: string[] }>({
+export const VariableHighlight = Extension.create<{ validKeys: Set<string> }>({
   name: 'variableHighlight',
 
   addOptions() {
-    return { extraKeys: [] };
+    return { validKeys: new Set<string>() };
   },
 
   addProseMirrorPlugins() {
-    const validKeys = new Set<string>([
-      ...STATIC_VARIABLE_KEYS,
-      ...this.options.extraKeys,
-    ]);
+    const validKeys = this.options.validKeys;
 
     return [
       new Plugin({

@@ -53,9 +53,9 @@ const NODES = [
     type:       'send_email',
     title:      'Enviar formulario al cliente',
     config: {
-      to:      '{{process.email}}',
-      subject: 'Complete su información — proceso {{process.id}}',
-      body:    'Estimado/a {{client.first_name}},\n\nHemos iniciado su proceso legal. Por favor complete el formulario de información personal en el siguiente enlace:\n\n{{form_url}}\n\nEste enlace es válido por 72 horas.\n\nQuedamos a su disposición.',
+      to:      '{PROCESS.EMAIL}',
+      subject: 'Complete su información — proceso {PROCESS.ID}',
+      body:    'Estimado/a {CLIENT.FIRST_NAME},\n\nHemos iniciado su proceso legal. Por favor complete el formulario de información personal en el siguiente enlace:\n\n{FORM_URL}\n\nEste enlace es válido por 72 horas.\n\nQuedamos a su disposición.',
     },
     position_x: 400,
     position_y: 280,
@@ -95,7 +95,7 @@ const NODES = [
     type:       'notify_lawyer',
     title:      'Notificar al abogado',
     config: {
-      message:    'El cliente {{client.first_name}} {{client.last_name}} completó el formulario del proceso {{process.id}}.\n\nPor favor revise los datos y apruebe para continuar.',
+      message:    'El cliente {CLIENT.FIRST_NAME} {CLIENT.LAST_NAME} completó el formulario del proceso {PROCESS.ID}.\n\nPor favor revise los datos y apruebe para continuar.',
       recipients: 'lawyer',
     },
     position_x: 400,
@@ -156,9 +156,9 @@ const NODES = [
     type:       'send_email',
     title:      'Enviar documentos al cliente',
     config: {
-      to:               '{{process.email}}',
+      to:               '{PROCESS.EMAIL}',
       subject:          'Sus documentos legales están listos',
-      body:             'Estimado/a {{client.first_name}},\n\nSus documentos legales han sido preparados y se adjuntan a este correo.\n\nGracias por confiar en nuestros servicios.',
+      body:             'Estimado/a {CLIENT.FIRST_NAME},\n\nSus documentos legales han sido preparados y se adjuntan a este correo.\n\nGracias por confiar en nuestros servicios.',
       attach_documents: 'all',
     },
     position_x: 400,

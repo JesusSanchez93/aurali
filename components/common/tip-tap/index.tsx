@@ -3,7 +3,9 @@
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
-import { MenuBar } from './menu-bar';
+import { MenuBar, type MenuBarExtra } from './menu-bar';
+import { VariableSuggestionExtension, VariableSuggestionDropdown } from './extensions/variable-suggestion';
+import type { VariableGroup } from './variable-types';
 import TextAlign from '@tiptap/extension-text-align';
 import {
     forwardRef,
@@ -78,6 +80,7 @@ interface OverlayRect {
 interface OverlayEditorHandle { getHTML: () => string; }
 interface OverlayEditorProps {
     defaultContent: string;
+    variableGroups?: VariableGroup[];
     aiVariableKeys?: string[];
     onEditorReady: (editor: Editor | null) => void;
     onContentChange: (html: string) => void;
@@ -88,15 +91,22 @@ interface OverlayEditorProps {
 }
 
 const OverlayEditor = forwardRef<OverlayEditorHandle, OverlayEditorProps>(
-    ({ defaultContent, aiVariableKeys, onEditorReady, onContentChange, marginLeft, marginRight, marginTop, marginBottom }, ref) => {
+    ({ defaultContent, variableGroups, aiVariableKeys, onEditorReady, onContentChange, marginLeft, marginRight, marginTop, marginBottom }, ref) => {
         // Stable ref so onUpdate closure never goes stale
         const onContentChangeRef = useRef(onContentChange);
         onContentChangeRef.current = onContentChange;
 
+        const overlayValidKeys = new Set<string>([
+            ...(variableGroups ?? []).flatMap((g) =>
+                g.variables.map((v) => `${g.key.toUpperCase()}.${v.key}`),
+            ),
+            ...(aiVariableKeys ?? []),
+        ]);
+
         const editor = useEditor({
             extensions: [
                 ...BASE_EXTENSIONS,
-                VariableHighlight.configure({ extraKeys: aiVariableKeys ?? [] }),
+                VariableHighlight.configure({ validKeys: overlayValidKeys }),
             ],
             content: defaultContent || '<p></p>',
             immediatelyRender: false,
@@ -164,6 +174,8 @@ interface Props {
     onChange: (value: any) => void;
     mode?: 'default' | 'document';
     menuBarStickyTop?: string;
+    menuBarExtras?: MenuBarExtra[];
+    variableGroups?: VariableGroup[];
     aiVariableKeys?: string[];
     header?: string;
     footer?: string;
@@ -178,6 +190,8 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
     onChange,
     mode = 'default',
     menuBarStickyTop,
+    menuBarExtras,
+    variableGroups,
     aiVariableKeys,
     header = '',
     footer = '',
@@ -303,9 +317,17 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
     // updateFooterContent commands (see effects below). Including them here
     // would recompute extensions on every keystroke and potentially reinit the editor.
     const extensions = useMemo(
-        () => [
+        () => {
+            const validKeys = new Set<string>([
+                ...(variableGroups ?? []).flatMap((g) =>
+                    g.variables.map((v) => `${g.key.toUpperCase()}.${v.key}`),
+                ),
+                ...(aiVariableKeys ?? []),
+            ]);
+            return [
             ...BASE_EXTENSIONS,
-            VariableHighlight.configure({ extraKeys: aiVariableKeys ?? [] }),
+            VariableHighlight.configure({ validKeys }),
+            VariableSuggestionExtension.configure({ groups: variableGroups ?? [] }),
             ...(isDocument
                 ? [PaginationPlus.configure({
                     ...withContentMargins(PP_PAGE_SIZES.A4, !!headerRef.current, !!footerRef.current),
@@ -318,9 +340,10 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
                     onFooterClick: (p) => onFooterClickCb.current?.(p),
                 })]
                 : []),
-        ],
+            ];
+        },
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [aiVariableKeys, isDocument],
+        [variableGroups, aiVariableKeys, isDocument],
     );
 
     const editor = useEditor({
@@ -448,10 +471,11 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
     if (!isDocument) {
         return (
             <div className="flex flex-col gap-2 rounded-md border border-input bg-background text-sm">
-                {editor && <MenuBar editor={editor} stickyTop={menuBarStickyTop} />}
+                {editor && <MenuBar editor={editor} stickyTop={menuBarStickyTop} extras={menuBarExtras} />}
                 <div>
                     <EditorContent editor={editor} />
                 </div>
+                {editor && <VariableSuggestionDropdown editor={editor} groups={variableGroups ?? []} />}
             </div>
         );
     }
@@ -478,7 +502,7 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
 
     return (
         <div className="flex flex-col rounded-md border border-input bg-background text-sm">
-            {activeEditor && <MenuBar editor={activeEditor} pageSizeProps={pageSizeProps} stickyTop={menuBarStickyTop} />}
+            {activeEditor && <MenuBar editor={activeEditor} pageSizeProps={pageSizeProps} stickyTop={menuBarStickyTop} extras={menuBarExtras} />}
             <div
                 ref={canvasRef}
                 className={classname}
@@ -519,6 +543,7 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
                                 key={`${overlay.section}-${overlay.pageNumber}`}
                                 ref={overlayEditorRef}
                                 defaultContent={editContent}
+                                variableGroups={variableGroups}
                                 aiVariableKeys={aiVariableKeys}
                                 onEditorReady={setOverlayEditor}
                                 onContentChange={handleContentChange}
@@ -558,6 +583,7 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
                     </div>
                 )}
             </div>
+            {editor && <VariableSuggestionDropdown editor={editor} groups={variableGroups ?? []} />}
         </div>
     );
 });
@@ -565,3 +591,4 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
 Tiptap.displayName = 'Tiptap';
 
 export default Tiptap;
+export type { VariableGroup, VariableDef } from './variable-types';
