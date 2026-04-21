@@ -73,9 +73,9 @@ export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin }: Props)
           <li className="flex gap-2">
             <span className="font-semibold text-foreground shrink-0">4.</span>
             En el Google Doc, escribe las variables con el formato{' '}
-            <code className="rounded bg-muted px-1 text-xs">{'{NOMBRE_VARIABLE}'}</code>{' '}
-            — por ejemplo: <code className="rounded bg-muted px-1 text-xs">{'{FIRST_NAME}'}</code>,{' '}
-            <code className="rounded bg-muted px-1 text-xs">{'{LAST_NAME}'}</code>.
+            <code className="rounded bg-muted px-1 text-xs">{'{GRUPO.VARIABLE}'}</code>{' '}
+            — por ejemplo: <code className="rounded bg-muted px-1 text-xs">{'{CLIENT.FIRST_NAME}'}</code>,{' '}
+            <code className="rounded bg-muted px-1 text-xs">{'{PROCESS.ID}'}</code>.
           </li>
         </ol>
 
