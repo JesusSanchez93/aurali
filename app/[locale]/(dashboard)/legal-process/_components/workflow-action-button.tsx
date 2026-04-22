@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { PlayCircle, RotateCcw, FileCheck, FilePlus, Paperclip } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   getPendingManualAction,
   retryFailedWorkflow,
@@ -116,9 +117,12 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
         const data = await res.json();
         throw new Error(data.error ?? 'Error al ejecutar la acción');
       }
+      toast.success('Acción confirmada', { description: 'El flujo continúa al siguiente paso.' });
       onSuccess();
     } catch (err) {
-      console.error(err);
+      toast.error('Error al ejecutar la acción', {
+        description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
+      });
     } finally {
       dispatch({ type: 'EXEC_DONE' });
     }
@@ -127,11 +131,21 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
   // ── Document preview: approve → generate final PDFs and resume workflow ──
   const handleApproveDocuments = async () => {
     dispatch({ type: 'EXEC_START' });
+    const loadingToast = toast.loading('Generando PDFs finales...', {
+      description: 'Esto puede tardar entre 10 y 30 segundos.',
+    });
     try {
       await approveDocumentPreviews(legalProcessId);
+      toast.dismiss(loadingToast);
+      toast.success('PDFs generados exitosamente', {
+        description: 'Los documentos fueron enviados al cliente.',
+      });
       onSuccess();
     } catch (err) {
-      console.error('[WorkflowActionButton] approveDocumentPreviews:', err);
+      toast.dismiss(loadingToast);
+      toast.error('Error al generar los PDFs', {
+        description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
+      });
     } finally {
       dispatch({ type: 'EXEC_DONE' });
     }
@@ -141,11 +155,21 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
   const handleConfirmTemplates = async () => {
     if (selectedTemplateIds.length === 0) return;
     dispatch({ type: 'EXEC_START' });
+    const loadingToast = toast.loading('Generando documentos...', {
+      description: 'Esto puede tardar unos segundos.',
+    });
     try {
       await confirmDocumentTemplates(legalProcessId, selectedTemplateIds);
+      toast.dismiss(loadingToast);
+      toast.success('Documentos generados', {
+        description: 'Las vistas previas están listas para revisar.',
+      });
       onSuccess();
     } catch (err) {
-      console.error('[WorkflowActionButton] confirmDocumentTemplates:', err);
+      toast.dismiss(loadingToast);
+      toast.error('Error al generar los documentos', {
+        description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
+      });
     } finally {
       dispatch({ type: 'EXEC_DONE' });
     }
@@ -155,11 +179,21 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
   const handleConfirmAttachments = async () => {
     if (selectedDocumentIds.length === 0) return;
     dispatch({ type: 'EXEC_START' });
+    const loadingToast = toast.loading('Enviando correo...', {
+      description: 'Preparando adjuntos y enviando al cliente.',
+    });
     try {
       await confirmEmailAttachments(legalProcessId, selectedDocumentIds);
+      toast.dismiss(loadingToast);
+      toast.success('Correo enviado', {
+        description: 'Los documentos fueron enviados al cliente.',
+      });
       onSuccess();
     } catch (err) {
-      console.error('[WorkflowActionButton] confirmEmailAttachments:', err);
+      toast.dismiss(loadingToast);
+      toast.error('Error al enviar el correo', {
+        description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
+      });
     } finally {
       dispatch({ type: 'EXEC_DONE' });
     }
@@ -170,9 +204,12 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
     dispatch({ type: 'EXEC_START' });
     try {
       await retryFailedWorkflow(legalProcessId);
+      toast.success('Flujo reiniciado', { description: 'El workflow fue relanzado exitosamente.' });
       onSuccess();
     } catch (err) {
-      console.error(err);
+      toast.error('Error al reintentar', {
+        description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
+      });
     } finally {
       dispatch({ type: 'EXEC_DONE' });
     }
