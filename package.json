@@ -30,6 +30,7 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-email/components": "^1.0.7",
     "@react-email/render": "^2.0.4",
+    "@sentry/nextjs": "^10.49.0",
     "@sparticuz/chromium-min": "^143.0.4",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
