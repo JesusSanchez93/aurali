@@ -25,6 +25,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateDocument } from '@/lib/documents/generateDocument';
+import { createLogger } from '@/lib/utils/logger';
+
+const logger = createLogger('API:DOCUMENTS_GENERATE');
 
 export async function POST(request: NextRequest) {
   // ── Auth ────────────────────────────────────────────────────────────────
@@ -59,6 +62,12 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Generate ─────────────────────────────────────────────────────────────
+  logger.info('Generate document request', {
+    templateId,
+    legalProcessId: typeof legalProcessId === 'string' ? legalProcessId : undefined,
+    mode: typeof legalProcessId === 'string' ? 'persist' : 'stream',
+  });
+
   try {
     const result = await generateDocument({
       templateId,
@@ -69,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Mode B — persist: return JSON with URL
     if (result.fileUrl) {
+      logger.info('Document generated (persist mode)', { documentId: result.documentId, fileName: result.fileName });
       return NextResponse.json({
         ok:          true,
         fileUrl:     result.fileUrl,
@@ -79,6 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Mode A — stream: return PDF binary
+    logger.info('Document generated (stream mode)', { fileName: result.fileName, size: result.buffer.length });
     return new NextResponse(result.buffer as unknown as BodyInit, {
       status: 200,
       headers: {
@@ -89,7 +100,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error al generar el documento';
-    console.error('[POST /api/documents/generate]', message);
+    logger.error('Document generation request failed', err, { templateId });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

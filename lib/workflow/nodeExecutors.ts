@@ -24,6 +24,9 @@
 
 import React from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createLogger } from '@/lib/utils/logger';
+
+const logger = createLogger('WORKFLOW_NODE');
 import { render } from '@react-email/render';
 import { resend } from '@/lib/resend';
 import { generateDocument, generatePreviewHtml } from '@/lib/documents/generateDocument';
@@ -260,7 +263,7 @@ async function sendEmail(
     attachments,
   });
   if (error) {
-    console.error('[sendEmail] Resend error:', error);
+    logger.error('Resend email failed', undefined, { subject, errorMessage: error.message });
     throw new Error(`Error al enviar email a ${to}: ${error.message}`);
   }
 }
@@ -350,7 +353,7 @@ async function executeSendEmail(
       const filename = `${baseName}.pdf`;
       const att = await fetchAttachment(doc.file_url, filename);
       if (!att) {
-        console.error(`[send_email] fetchAttachment falló para: ${doc.file_url}`);
+        logger.warn('fetchAttachment failed for document', { filename, nodeId: node.node_id });
         continue;
       }
       attachments.push(att);
@@ -1005,8 +1008,11 @@ async function executeGenerateDocument(
         template_id: tid,
       });
     } catch (err: unknown) {
-      console.log({ err });
-
+      logger.error('Document generation failed for template', err, {
+        templateId: tid,
+        processId: context.legalProcess.id,
+        nodeId: node.node_id,
+      });
       const message = err instanceof Error ? err.message : String(err);
       return { status: 'failed', output: {}, error: `Error generando plantilla ${tid}: ${message}` };
     }
@@ -1062,28 +1068,35 @@ async function executeSendDocuments(
     previousOutput: { ...context.previousOutput, document_url: documentUrl },
   };
 
-  console.log('[send_documents] cfg.to raw:', toRaw);
-  console.log('[send_documents] to resuelto:', to);
-  console.log('[send_documents] subject:', subject);
-  console.log('[send_documents] documentUrl:', documentUrl || '(vacío)');
-  console.log('[send_documents] previousOutput keys:', Object.keys(context.previousOutput));
-  console.log('[send_documents] clientData.email:', context.clientData.email);
+  logger.info('send_documents node starting', {
+    subject,
+    hasDocumentUrl: !!documentUrl,
+    previousOutputKeys: Object.keys(context.previousOutput),
+    nodeId: node.node_id,
+  });
 
   if (!to) {
     const err = `Campo "to" vacío. Raw: "${toRaw}". clientData.email: "${context.clientData.email}"`;
-    console.error('[send_documents]', err);
+    logger.error('send_documents: recipient "to" could not be resolved', undefined, {
+      toRaw,
+      nodeId: node.node_id,
+      processId: context.legalProcess.id,
+    });
     return { status: 'failed', output: {}, error: err };
   }
 
   if (!documentUrl) {
     const err = 'No se encontró file_url en el output del nodo anterior (generate_document debe preceder a send_documents)';
-    console.error('[send_documents]', err);
+    logger.error('send_documents: missing document URL from previous node', undefined, {
+      nodeId: node.node_id,
+      processId: context.legalProcess.id,
+    });
     return { status: 'failed', output: {}, error: err };
   }
 
   const fallback = 'Sus documentos están disponibles en: {output.document_url}';
   const bodyHtml = substituteVars(resolveBodyHtml(cfg.body ?? fallback), enrichedContext);
-  console.log('[send_documents] enviando email a:', to);
+  logger.debug('Sending documents email', { subject, nodeId: node.node_id });
   await sendEmail(to, subject, bodyHtml);
 
   void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({

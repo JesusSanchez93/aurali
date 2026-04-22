@@ -26,6 +26,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { resumeWorkflow } from '@/lib/workflow/workflowRunner';
+import { createLogger } from '@/lib/utils/logger';
+
+const logger = createLogger('API:WORKFLOW_RESUME');
 
 export async function POST(request: NextRequest) {
   // ── Authentication ────────────────────────────────────────────────────────
@@ -65,12 +68,15 @@ export async function POST(request: NextRequest) {
       : {};
 
   // ── Execute ───────────────────────────────────────────────────────────────
+  logger.info('Workflow resume request', { workflowRunId });
+
   try {
     await resumeWorkflow(workflowRunId, safeInput);
+    logger.info('Workflow resumed successfully', { workflowRunId });
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error desconocido';
-    console.error('[POST /api/workflow/resume]', message);
+    logger.error('Workflow resume failed', err, { workflowRunId });
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

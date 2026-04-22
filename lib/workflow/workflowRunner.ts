@@ -29,6 +29,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { executeNode, getNextNodes } from './nodeExecutors';
+import { createLogger } from '@/lib/utils/logger';
+
+const logger = createLogger('WORKFLOW_RUNNER');
 import type {
   WorkflowRunRow,
   WorkflowNodeRow,
@@ -49,6 +52,8 @@ export async function startWorkflow(
   templateId: string,
   legalProcessId: string,
 ): Promise<{ workflowRunId: string }> {
+  logger.info('Starting workflow', { templateId, legalProcessId });
+
   const supabase = await createClient({ admin: true });
 
   // 1. Load the legal process
@@ -112,6 +117,7 @@ export async function startWorkflow(
 
   await runFromNode(startNode, nodes, edges, context, supabase, 0);
 
+  logger.info('Workflow started successfully', { workflowRunId: run.id, templateId, legalProcessId });
   return { workflowRunId: run.id };
 }
 
@@ -121,6 +127,8 @@ export async function resumeWorkflow(
   workflowRunId: string,
   input: Record<string, unknown> = {},
 ): Promise<void> {
+  logger.info('Resuming workflow', { workflowRunId });
+
   const supabase = await createClient({ admin: true });
   const db = supabase as unknown as Record<string, unknown> & SupabaseClient;
 
@@ -418,6 +426,14 @@ async function runFromNode(
     return;
   }
 
+  logger.debug('Executing node', {
+    nodeType: node.type,
+    nodeId: node.node_id,
+    nodeTitle: node.title,
+    stepCount,
+    workflowRunId: context.workflowRun.id,
+  });
+
   const db = supabase as unknown as Record<string, unknown> & SupabaseClient;
 
   // ── 1. Stamp the run with the current node ──────────────────────────────────
@@ -448,8 +464,20 @@ async function runFromNode(
   let result;
   try {
     result = await executeNode(node, context, supabase);
+    logger.debug('Node executed', {
+      nodeType: node.type,
+      nodeId: node.node_id,
+      status: result.status,
+      workflowRunId: context.workflowRun.id,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    logger.error('Node execution threw an exception', err, {
+      nodeType: node.type,
+      nodeId: node.node_id,
+      nodeTitle: node.title,
+      workflowRunId: context.workflowRun.id,
+    });
     void db.from('audit_logs').insert({
       organization_id: context.legalProcess.organization_id,
       user_id: context.legalProcess.lawyer_id,
@@ -646,8 +674,7 @@ async function failRun(runId: string, reason: string, supabase: SupabaseClient):
     .update({ status: 'failed' })
     .eq('id', runId);
 
-  // Log the failure reason for debugging
-  console.error(`[WorkflowRunner] Run ${runId} failed: ${reason}`);
+  logger.error('Workflow run failed', undefined, { runId, reason });
 }
 
 async function failStep(

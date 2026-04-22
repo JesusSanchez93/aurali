@@ -7,6 +7,9 @@
  */
 
 import { getBrowser } from '@/lib/puppeteer';
+import { createLogger } from '@/lib/utils/logger';
+
+const logger = createLogger('PDF_GENERATION');
 
 export interface PdfOptions {
   /** Paper format. Default: 'A4' */
@@ -46,7 +49,15 @@ export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise
   const { format = 'A4', printBackground = true, headerTemplate, footerTemplate, topMargin = '2.5cm', bottomMargin = '2.5cm' } = options;
   const hasHeaderFooter = !!(headerTemplate || footerTemplate);
 
+  logger.info('Starting PDF generation', {
+    contentLength: html.length,
+    format,
+    hasHeaderTemplate: !!headerTemplate,
+    hasFooterTemplate: !!footerTemplate,
+  });
+
   const browser = await getBrowser();
+  logger.debug('Browser launched');
 
   try {
     const page = await browser.newPage();
@@ -57,6 +68,7 @@ export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise
     // waitUntil:'networkidle0' ensures fonts / external assets finish loading.
     // For fully-embedded templates (no external requests) this resolves quickly.
     await page.setContent(html, { waitUntil: 'networkidle0' });
+    logger.debug('HTML content set, generating PDF');
 
     const pdfBytes = await page.pdf({
       format,
@@ -80,8 +92,13 @@ export async function htmlToPdf(html: string, options: PdfOptions = {}): Promise
       }),
     });
 
+    logger.info('PDF generated successfully', { pdfSize: pdfBytes.length });
     return Buffer.from(pdfBytes);
+  } catch (err) {
+    logger.error('PDF generation failed', err, { contentLength: html.length, format });
+    throw err;
   } finally {
     await browser.close();
+    logger.debug('Browser closed');
   }
 }
