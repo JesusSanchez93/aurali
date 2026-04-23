@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 interface Props {
   credentialsConfigured: boolean;
   isSuperAdmin: boolean;
+  connected?: boolean;
 }
 
 function Step({ number, title, children }: { number: number; title: string; children: React.ReactNode }) {
@@ -32,14 +33,17 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
-export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin }: Props) {
+export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin, connected }: Props) {
   const [adminOpen, setAdminOpen] = useState(!credentialsConfigured);
+
+  // Si ya está conectado y no es superadmin, no hay nada que mostrar
+  if (connected && !isSuperAdmin) return null;
 
   return (
     <div className="space-y-0 rounded-lg border divide-y">
 
-      {/* ── Sección del abogado (siempre visible, es lo principal) ── */}
-      <div className="px-4 py-4 space-y-3">
+      {/* ── Sección del abogado (solo cuando no está conectado) ── */}
+      {!connected && <div className="px-4 py-4 space-y-3">
         <div className="flex items-center gap-2">
           <div className="flex h-4 w-4 items-center justify-center shrink-0">
             <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
@@ -88,7 +92,7 @@ export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin }: Props)
             </a>
           </Button>
         </div>
-      </div>
+      </div>}
 
       {/* ── Sección administrador del servidor (solo superadmin) ── */}
       {isSuperAdmin && <div>

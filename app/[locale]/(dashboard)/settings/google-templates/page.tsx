@@ -39,7 +39,7 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
       </div>
 
       {/* Guía de configuración */}
-      <GoogleSetupGuide credentialsConfigured={credentialsConfigured} isSuperAdmin={isSuperAdmin} />
+      <GoogleSetupGuide credentialsConfigured={credentialsConfigured} isSuperAdmin={isSuperAdmin} connected={connection.connected} />
 
       {/* Estado de conexión */}
       <GoogleConnection
