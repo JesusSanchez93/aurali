@@ -102,7 +102,7 @@ export default async function ProcessPage(props: {
         }
       />
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-2">
+        <div className="sticky bottom-0 flex items-center justify-between bg-background/80 backdrop-blur-sm px-2 py-3">
           <div className="text-sm text-muted-foreground">
             {t('showing', { start: startIdx, end: endIdx, total: count })}
           </div>
