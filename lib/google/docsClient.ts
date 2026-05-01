@@ -80,7 +80,13 @@ async function fetchGoogleDocJson(docId: string, accessToken: string): Promise<a
     throw new Error('Google Doc no encontrado. Verifica que el ID sea correcto y que la cuenta tenga acceso.');
   }
   if (!res.ok) {
-    throw new Error(`Error al obtener el Google Doc (${res.status}): ${await res.text()}`);
+    const body = await res.text();
+    if (body.includes('FAILED_PRECONDITION')) {
+      throw new Error(
+        'Este archivo no es un Google Doc nativo. En Google Drive, haz clic derecho → "Abrir con" → "Google Docs" para convertirlo y usa el nuevo enlace.',
+      );
+    }
+    throw new Error(`Error al obtener el Google Doc (${res.status}): ${body}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -188,3 +188,40 @@ export async function deleteDocument(
     console.warn('[deleteDocument] Network error deleting temp doc', documentId, err);
   }
 }
+
+// ─── Validation ───────────────────────────────────────────────────────────────
+
+/**
+ * Verifies that a Drive file ID points to a native Google Doc.
+ * Throws a user-friendly error if the file is a Word doc, PDF, Slides, etc.
+ * Call this before saving a google_doc_template to the DB.
+ */
+export async function validateGoogleDocMimeType(
+  docId: string,
+  accessToken: string,
+): Promise<void> {
+  const url = `${DRIVE_API}/files/${encodeURIComponent(docId)}?fields=mimeType%2Cname`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+
+  if (res.status === 404) {
+    throw new Error('Google Doc no encontrado. Verifica que el ID sea correcto y que el documento exista.');
+  }
+  if (res.status === 403) {
+    throw new Error('Sin acceso al documento. Verifica que esté compartido con tu cuenta de Google conectada.');
+  }
+  if (!res.ok) {
+    throw new Error(`Error verificando el documento (${res.status}). Intenta de nuevo.`);
+  }
+
+  const { mimeType, name } = await res.json() as { mimeType: string; name: string };
+  if (mimeType !== 'application/vnd.google-apps.document') {
+    throw new Error(
+      `"${name}" no es un Google Doc nativo. ` +
+      'En Google Drive, haz clic derecho sobre el archivo → "Abrir con" → "Google Docs" para convertirlo, ' +
+      'luego copia el enlace del documento convertido.',
+    );
+  }
+}

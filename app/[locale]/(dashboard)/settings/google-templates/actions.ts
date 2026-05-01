@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { getValidAccessToken } from '@/lib/google/auth';
+import { validateGoogleDocMimeType } from '@/lib/google/googleDocPdfService';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = any;
@@ -81,6 +83,8 @@ export async function createGoogleDocTemplate(input: {
 }) {
   const googleDocId = extractDocId(input.googleDocUrl);
   const { db, userId, orgId } = await getOrgContext();
+  const accessToken = await getValidAccessToken(userId);
+  await validateGoogleDocMimeType(googleDocId, accessToken);
   const { error } = await db.from('google_doc_templates').insert({
     name: input.name,
     google_doc_id: googleDocId,
@@ -97,7 +101,9 @@ export async function updateGoogleDocTemplate(
   input: { name: string; googleDocUrl: string; description?: string },
 ) {
   const googleDocId = extractDocId(input.googleDocUrl);
-  const { db, orgId } = await getOrgContext();
+  const { db, userId, orgId } = await getOrgContext();
+  const accessToken = await getValidAccessToken(userId);
+  await validateGoogleDocMimeType(googleDocId, accessToken);
   const { error } = await db
     .from('google_doc_templates')
     .update({
