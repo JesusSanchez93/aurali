@@ -73,13 +73,16 @@ BEGIN
   END IF;
 
   -- ── Template ───────────────────────────────────────────────────────────────
-  INSERT INTO public.workflow_templates (id, organization_id, name, description, is_default)
+  INSERT INTO public.workflow_templates (id, organization_id, name, description, is_default, icon_svg, gradient_color, gradient_color_to)
   VALUES (
     v_template_id,
     NULL,
     'Fraudes Financieros',
     'Flujo estándar: captación del cliente, recopilación de datos, revisión del abogado, generación y envío de documentos.',
-    true
+    true,
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    '#7c3aed',
+    '#0ea5e9'
   );
 
   -- ── Nodes (ordered top → bottom by position_y) ────────────────────────────

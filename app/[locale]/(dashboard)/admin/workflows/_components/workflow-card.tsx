@@ -1,8 +1,16 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -21,14 +29,19 @@ export type WorkflowItem = {
   description: string | null
   is_default: boolean
   icon_svg: string | null
+  gradient_color: string | null
+  gradient_color_to: string | null
   created_at: string
 }
 
 export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [name, setName] = useState(wf.name)
   const [description, setDescription] = useState(wf.description ?? '')
   const [iconSvg, setIconSvg] = useState(wf.icon_svg ?? '')
+  const [gradientColor, setGradientColor] = useState(wf.gradient_color ?? '#7c3aed')
+  const [gradientColorTo, setGradientColorTo] = useState(wf.gradient_color_to ?? '#0ea5e9')
   const [isPending, startTransition] = useTransition()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -48,6 +61,8 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
           name: name.trim(),
           description: description.trim() || null,
           icon_svg: iconSvg.trim() || null,
+          gradient_color: gradientColor || null,
+          gradient_color_to: gradientColorTo || null,
         })
         toast.success('Flujo actualizado')
         setEditOpen(false)
@@ -69,71 +84,119 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
 
   return (
     <>
-      <Card className="group flex flex-col">
-        <CardHeader className="flex-1 pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              {/* Icon */}
-              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-muted text-muted-foreground">
-                {wf.icon_svg ? (
-                  <span
-                    className="flex h-5 w-5 items-center justify-center [&_svg]:h-full [&_svg]:w-full"
-                    dangerouslySetInnerHTML={{ __html: wf.icon_svg }}
-                  />
-                ) : (
-                  <Workflow className="h-4 w-4" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <CardTitle className="truncate text-base">{wf.name}</CardTitle>
-                {wf.description && (
-                  <CardDescription className="mt-1 line-clamp-2 text-xs">
-                    {wf.description}
-                  </CardDescription>
-                )}
-              </div>
-            </div>
-            {wf.is_default && (
-              <Badge variant="secondary" className="shrink-0 text-xs">
-                Por defecto
-              </Badge>
+      <div className="group relative flex w-56 flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+
+        {/* Top half — icon zone */}
+        <div
+          className="relative flex h-44 items-center justify-center overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${wf.gradient_color ?? '#7c3aed'}28 0%, ${wf.gradient_color_to ?? '#0ea5e9'}18 55%, ${wf.gradient_color_to ?? '#0ea5e9'}08 100%)`,
+          }}
+        >
+          {/* Blurred blobs */}
+          <div
+            className="absolute -left-4 -top-4 h-24 w-24 rounded-full blur-2xl"
+            style={{ background: `${wf.gradient_color ?? '#7c3aed'}50` }}
+          />
+          <div
+            className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full blur-2xl"
+            style={{ background: `${wf.gradient_color_to ?? '#0ea5e9'}40` }}
+          />
+          <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-xl" />
+
+          {/* Icon */}
+          <div
+            className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.3)] backdrop-blur-sm ring-1 ring-white/20"
+            style={{ color: wf.gradient_color ?? '#7c3aed' }}
+          >
+            {wf.icon_svg ? (
+              <span
+                className="flex h-8 w-8 items-center justify-center [&_svg]:h-full [&_svg]:w-full"
+                dangerouslySetInnerHTML={{ __html: wf.icon_svg }}
+              />
+            ) : (
+              <Workflow className="h-8 w-8" />
             )}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Creado{' '}
-            {formatDistanceToNow(new Date(wf.created_at), { addSuffix: true, locale: es })}
-          </p>
-        </CardHeader>
 
-        <CardContent className="flex gap-2 pt-0">
-          <Button variant="outline" size="sm" className="flex-1" asChild>
-            <Link href={`/admin/workflows/${wf.id}/builder`}>
-              <Workflow className="mr-2 h-3.5 w-3.5" />
-              Abrir editor
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-            onClick={() => setEditOpen(true)}
-            disabled={isPending}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-destructive opacity-0 transition-opacity hover:bg-destructive/10 group-hover:opacity-100"
-            onClick={handleDelete}
-            disabled={isPending}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </CardContent>
-      </Card>
+          {/* Action buttons — top-right */}
+          <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 rounded-lg bg-background/60 p-0 text-muted-foreground backdrop-blur-sm hover:bg-background hover:text-foreground"
+              onClick={() => setEditOpen(true)}
+              disabled={isPending}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 rounded-lg bg-background/60 p-0 text-muted-foreground backdrop-blur-sm hover:bg-destructive/20 hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+              disabled={isPending}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Bottom half — content */}
+        <div className="flex flex-1 flex-col justify-between p-4">
+          <div className="flex flex-col gap-1.5">
+            <p className="line-clamp-1 text-[15px] font-semibold leading-tight tracking-tight text-foreground">
+              {wf.name}
+            </p>
+            {wf.description ? (
+              <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+                {wf.description}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground/40 italic">Sin descripción</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+              {formatDistanceToNow(new Date(wf.created_at), { addSuffix: true, locale: es })}
+            </p>
+            <Button size="sm" className="h-8 w-full rounded-lg text-xs font-medium mt-4" asChild>
+              <Link href={`/admin/workflows/${wf.id}/builder`}>
+                <Workflow className="mr-1.5 h-3.5 w-3.5" />
+                Abrir editor
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar flujo de trabajo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El flujo{' '}
+              <span className="font-medium text-foreground">{wf.name}</span> será eliminado
+              permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -166,6 +229,47 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
                 placeholder="Describe el propósito de este flujo…"
                 rows={3}
               />
+            </div>
+
+            {/* Gradient colors */}
+            <div className="space-y-2">
+              <Label>Colores del degradado</Label>
+              <div className="overflow-hidden rounded-lg border">
+                {/* Preview */}
+                <div
+                  className="h-10 w-full"
+                  style={{
+                    background: `linear-gradient(135deg, ${gradientColor} 0%, ${gradientColorTo} 100%)`,
+                  }}
+                />
+                {/* Pickers */}
+                <div className="flex divide-x">
+                  <label className="flex flex-1 cursor-pointer items-center gap-2 px-3 py-2 hover:bg-muted/50">
+                    <input
+                      type="color"
+                      value={gradientColor}
+                      onChange={(e) => setGradientColor(e.target.value)}
+                      className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Desde</p>
+                      <p className="font-mono text-xs">{gradientColor}</p>
+                    </div>
+                  </label>
+                  <label className="flex flex-1 cursor-pointer items-center gap-2 px-3 py-2 hover:bg-muted/50">
+                    <input
+                      type="color"
+                      value={gradientColorTo}
+                      onChange={(e) => setGradientColorTo(e.target.value)}
+                      className="h-6 w-6 cursor-pointer rounded border-0 bg-transparent p-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Hasta</p>
+                      <p className="font-mono text-xs">{gradientColorTo}</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* SVG icon */}

@@ -19,7 +19,7 @@ export async function getGlobalWorkflows() {
 
   const { data, error } = await db
     .from('workflow_templates')
-    .select('id, name, description, is_default, icon_svg, created_at')
+    .select('id, name, description, is_default, icon_svg, gradient_color, gradient_color_to, created_at')
     .is('organization_id', null)
     .order('created_at', { ascending: false })
 
@@ -30,6 +30,8 @@ export async function getGlobalWorkflows() {
     description: string | null
     is_default: boolean
     icon_svg: string | null
+    gradient_color: string | null
+    gradient_color_to: string | null
     created_at: string
   }>
 }
@@ -62,7 +64,7 @@ export async function createGlobalWorkflow(name: string, description?: string) {
  */
 export async function updateGlobalWorkflow(
   id: string,
-  values: { name: string; description?: string | null; icon_svg?: string | null },
+  values: { name: string; description?: string | null; icon_svg?: string | null; gradient_color?: string | null; gradient_color_to?: string | null },
 ) {
   await requireSuperAdmin()
 
@@ -75,6 +77,8 @@ export async function updateGlobalWorkflow(
       name: values.name,
       description: values.description ?? null,
       icon_svg: values.icon_svg ?? null,
+      gradient_color: values.gradient_color ?? null,
+      gradient_color_to: values.gradient_color_to ?? null,
     })
     .eq('id', id)
     .is('organization_id', null)
