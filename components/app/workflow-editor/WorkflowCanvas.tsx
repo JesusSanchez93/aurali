@@ -9,7 +9,6 @@ import {
   MiniMap,
   useReactFlow,
   ConnectionLineType,
-  MarkerType,
   type OnConnect,
   type OnNodesChange,
   type OnEdgesChange,
@@ -17,6 +16,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from './nodes';
+import { GradientEdge } from './edges/GradientEdge';
 import { NODE_TYPES_CONFIG } from './node-config';
 import type { WorkflowNode, WorkflowEdge, WorkflowNodeType } from './types';
 
@@ -33,11 +33,12 @@ interface WorkflowCanvasProps {
   readOnly?: boolean;
 }
 
+const edgeTypes = { bezier: GradientEdge };
+
 const DEFAULT_EDGE_OPTIONS = {
   type: 'bezier',
   animated: true,
   style: { strokeWidth: 2 },
-  markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 },
 };
 
 export function WorkflowCanvas({
@@ -102,6 +103,7 @@ export function WorkflowCanvas({
         onNodeDoubleClick={!readOnly ? (_, node) => onNodeClick(node as WorkflowNode) : undefined}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
         connectionLineType={ConnectionLineType.Bezier}
         fitView
@@ -110,6 +112,10 @@ export function WorkflowCanvas({
         nodesDraggable={!readOnly}
         nodesConnectable={!readOnly}
         elementsSelectable
+        multiSelectionKeyCode="Shift"
+        selectionOnDrag={!readOnly}
+        panOnDrag={readOnly ? true : [1, 2]}
+        panOnScroll={!readOnly}
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} className="opacity-50" />
