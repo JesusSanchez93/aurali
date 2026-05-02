@@ -8,6 +8,7 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { AppLoadingFallback } from '@/components/common/app-loading-fallback';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -84,6 +85,7 @@ export default async function RootLayout({
               disableTransitionOnChange
             >
               {children}
+              <SpeedInsights />
             </ThemeProvider>
             <Toaster position="top-right" richColors />
           </Suspense>
