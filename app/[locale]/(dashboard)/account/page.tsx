@@ -4,7 +4,7 @@ import { getLocale } from 'next-intl/server';
 
 export default async function AccountPage() {
   const locale = await getLocale();
-  const { profile, memberships, catalogDocuments } = await getAccountProfile();
+  const { profile, memberships, catalogDocuments, orgData } = await getAccountProfile();
 
   const documentTypeOptions = catalogDocuments.map((d: { slug: string; name: Record<string, string> }) => ({
     value: d.slug,
@@ -33,10 +33,14 @@ export default async function AccountPage() {
           document_type: profile?.document_type ?? '',
           document_number: profile?.document_number ?? '',
           professional_card_number: profile?.professional_card_number ?? null,
+          professional_card_country: profile?.professional_card_country ?? null,
+          professional_card_region: profile?.professional_card_region ?? null,
+          professional_card_city: profile?.professional_card_city ?? null,
           signature_url: profile?.signature_url ?? null,
         }}
         documentTypeOptions={documentTypeOptions}
         memberships={orgMemberships}
+        orgData={orgData ?? null}
       />
     </div>
   );

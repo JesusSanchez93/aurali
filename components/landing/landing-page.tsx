@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/common/logo';
 
 const entryTransition = { duration: 0.5, ease: 'easeOut' as const };
 const sectionViewport = { once: true, margin: '-80px' };
@@ -275,11 +276,8 @@ function LandingNav({
         )}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-3" aria-label="Aurali home">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--landing-primary)] text-sm font-bold text-white shadow-[0_14px_30px_-18px_rgba(30,27,75,0.75)]">
-              A
-            </span>
-            <span className="text-xl font-bold tracking-tight text-[var(--landing-primary)]">Aurali</span>
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Aurali home">
+            <Logo size={36} />
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">

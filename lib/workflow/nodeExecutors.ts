@@ -529,7 +529,7 @@ export async function buildDocumentTemplateData(
   if (legalProcess.lawyer_id) {
     const { data: lawyer } = await db
       .from('profiles')
-      .select('id, email, firstname, lastname, document_type, document_number, signature_url')
+      .select('id, email, firstname, lastname, document_type, document_number, professional_card_number, professional_card_country, professional_card_city, signature_url')
       .eq('id', legalProcess.lawyer_id)
       .single() as { data: ProfileRow | null };
     lawyerData = lawyer;
@@ -686,6 +686,9 @@ export async function buildDocumentTemplateData(
     'LAWYER.DOCUMENT_TYPE': lawyerData?.document_type ?? '',
     'LAWYER.DOCUMENT_NAME': lawyerData?.document_type ?? '',
     'LAWYER.DOCUMENT_NUMBER': lawyerData?.document_number ?? '',
+    'LAWYER.PROFESSIONAL_CARD_NUMBER': lawyerData?.professional_card_number ?? '',
+    'LAWYER.PROFESSIONAL_CARD_COUNTRY': lawyerData?.professional_card_country ?? '',
+    'LAWYER.PROFESSIONAL_CARD_CITY': lawyerData?.professional_card_city ?? '',
     'LAWYER.SIGNATURE': lawyerData?.signature_url ?? '',
     // ORG_REP.*
     'ORG_REP.NAME': orgData?.name ?? '',
@@ -727,7 +730,7 @@ async function executeGenerateDocument(
   if (context.legalProcess.lawyer_id) {
     const { data: lawyer } = await (supabase as SupabaseClient & Record<string, unknown>)
       .from('profiles')
-      .select('id, email, firstname, lastname, document_type, document_number, signature_url')
+      .select('id, email, firstname, lastname, document_type, document_number, professional_card_number, professional_card_country, professional_card_city, signature_url')
       .eq('id', context.legalProcess.lawyer_id)
       .single() as { data: ProfileRow | null };
     lawyerData = lawyer;
@@ -855,6 +858,9 @@ async function executeGenerateDocument(
     'LAWYER.DOCUMENT_TYPE': lawyerData?.document_type ?? '',
     'LAWYER.DOCUMENT_NAME': lawyerData?.document_type ?? '',
     'LAWYER.DOCUMENT_NUMBER': lawyerData?.document_number ?? '',
+    'LAWYER.PROFESSIONAL_CARD_NUMBER': lawyerData?.professional_card_number ?? '',
+    'LAWYER.PROFESSIONAL_CARD_COUNTRY': lawyerData?.professional_card_country ?? '',
+    'LAWYER.PROFESSIONAL_CARD_CITY': lawyerData?.professional_card_city ?? '',
     'LAWYER.SIGNATURE': lawyerData?.signature_url ?? '',
     // ORG_REP.*
     'ORG_REP.NAME': orgData2?.name ?? '',

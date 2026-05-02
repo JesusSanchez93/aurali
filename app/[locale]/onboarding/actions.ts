@@ -10,6 +10,9 @@ export async function updateProfileAction(values: {
   document_type?: string;
   document_number?: string;
   professional_card_number?: string;
+  professional_card_country?: string;
+  professional_card_region?: string;
+  professional_card_city?: string;
   onboarding_status: string;
 }) {
   const supabase = await createClient();
@@ -33,6 +36,9 @@ export async function updateProfileAction(values: {
       document_type: values.document_type,
       document_number: values.document_number,
       professional_card_number: values.professional_card_number ?? null,
+      professional_card_country: values.professional_card_country ?? null,
+      professional_card_region: values.professional_card_region ?? null,
+      professional_card_city: values.professional_card_city ?? null,
       onboarding_status: values.onboarding_status,
     })
     .eq('id', user.id);

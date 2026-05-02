@@ -12,7 +12,11 @@ import { Spinner } from '@/components/ui/spinner';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck, User, Building2, PenLine, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { updateAccountProfile, uploadProfileSignature, deleteProfileSignature } from '@/app/[locale]/(dashboard)/account/actions';
+import { updateAccountProfile, uploadProfileSignature, deleteProfileSignature, updateOrganizationProfile } from '@/app/[locale]/(dashboard)/account/actions';
+import { CountrySelector } from '@/components/ui/country-selector';
+import { RegionSelector } from '@/components/ui/region-selector';
+import { CitySelector } from '@/components/ui/city-selector';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SignatureInput } from '@/components/common/signature-input';
@@ -24,7 +28,19 @@ type Membership = {
   active: boolean;
 };
 
+type OrgData = {
+  id: string;
+  name: string | null;
+  legal_name: string | null;
+  nit: string | null;
+  address: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+} | null;
+
 type Props = {
+  orgData: OrgData;
   profile: {
     firstname: string;
     lastname: string;
@@ -33,17 +49,21 @@ type Props = {
     document_type: string;
     document_number: string;
     professional_card_number: string | null;
+    professional_card_country: string | null;
+    professional_card_region: string | null;
+    professional_card_city: string | null;
     signature_url: string | null;
   };
   documentTypeOptions: { value: string; label: string }[];
   memberships: Membership[];
 };
 
-export default function AccountProfileSection({ profile, documentTypeOptions, memberships }: Props) {
+export default function AccountProfileSection({ profile, documentTypeOptions, memberships, orgData }: Props) {
   const processT = useTranslations('process.fields');
   const validationT = useTranslations('common.validation');
   const t = useTranslations('settings.account');
   const [isPending, startTransition] = useTransition();
+  const [orgEditOpen, setOrgEditOpen] = useState(false);
 
   // ── Signature state ───────────────────────────────────────────────────────
   const [signatureUrl, setSignatureUrl] = useState<string | null>(profile.signature_url);
@@ -83,6 +103,9 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
     document_type: z.string().trim().min(1, validationT('required')),
     document_number: z.string().trim().min(1, validationT('required')),
     professional_card_number: z.string().trim().optional(),
+    professional_card_country: z.string().trim().optional(),
+    professional_card_region: z.string().trim().optional(),
+    professional_card_city: z.string().trim().optional(),
   }), [validationT]);
 
   const form = useForm<z.infer<typeof schema>>({
@@ -94,6 +117,9 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
       document_type: profile.document_type,
       document_number: profile.document_number,
       professional_card_number: profile.professional_card_number ?? '',
+      professional_card_country: profile.professional_card_country ?? '',
+      professional_card_region: profile.professional_card_region ?? '',
+      professional_card_city: profile.professional_card_city ?? '',
     },
   });
 
@@ -103,6 +129,9 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
         await updateAccountProfile({
           ...values,
           professional_card_number: values.professional_card_number || undefined,
+          professional_card_country: values.professional_card_country || undefined,
+          professional_card_region: values.professional_card_region || undefined,
+          professional_card_city: values.professional_card_city || undefined,
         });
         toast.success(t('profile_updated'));
       } catch {
@@ -164,6 +193,64 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
                 control={form.control}
                 name="professional_card_number"
                 label={processT('professional_card_number')}
+              />
+              <FormField
+                control={form.control}
+                name="professional_card_country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{processT('professional_card_country')}</FormLabel>
+                    <FormControl>
+                      <CountrySelector
+                        value={field.value}
+                        onChange={(val) => {
+                          field.onChange(val);
+                          form.setValue('professional_card_region', '');
+                          form.setValue('professional_card_city', '');
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="professional_card_region"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{processT('professional_card_region')}</FormLabel>
+                    <FormControl>
+                      <RegionSelector
+                        countryCode={form.watch('professional_card_country')}
+                        value={field.value}
+                        onChange={(val) => {
+                          field.onChange(val);
+                          form.setValue('professional_card_city', '');
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="professional_card_city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{processT('professional_card_city')}</FormLabel>
+                    <FormControl>
+                      <CitySelector
+                        countryCode={form.watch('professional_card_country')}
+                        stateName={form.watch('professional_card_region')}
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
             <div className="flex justify-end">
@@ -314,6 +401,18 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
                   {!m.active && (
                     <Badge variant="outline" className="text-muted-foreground">{t('inactive')}</Badge>
                   )}
+                  {orgData && m.orgId === orgData.id && m.role === 'ORG_ADMIN' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 px-2"
+                      onClick={() => setOrgEditOpen(true)}
+                    >
+                      <PenLine className="h-3.5 w-3.5" />
+                      {t('edit')}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -321,6 +420,142 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
         )}</div>
       </section>
 
+      {/* ── Org edit modal (ORG_ADMIN only) ──────────────────────────────── */}
+      {orgData && (
+        <Dialog open={orgEditOpen} onOpenChange={setOrgEditOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{t('org_title')}</DialogTitle>
+            </DialogHeader>
+            <OrgProfileSection orgData={orgData} onSuccess={() => setOrgEditOpen(false)} />
+          </DialogContent>
+        </Dialog>
+      )}
+
     </div>
+  );
+}
+
+function OrgProfileSection({ orgData, onSuccess }: { orgData: NonNullable<OrgData>; onSuccess?: () => void }) {
+  const t = useTranslations('settings.account');
+  const validationT = useTranslations('common.validation');
+  const [isPending, startTransition] = useTransition();
+
+  const schema = useMemo(() => z.object({
+    name:       z.string().trim().min(1, validationT('required')),
+    legal_name: z.string().trim().min(1, validationT('required')),
+    nit:        z.string().trim().min(1, validationT('required')),
+    address:    z.string().trim().optional(),
+    country:    z.string().trim().optional(),
+    region:     z.string().trim().optional(),
+    city:       z.string().trim().optional(),
+  }), [validationT]);
+
+  const form = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name:       orgData.name ?? '',
+      legal_name: orgData.legal_name ?? '',
+      nit:        orgData.nit ?? '',
+      address:    orgData.address ?? '',
+      country:    orgData.country ?? '',
+      region:     orgData.region ?? '',
+      city:       orgData.city ?? '',
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof schema>) {
+    startTransition(async () => {
+      try {
+        await updateOrganizationProfile({ orgId: orgData.id, ...values,
+          address: values.address ?? '',
+          country: values.country ?? '',
+          region:  values.region ?? '',
+          city:    values.city ?? '',
+        });
+        toast.success(t('org_updated'));
+        onSuccess?.();
+      } catch {
+        toast.error(t('org_update_error'));
+      }
+    });
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <p className="text-sm text-muted-foreground">{t('org_description')}</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormInput control={form.control} name="name"       label={t('org_name')} />
+          <FormInput control={form.control} name="legal_name" label={t('org_legal_name')} />
+          <FormInput control={form.control} name="nit"        label={t('org_nit')} />
+          <FormInput control={form.control} name="address" label={t('org_address')} />
+              <FormField
+                control={form.control}
+                name="country"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('org_country')}</FormLabel>
+                    <FormControl>
+                      <CountrySelector
+                        value={field.value}
+                        onChange={(val) => {
+                          field.onChange(val);
+                          form.setValue('region', '');
+                          form.setValue('city', '');
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="region"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('org_region')}</FormLabel>
+                    <FormControl>
+                      <RegionSelector
+                        countryCode={form.watch('country')}
+                        value={field.value}
+                        onChange={(val) => {
+                          field.onChange(val);
+                          form.setValue('city', '');
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('org_city')}</FormLabel>
+                    <FormControl>
+                      <CitySelector
+                        countryCode={form.watch('country')}
+                        stateName={form.watch('region')}
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+        </div>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isPending}>
+            {isPending ? <Spinner className="mr-2 h-4 w-4" /> : null}
+            {t('save_changes')}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }

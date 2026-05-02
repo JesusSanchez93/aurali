@@ -1402,7 +1402,10 @@ export type Database = {
           lastname: string | null
           onboarding_status: string | null
           phone: string | null
+          professional_card_city: string | null
+          professional_card_country: string | null
           professional_card_number: string | null
+          professional_card_region: string | null
           signature_url: string | null
           system_role: string
           updated_at: string
@@ -1419,7 +1422,10 @@ export type Database = {
           lastname?: string | null
           onboarding_status?: string | null
           phone?: string | null
+          professional_card_city?: string | null
+          professional_card_country?: string | null
           professional_card_number?: string | null
+          professional_card_region?: string | null
           signature_url?: string | null
           system_role?: string
           updated_at?: string
@@ -1436,7 +1442,10 @@ export type Database = {
           lastname?: string | null
           onboarding_status?: string | null
           phone?: string | null
+          professional_card_city?: string | null
+          professional_card_country?: string | null
           professional_card_number?: string | null
+          professional_card_region?: string | null
           signature_url?: string | null
           system_role?: string
           updated_at?: string
@@ -1734,6 +1743,8 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          gradient_color: string | null
+          gradient_color_to: string | null
           icon_svg: string | null
           id: string
           is_default: boolean
@@ -1744,6 +1755,8 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          gradient_color?: string | null
+          gradient_color_to?: string | null
           icon_svg?: string | null
           id?: string
           is_default?: boolean
@@ -1754,6 +1767,8 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          gradient_color?: string | null
+          gradient_color_to?: string | null
           icon_svg?: string | null
           id?: string
           is_default?: boolean

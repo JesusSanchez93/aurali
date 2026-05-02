@@ -49,8 +49,11 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'LAST_NAME',       label: 'Apellido del Abogado' },
             { key: 'DOCUMENT_TYPE',   label: 'Tipo de Documento del Abogado' },
             { key: 'DOCUMENT_NAME',   label: 'Nombre del Documento del Abogado' },
-            { key: 'DOCUMENT_NUMBER', label: 'Número de Documento del Abogado' },
-            { key: 'SIGNATURE',       label: 'Firma del Abogado' },
+            { key: 'DOCUMENT_NUMBER',          label: 'Número de Documento del Abogado' },
+            { key: 'PROFESSIONAL_CARD_NUMBER',  label: 'Número de Tarjeta Profesional' },
+            { key: 'PROFESSIONAL_CARD_COUNTRY', label: 'País de Expedición de Tarjeta Profesional' },
+            { key: 'PROFESSIONAL_CARD_CITY',    label: 'Ciudad de Expedición de Tarjeta Profesional' },
+            { key: 'SIGNATURE',                 label: 'Firma del Abogado' },
         ],
     },
     {

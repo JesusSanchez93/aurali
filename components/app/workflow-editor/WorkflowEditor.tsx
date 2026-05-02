@@ -1,17 +1,18 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ReactFlowProvider,
   addEdge,
   reconnectEdge,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type OnConnect,
   type Connection,
 } from '@xyflow/react';
 import { toast } from 'sonner';
-import { Save, Loader2, ArrowLeft, Eye, ChevronLeft, ChevronRight, AlignCenterHorizontal, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Eye, ChevronLeft, ChevronRight, AlignCenterHorizontal, AlignCenterVertical } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -154,25 +155,35 @@ function WorkflowEditorInner({
 
   const selectedNodes = nodes.filter(n => n.selected);
 
-  const alignXLeft = useCallback(() => {
-    const minX = Math.min(...selectedNodes.map(n => n.position.x));
-    setNodes(nds => nds.map(n => n.selected ? { ...n, position: { ...n.position, x: minX } } : n));
-  }, [selectedNodes, setNodes]);
+  // Ref always contains current selected IDs — used inside align callbacks
+  // to avoid stale closures without adding selectedNodes to dependencies.
+  const selectedIdsRef = useRef<string[]>([]);
+  selectedIdsRef.current = selectedNodes.map(n => n.id);
 
-  const alignXCenter = useCallback(() => {
-    const avgX = selectedNodes.reduce((sum, n) => sum + n.position.x, 0) / selectedNodes.length;
-    setNodes(nds => nds.map(n => n.selected ? { ...n, position: { ...n.position, x: avgX } } : n));
-  }, [selectedNodes, setNodes]);
+  const makeAlignFn = useCallback(
+    (axis: 'x' | 'y', strategy: 'min' | 'avg' | 'max') =>
+      () => {
+        const ids = new Set(selectedIdsRef.current);
+        if (ids.size < 2) return;
+        setNodes(current => {
+          const sel = current.filter(n => ids.has(n.id));
+          const values = sel.map(n => n.position[axis]);
+          const target =
+            strategy === 'min' ? Math.min(...values)
+            : strategy === 'max' ? Math.max(...values)
+            : values.reduce((a, b) => a + b, 0) / values.length;
+          return current.map(n =>
+            ids.has(n.id)
+              ? { ...n, position: { ...n.position, [axis]: target } }
+              : n,
+          );
+        });
+      },
+    [setNodes],
+  );
 
-  const alignXRight = useCallback(() => {
-    const maxX = Math.max(...selectedNodes.map(n => n.position.x));
-    setNodes(nds => nds.map(n => n.selected ? { ...n, position: { ...n.position, x: maxX } } : n));
-  }, [selectedNodes, setNodes]);
-
-  const alignY = useCallback(() => {
-    const avgY = selectedNodes.reduce((sum, n) => sum + n.position.y, 0) / selectedNodes.length;
-    setNodes(nds => nds.map(n => n.selected ? { ...n, position: { ...n.position, y: avgY } } : n));
-  }, [selectedNodes, setNodes]);
+  const alignY = makeAlignFn('y', 'avg');
+  const alignX = makeAlignFn('x', 'avg');
 
   const onDragStart = useCallback((event: React.DragEvent, nodeType: WorkflowNodeType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
@@ -242,20 +253,16 @@ function WorkflowEditorInner({
 
         <main className="relative flex-1">
           {!readOnly && selectedNodes.length >= 2 && (
-            <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2 flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 shadow-md">
+            <div
+              className="absolute top-3 left-1/2 z-10 -translate-x-1/2 flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 shadow-md"
+              onMouseDown={e => e.stopPropagation()}
+            >
               <span className="pr-1 text-xs text-muted-foreground">{selectedNodes.length} nodos</span>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={alignY} title="Alinear horizontal">
                 <AlignCenterHorizontal className="h-4 w-4" />
               </Button>
-              <div className="mx-1 h-4 w-px bg-border" />
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={alignXLeft} title="Alinear izquierda">
-                <AlignLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={alignXCenter} title="Alinear centro">
-                <AlignCenter className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={alignXRight} title="Alinear derecha">
-                <AlignRight className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={alignX} title="Alinear vertical">
+                <AlignCenterVertical className="h-4 w-4" />
               </Button>
             </div>
           )}

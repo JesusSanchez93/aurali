@@ -5,9 +5,12 @@ import { useTransition, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
-import { Form } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
 import { FormSelect } from '@/components/common/form/form-select';
+import { CountrySelector } from '@/components/ui/country-selector';
+import { RegionSelector } from '@/components/ui/region-selector';
+import { CitySelector } from '@/components/ui/city-selector';
 import { Spinner } from '@/components/ui/spinner';
 import { ArrowRight } from 'lucide-react';
 import { ViewTransition } from 'react';
@@ -26,6 +29,9 @@ type Props = {
     document_type: string;
     document_number: string;
     professional_card_number: string | null;
+    professional_card_country: string | null;
+    professional_card_region: string | null;
+    professional_card_city: string | null;
   };
 };
 
@@ -64,6 +70,9 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
       .trim()
       .min(1, validationT('required')),
     professional_card_number: z.string().trim().optional(),
+    professional_card_country: z.string().trim().optional(),
+    professional_card_region: z.string().trim().optional(),
+    professional_card_city: z.string().trim().optional(),
   }), [validationT]);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -76,6 +85,9 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
       document_type: profile.document_type || '',
       document_number: profile.document_number || '',
       professional_card_number: profile.professional_card_number ?? '',
+      professional_card_country: profile.professional_card_country ?? '',
+      professional_card_region: profile.professional_card_region ?? '',
+      professional_card_city: profile.professional_card_city ?? '',
     },
   });
 
@@ -89,6 +101,9 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
         document_type: values.document_type,
         document_number: values.document_number,
         professional_card_number: values.professional_card_number || undefined,
+        professional_card_country: values.professional_card_country || undefined,
+        professional_card_region: values.professional_card_region || undefined,
+        professional_card_city: values.professional_card_city || undefined,
         onboarding_status: isInvited ? 'completed' : 'step1_completed',
       });
       router.push(isInvited ? '/dashboard' : '/onboarding/step2');
@@ -147,6 +162,64 @@ export default function Step1Form({ profile, isInvited = false, documentTypeOpti
               control={form.control}
               name="professional_card_number"
               label={processT('professional_card_number')}
+            />
+            <FormField
+              control={form.control}
+              name="professional_card_country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{processT('professional_card_country')}</FormLabel>
+                  <FormControl>
+                    <CountrySelector
+                      value={field.value}
+                      onChange={(val) => {
+                        field.onChange(val);
+                        form.setValue('professional_card_region', '');
+                        form.setValue('professional_card_city', '');
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="professional_card_region"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{processT('professional_card_region')}</FormLabel>
+                  <FormControl>
+                    <RegionSelector
+                      countryCode={form.watch('professional_card_country')}
+                      value={field.value}
+                      onChange={(val) => {
+                        field.onChange(val);
+                        form.setValue('professional_card_city', '');
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="professional_card_city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{processT('professional_card_city')}</FormLabel>
+                  <FormControl>
+                    <CitySelector
+                      countryCode={form.watch('professional_card_country')}
+                      stateName={form.watch('professional_card_region')}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
 

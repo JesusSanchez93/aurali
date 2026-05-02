@@ -1,9 +1,9 @@
 'use client';
 
 import { memo, useState } from 'react';
-import { Handle, Position, useReactFlow, useConnection, useEdges, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useReactFlow, useConnection, useEdges, useStore, type NodeProps } from '@xyflow/react';
 import * as LucideIcons from 'lucide-react';
-import { X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NODE_TYPES_CONFIG } from '../node-config';
 import type { WorkflowNode, WorkflowNodeType } from '../types';
@@ -46,6 +46,10 @@ export const CustomNode = memo(function CustomNode({
 
   const isDimmed = data.dimmed === true;
   const isConnecting = connection.inProgress;
+  // Read selected state directly from the RF store — NodeProps.selected can
+  // lag on multi-selection via drag-box when the component is memoized.
+  const isNodeSelected = useStore(s => !!s.nodes.find(n => n.id === id)?.selected);
+  const selectedCount = useStore(s => s.nodes.filter(n => n.selected).length);
 
   const connectedHandles = new Set<string>();
   for (const edge of edges) {
@@ -62,7 +66,7 @@ export const CustomNode = memo(function CustomNode({
   return (
     <div
       className={cn(
-        'group relative min-w-[180px] max-w-[220px] rounded-lg border bg-card transition-all duration-150',
+        'group relative w-[220px] rounded-lg border bg-card transition-all duration-150',
         'shadow-[0_2px_8px_rgba(0,0,0,0.08)]',
         isDimmed && 'pointer-events-none border-border opacity-35',
         !isDimmed && !isConfigurable && (
@@ -84,11 +88,11 @@ export const CustomNode = memo(function CustomNode({
             deleteElements({ nodes: [{ id }] });
           }}
           className={cn(
-            'absolute -right-2 -top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow transition-opacity',
-            selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+            'absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-red-50 text-destructive shadow-sm transition-opacity hover:bg-destructive hover:text-destructive-foreground ring-1 ring-white',
+            isNodeSelected && selectedCount === 1 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
           )}
         >
-          <X className="h-3 w-3" />
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
       )}
 

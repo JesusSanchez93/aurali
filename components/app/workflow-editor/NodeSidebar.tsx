@@ -1,10 +1,21 @@
 'use client';
 
 import * as LucideIcons from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { NODE_TYPES_CONFIG } from './node-config';
 import type { WorkflowNodeType } from './types';
+
+const COLOR_MAP: Record<string, string> = {
+  'bg-emerald-500': '#10b981',
+  'bg-blue-500':    '#3b82f6',
+  'bg-violet-500':  '#8b5cf6',
+  'bg-amber-500':   '#f59e0b',
+  'bg-orange-500':  '#f97316',
+  'bg-cyan-500':    '#06b6d4',
+  'bg-rose-500':    '#f43f5e',
+  'bg-slate-500':   '#64748b',
+  'bg-indigo-500':  '#6366f1',
+};
 
 const NODE_ORDER: WorkflowNodeType[] = [
   'start',
@@ -17,8 +28,8 @@ const NODE_ORDER: WorkflowNodeType[] = [
   'end',
 ];
 
-function getIcon(name: string): React.ComponentType<{ className?: string }> {
-  const icon = (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[name];
+function getIcon(name: string): React.ComponentType<{ className?: string; style?: React.CSSProperties }> {
+  const icon = (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>>)[name];
   return icon ?? LucideIcons.Circle;
 }
 
@@ -41,6 +52,8 @@ export function NodeSidebar({ onDragStart }: NodeSidebarProps) {
             const cfg = NODE_TYPES_CONFIG[type];
             const Icon = getIcon(cfg.icon);
 
+            const hex = COLOR_MAP[cfg.colorClass] ?? '#6366f1';
+
             return (
               <div
                 key={type}
@@ -49,12 +62,10 @@ export function NodeSidebar({ onDragStart }: NodeSidebarProps) {
                 className="flex cursor-grab items-center gap-3 rounded-lg border bg-background px-3 py-2.5 shadow-sm transition-colors hover:border-primary/50 hover:bg-accent active:cursor-grabbing select-none"
               >
                 <div
-                  className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
-                    cfg.colorClass,
-                  )}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+                  style={{ background: `linear-gradient(135deg, ${hex}30, ${hex}12)` }}
                 >
-                  <Icon className="h-4 w-4 text-white" />
+                  <Icon className="h-4 w-4" style={{ color: hex }} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{cfg.label}</p>

@@ -116,6 +116,7 @@ export function WorkflowCanvas({
         selectionOnDrag={!readOnly}
         panOnDrag={readOnly ? true : [1, 2]}
         panOnScroll={!readOnly}
+        panActivationKeyCode="Meta"
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} className="opacity-50" />

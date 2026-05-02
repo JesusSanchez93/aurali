@@ -13,7 +13,7 @@ export async function getAccountProfile() {
   const [{ data: profile }, { data: memberships }, { data: catalogDocuments }] = await Promise.all([
     db
       .from('profiles')
-      .select('id, firstname, lastname, email, phone, document_type, document_number, professional_card_number, signature_url')
+      .select('id, firstname, lastname, email, phone, document_type, document_number, professional_card_number, professional_card_country, professional_card_region, professional_card_city, signature_url, current_organization_id')
       .eq('id', user.id)
       .single(),
     db
@@ -27,7 +27,27 @@ export async function getAccountProfile() {
       .order('slug'),
   ]);
 
-  return { profile, memberships: memberships ?? [], catalogDocuments: catalogDocuments ?? [] };
+  // Fetch org data if user is admin of their current org
+  let orgData: { id: string; name: string | null; legal_name: string | null; nit: string | null; address: string | null; country: string | null; region: string | null; city: string | null } | null = null;
+  if (profile?.current_organization_id) {
+    const { data: membership } = await db
+      .from('organization_members')
+      .select('role')
+      .eq('organization_id', profile.current_organization_id)
+      .eq('user_id', user.id)
+      .eq('active', true)
+      .maybeSingle();
+    if (membership?.role === 'ORG_ADMIN') {
+      const { data: org } = await db
+        .from('organizations')
+        .select('id, name, legal_name, nit, address, country, region, city')
+        .eq('id', profile.current_organization_id)
+        .single();
+      orgData = org;
+    }
+  }
+
+  return { profile, memberships: memberships ?? [], catalogDocuments: catalogDocuments ?? [], orgData };
 }
 
 export async function updateAccountProfile(values: {
@@ -37,6 +57,9 @@ export async function updateAccountProfile(values: {
   document_type: string;
   document_number: string;
   professional_card_number?: string;
+  professional_card_country?: string;
+  professional_card_region?: string;
+  professional_card_city?: string;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -51,8 +74,51 @@ export async function updateAccountProfile(values: {
       document_type: values.document_type,
       document_number: values.document_number,
       professional_card_number: values.professional_card_number ?? null,
+      professional_card_country: values.professional_card_country ?? null,
+      professional_card_region: values.professional_card_region ?? null,
+      professional_card_city: values.professional_card_city ?? null,
     })
     .eq('id', user.id);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function updateOrganizationProfile(values: {
+  orgId: string;
+  name: string;
+  legal_name: string;
+  nit: string;
+  address: string;
+  country: string;
+  region: string;
+  city: string;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  // Verify user is ORG_ADMIN of this org
+  const { data: membership } = await supabase
+    .from('organization_members')
+    .select('role')
+    .eq('organization_id', values.orgId)
+    .eq('user_id', user.id)
+    .eq('active', true)
+    .maybeSingle();
+  if (membership?.role !== 'ORG_ADMIN') throw new Error('Forbidden');
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({
+      name: values.name,
+      legal_name: values.legal_name,
+      nit: values.nit,
+      address: values.address,
+      country: values.country,
+      region: values.region,
+      city: values.city,
+    })
+    .eq('id', values.orgId);
 
   if (error) throw new Error(error.message);
 }
