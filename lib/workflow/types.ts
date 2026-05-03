@@ -129,6 +129,7 @@ export interface ProfileRow {
   document_number: string | null;
   professional_card_number?: string | null;
   professional_card_country?: string | null;
+  professional_card_region?: string | null;
   professional_card_city?: string | null;
   signature_url?: string | null;
 }

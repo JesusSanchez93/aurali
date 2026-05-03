@@ -1,4 +1,11 @@
+import { getTranslations } from 'next-intl/server';
 import { getAccountProfile } from './actions';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.user.account') };
+}
 import AccountProfileSection from '@/components/app/settings/account-profile-section';
 import { getLocale } from 'next-intl/server';
 

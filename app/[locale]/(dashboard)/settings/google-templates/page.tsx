@@ -1,4 +1,11 @@
+import { getTranslations } from 'next-intl/server';
 import { getGoogleDocTemplates, getGoogleConnectionStatus } from './actions';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.google_docs') };
+}
 import { GoogleTemplatesSection } from './_components/google-templates-section';
 import { VARIABLE_GROUPS } from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables';
 import { GoogleSetupGuide } from './_components/google-setup-guide';

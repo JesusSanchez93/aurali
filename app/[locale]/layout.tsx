@@ -24,7 +24,10 @@ export async function generateMetadata({
 
   return {
     metadataBase: new URL(defaultUrl),
-    title: t('title'),
+    title: {
+      template: `%s | Aurali`,
+      default: 'Aurali',
+    },
     description: t('description'),
   };
 }

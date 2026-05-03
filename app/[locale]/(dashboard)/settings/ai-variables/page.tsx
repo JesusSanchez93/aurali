@@ -2,6 +2,12 @@ import { getAiVariables } from './actions';
 import { AiVariablesSection } from '@/components/app/settings/ai-variables-section';
 import { getTranslations } from 'next-intl/server';
 
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.ai_variables') };
+}
+
 export default async function AiVariablesPage() {
   const [variables, t] = await Promise.all([
     getAiVariables(),

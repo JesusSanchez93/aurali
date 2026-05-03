@@ -1,4 +1,11 @@
+import { getTranslations } from 'next-intl/server';
 import ClientList from '@/components/app/clients/client-list';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.clients') };
+}
 import { getClients } from './actions';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';

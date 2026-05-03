@@ -1,4 +1,11 @@
+import { getTranslations } from 'next-intl/server';
 import { getDashboardStats, getDashboardAnalytics } from '../actions';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.analytics') };
+}
 import DashboardCards from '@/components/app/dashboard/dashboard-cards';
 import AnalyticsSection from '@/components/app/dashboard/analytics-section';
 import FinancialsSection from '@/components/app/dashboard/financials-section';

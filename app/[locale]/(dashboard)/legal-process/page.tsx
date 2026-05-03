@@ -1,10 +1,16 @@
+import { getTranslations } from 'next-intl/server';
 import ProcessList from '@/app/[locale]/(dashboard)/legal-process/_components/process-list';
 import { getDocuments, getLegalProcesses, getOrgLawyers } from './actions';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/routing';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.processes') };
+}
 import ProcessSearch from './_components/process-search';
 import ProcessStatusFilter from './_components/process-status-filter';
 import ProcessFormSheet from './_components/process-form-sheet';

@@ -688,6 +688,7 @@ export async function buildDocumentTemplateData(
     'LAWYER.DOCUMENT_NUMBER': lawyerData?.document_number ?? '',
     'LAWYER.PROFESSIONAL_CARD_NUMBER': lawyerData?.professional_card_number ?? '',
     'LAWYER.PROFESSIONAL_CARD_COUNTRY': lawyerData?.professional_card_country ?? '',
+    'LAWYER.PROFESSIONAL_CARD_REGION': lawyerData?.professional_card_region ?? '',
     'LAWYER.PROFESSIONAL_CARD_CITY': lawyerData?.professional_card_city ?? '',
     'LAWYER.SIGNATURE': lawyerData?.signature_url ?? '',
     // ORG_REP.*
@@ -860,6 +861,7 @@ async function executeGenerateDocument(
     'LAWYER.DOCUMENT_NUMBER': lawyerData?.document_number ?? '',
     'LAWYER.PROFESSIONAL_CARD_NUMBER': lawyerData?.professional_card_number ?? '',
     'LAWYER.PROFESSIONAL_CARD_COUNTRY': lawyerData?.professional_card_country ?? '',
+    'LAWYER.PROFESSIONAL_CARD_REGION': lawyerData?.professional_card_region ?? '',
     'LAWYER.PROFESSIONAL_CARD_CITY': lawyerData?.professional_card_city ?? '',
     'LAWYER.SIGNATURE': lawyerData?.signature_url ?? '',
     // ORG_REP.*

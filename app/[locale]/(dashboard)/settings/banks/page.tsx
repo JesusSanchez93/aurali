@@ -1,4 +1,11 @@
+import { getTranslations } from 'next-intl/server';
 import { getOrgBanks, getCatalogBanksForOrg } from './actions';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.banks') };
+}
 import { BanksSection } from './_components/banks-section';
 
 export default async function BanksSettingsPage() {

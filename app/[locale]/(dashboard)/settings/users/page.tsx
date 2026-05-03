@@ -1,4 +1,11 @@
+import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.users') };
+}
 import { createClient } from '@/lib/supabase/server';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import { getOrgMembers, getPendingInvitations } from './actions';

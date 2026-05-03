@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { getSessionProfile } from '@/lib/auth/get-session-profile'
 import { getTranslations } from 'next-intl/server'
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'common' });
+  return { title: t('nav.workflows') };
+}
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { userAgent } from 'next/server'
