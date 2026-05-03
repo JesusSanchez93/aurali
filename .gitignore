@@ -44,6 +44,8 @@ next-env.d.ts
 # Claude Code local settings
 .claude/settings.local.json
 .mcp.json
+skills-lock.json
+.agents/
 
 # Sentry Config File
 .env.sentry-build-plugin
