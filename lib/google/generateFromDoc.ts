@@ -24,6 +24,7 @@ import { substituteVars, wrapWithPageLayout } from '@/lib/documents/htmlRenderer
 import {
   copyTemplate,
   replaceVariables,
+  insertImageVariables,
   exportToPdf,
   deleteDocument,
 } from '@/lib/google/googleDocPdfService';
@@ -87,7 +88,10 @@ export async function generateFromGoogleDoc(
 
   try {
     // ── 4. Sustituir variables en la copia ─────────────────────────────────
-    await replaceVariables(tempDocId, data, accessToken);
+    // Resolve private Supabase storage URLs to fresh signed URLs for _IMG variables
+    const resolvedData = await resolveImageUrls(data, supabase);
+    await replaceVariables(tempDocId, resolvedData, accessToken);
+    await insertImageVariables(tempDocId, resolvedData, accessToken);
 
     // ── 5. Exportar a PDF ──────────────────────────────────────────────────
     const buffer = await exportToPdf(tempDocId, accessToken);
@@ -188,6 +192,41 @@ export async function generateGoogleDocPreviewHtml(
   const html = wrapWithPageLayout(previewHeader + substitutedHtml, template.name as string);
 
   return { html, name: template.name as string };
+}
+
+/**
+ * For variables ending in `_IMG`, replaces Supabase Storage URLs with fresh
+ * 300-second signed URLs so Google can fetch the image from a private bucket.
+ * Matches both public and signed Supabase storage URL formats.
+ */
+async function resolveImageUrls(
+  data: Record<string, string>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+): Promise<Record<string, string>> {
+  const resolved = { ...data };
+  for (const [key, value] of Object.entries(data)) {
+    if (!key.endsWith('_IMG') || !value) continue;
+
+    const match = value.match(/\/storage\/v1\/object\/(?:sign|public)\/([^/?]+)\/(.+?)(?:\?|$)/);
+    if (!match) {
+      console.warn(`[resolveImageUrls] ${key}: URL does not match Supabase storage pattern, skipping`);
+      continue;
+    }
+
+    const [, bucket, path] = match;
+    const { data: signed, error } = await supabase.storage.from(bucket).createSignedUrl(path, 300);
+
+    if (error || !signed?.signedUrl) {
+      console.error(`[resolveImageUrls] Failed to create signed URL for ${key} (bucket=${bucket}, path=${path}):`, error?.message ?? 'no signedUrl returned');
+      // Remove the variable so insertImageVariables skips it rather than sending an inaccessible URL
+      delete resolved[key];
+      continue;
+    }
+
+    resolved[key] = signed.signedUrl;
+  }
+  return resolved;
 }
 
 function sanitizeFileName(name: string): string {

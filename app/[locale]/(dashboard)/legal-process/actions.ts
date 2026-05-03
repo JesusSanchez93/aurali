@@ -77,10 +77,11 @@ export async function getLegalProcesses(page: number = 1, pageSize: number = 10,
     } else {
       // Text search on client fields (joined table)
       query = query.or(
-        `legal_process_clients.first_name.ilike.%${search}%,` +
-        `legal_process_clients.last_name.ilike.%${search}%,` +
-        `legal_process_clients.email.ilike.%${search}%,` +
-        `legal_process_clients.document_number.ilike.%${search}%`,
+        `first_name.ilike.%${search}%,` +
+        `last_name.ilike.%${search}%,` +
+        `email.ilike.%${search}%,` +
+        `document_number.ilike.%${search}%`,
+        { referencedTable: 'legal_process_clients' }
       );
     }
   }

@@ -148,6 +148,7 @@ export async function uploadProfileSignature(base64DataUrl: string): Promise<str
     .upload(path, buffer, { contentType: mimeType });
   if (uploadErr) throw new Error(uploadErr.message);
 
+  // Store the public URL format — encodes bucket+path for later signed URL generation
   const { data: { publicUrl } } = supabase.storage
     .from('signatures')
     .getPublicUrl(path);
@@ -158,7 +159,11 @@ export async function uploadProfileSignature(base64DataUrl: string): Promise<str
     .eq('id', user.id);
   if (error) throw new Error(error.message);
 
-  return publicUrl;
+  // Return a signed URL for immediate display (bucket is private, public URL returns 403)
+  const { data: signed } = await supabase.storage
+    .from('signatures')
+    .createSignedUrl(path, 3600);
+  return signed?.signedUrl ?? publicUrl;
 }
 
 export async function deleteProfileSignature(): Promise<void> {

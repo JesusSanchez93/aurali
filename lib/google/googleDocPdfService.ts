@@ -96,20 +96,18 @@ export async function copyTemplate(
 // ─── Step 2: Replace variables ────────────────────────────────────────────────
 
 /**
- * Replaces all `{{VARIABLE}}` placeholders in the document (body, headers,
+ * Replaces all `{VARIABLE}` placeholders in the document (body, headers,
  * footers) using a single batchUpdate request.
  *
- * `replaceAllText` is case-sensitive and operates on the entire document
- * including all sections — no partial replacement possible.
- *
- * Variables with no matching placeholder are silently skipped.
+ * Variables ending in `_IMG` are excluded — they are handled separately by
+ * `insertImageVariables()` which inlines the image at the placeholder position.
  */
 export async function replaceVariables(
   documentId: string,
   variables: Record<string, string>,
   accessToken: string,
 ): Promise<void> {
-  const entries = Object.entries(variables);
+  const entries = Object.entries(variables).filter(([key]) => !key.endsWith('_IMG'));
   if (entries.length === 0) return;
 
   const requests = entries.map(([key, value]) => ({
@@ -135,6 +133,141 @@ export async function replaceVariables(
   );
 
   if (!res.ok) await throwApiError(res, 'reemplazar variables');
+}
+
+// ─── Step 2b: Insert image variables ─────────────────────────────────────────
+
+type DocTextRun = { content: string };
+type DocParagraphElement = { startIndex?: number; textRun?: DocTextRun };
+type DocParagraph = { elements?: DocParagraphElement[] };
+type DocTableCell = { content?: DocStructuralElement[] };
+type DocTableRow = { tableCells?: DocTableCell[] };
+type DocTable = { tableRows?: DocTableRow[] };
+type DocStructuralElement = { paragraph?: DocParagraph; table?: DocTable };
+type GoogleDocJson = { body?: { content?: DocStructuralElement[] } };
+
+function searchParagraph(elements: DocParagraphElement[], placeholder: string): number | null {
+  let text = '';
+  const indexMap: number[] = [];
+  for (const el of elements) {
+    if (el.textRun?.content != null && el.startIndex != null) {
+      for (let i = 0; i < el.textRun.content.length; i++) {
+        indexMap.push(el.startIndex + i);
+        text += el.textRun.content[i];
+      }
+    }
+  }
+  const pos = text.indexOf(placeholder);
+  return pos === -1 ? null : indexMap[pos];
+}
+
+function searchElements(elements: DocStructuralElement[], placeholder: string): number | null {
+  for (const el of elements) {
+    if (el.paragraph) {
+      const idx = searchParagraph(el.paragraph.elements ?? [], placeholder);
+      if (idx !== null) return idx;
+    }
+    if (el.table) {
+      for (const row of el.table.tableRows ?? []) {
+        for (const cell of row.tableCells ?? []) {
+          const idx = searchElements(cell.content ?? [], placeholder);
+          if (idx !== null) return idx;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * For each variable ending in `_IMG`, replaces its `{KEY}` placeholder with an
+ * inline image using a 3-step approach:
+ *
+ *   1. replaceAllText → clean ASCII marker  (fixes text-run splitting in Google Docs)
+ *   2. Read doc       → find marker's exact index
+ *   3. batchUpdate    → insertInlineImage + deleteContentRange (removes marker)
+ *
+ * The image URI must be publicly accessible. For private Supabase Storage
+ * buckets, pass a fresh signed URL (see resolveImageUrls() in generateFromDoc.ts).
+ */
+export async function insertImageVariables(
+  documentId: string,
+  variables: Record<string, string>,
+  accessToken: string,
+): Promise<void> {
+  const imgEntries = Object.entries(variables).filter(
+    ([key, value]) => key.endsWith('_IMG') && value,
+  );
+  if (imgEntries.length === 0) return;
+
+  for (const [key, url] of imgEntries) {
+    const placeholder = `{${key}}`;
+    const marker = `AURALI_IMG_${key.replace(/[^A-Z0-9]/g, '_')}`;
+
+    // Step 1: Replace placeholder with clean marker (handles split text runs)
+    const replaceRes = await fetch(
+      `${DOCS_API}/documents/${encodeURIComponent(documentId)}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            replaceAllText: {
+              containsText: { text: placeholder, matchCase: true },
+              replaceText: marker,
+            },
+          }],
+        }),
+      },
+    );
+    if (!replaceRes.ok) await throwApiError(replaceRes, `preparar marcador de imagen (${key})`);
+
+    // Step 2: Read doc to find the marker's exact index
+    const docRes = await fetch(`${DOCS_API}/documents/${encodeURIComponent(documentId)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!docRes.ok) await throwApiError(docRes, `leer documento para insertar imagen (${key})`);
+    const doc = await docRes.json() as GoogleDocJson;
+
+    const startIndex = searchElements(doc.body?.content ?? [], marker);
+    if (startIndex === null) {
+      console.warn(`[insertImageVariables] Marker for ${key} not found after replacement, skipping`);
+      continue;
+    }
+
+    // Step 3: Insert image at marker position, then delete the marker
+    const insertRes = await fetch(
+      `${DOCS_API}/documents/${encodeURIComponent(documentId)}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [
+            {
+              insertInlineImage: {
+                location: { index: startIndex },
+                uri: url,
+                objectSize: {
+                  width: { magnitude: 120, unit: 'PT' },
+                  height: { magnitude: 60, unit: 'PT' },
+                },
+              },
+            },
+            {
+              deleteContentRange: {
+                range: {
+                  startIndex: startIndex + 1, // +1: inserted image occupies one index slot
+                  endIndex: startIndex + 1 + marker.length,
+                },
+              },
+            },
+          ],
+        }),
+      },
+    );
+
+    if (!insertRes.ok) await throwApiError(insertRes, `insertar imagen de firma (${key})`);
+  }
 }
 
 // ─── Step 3: Export as PDF ────────────────────────────────────────────────────

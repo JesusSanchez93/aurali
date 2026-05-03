@@ -1,13 +1,24 @@
 import { getTranslations } from 'next-intl/server';
 import { getAccountProfile } from './actions';
+import AccountProfileSection from '@/components/app/settings/account-profile-section';
+import { getLocale } from 'next-intl/server';
+import { createClient } from '@/lib/supabase/server';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'common' });
   return { title: t('nav.user.account') };
 }
-import AccountProfileSection from '@/components/app/settings/account-profile-section';
-import { getLocale } from 'next-intl/server';
+
+async function getSignatureSignedUrl(storedUrl: string | null): Promise<string | null> {
+  if (!storedUrl) return null;
+  const match = storedUrl.match(/\/storage\/v1\/object\/(?:sign|public)\/([^/?]+)\/(.+?)(?:\?|$)/);
+  if (!match) return storedUrl;
+  const [, bucket, path] = match;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
 
 export default async function AccountPage() {
   const locale = await getLocale();
@@ -43,7 +54,7 @@ export default async function AccountPage() {
           professional_card_country: profile?.professional_card_country ?? null,
           professional_card_region: profile?.professional_card_region ?? null,
           professional_card_city: profile?.professional_card_city ?? null,
-          signature_url: profile?.signature_url ?? null,
+          signature_url: await getSignatureSignedUrl(profile?.signature_url ?? null),
         }}
         documentTypeOptions={documentTypeOptions}
         memberships={orgMemberships}

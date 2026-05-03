@@ -54,7 +54,8 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'PROFESSIONAL_CARD_COUNTRY', label: 'País de Expedición de Tarjeta Profesional' },
             { key: 'PROFESSIONAL_CARD_REGION',  label: 'Departamento de Expedición de Tarjeta Profesional' },
             { key: 'PROFESSIONAL_CARD_CITY',    label: 'Ciudad de Expedición de Tarjeta Profesional' },
-            { key: 'SIGNATURE',                 label: 'Firma del Abogado' },
+            { key: 'SIGNATURE',                 label: 'Firma del Abogado (URL)' },
+            { key: 'SIGNATURE_IMG',             label: 'Firma del Abogado (Imagen — solo Google Docs)' },
         ],
     },
     {
