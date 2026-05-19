@@ -42,6 +42,11 @@ export interface GenerateFromDocInput {
   userId?: string;
   /** Si se provee, el PDF se sube a Supabase Storage y se retorna URL */
   legalProcessId?: string;
+  /**
+   * ID de un doc temporal ya copiado y con variables sustituidas (de prepareGoogleDocPreview).
+   * Si se provee, se omiten los pasos de copy + replace + image y se exporta directamente.
+   */
+  existingTempDocId?: string;
 }
 
 export interface GenerateFromDocResult {
@@ -55,7 +60,7 @@ export interface GenerateFromDocResult {
 export async function generateFromGoogleDoc(
   input: GenerateFromDocInput,
 ): Promise<GenerateFromDocResult> {
-  const { googleDocTemplateId, data, organizationId, userId, legalProcessId } = input;
+  const { googleDocTemplateId, data, organizationId, userId, legalProcessId, existingTempDocId } = input;
 
   // ── 1. Cargar template ─────────────────────────────────────────────────────
   const supabase = await createClient({ admin: true });
@@ -82,21 +87,44 @@ export async function generateFromGoogleDoc(
   }
   const accessToken = await getValidAccessToken(effectiveUserId);
 
-  // ── 3. Copiar plantilla (copia temporal en el Drive del usuario) ──────────
-  const copyName = `${template.name as string} — generado ${new Date().toISOString()}`;
-  const tempDocId = await copyTemplate(template.google_doc_id as string, accessToken, copyName);
+  // ── 3. Copiar y sustituir variables (omitir si ya existe un temp doc) ──────
+  let tempDocId: string;
+  if (existingTempDocId) {
+    // Reutilizar el doc temporal ya preparado en prepareGoogleDocPreview()
+    tempDocId = existingTempDocId;
+  } else {
+    const copyName = `${template.name as string} — generado ${new Date().toISOString()}`;
+    tempDocId = await copyTemplate(template.google_doc_id as string, accessToken, copyName);
+  }
 
   try {
-    // ── 4. Sustituir variables en la copia ─────────────────────────────────
-    // Resolve private Supabase storage URLs to fresh signed URLs for _IMG variables
-    const resolvedData = await resolveImageUrls(data, supabase);
-    await replaceVariables(tempDocId, resolvedData, accessToken);
-    await insertImageVariables(tempDocId, resolvedData, accessToken);
+    if (!existingTempDocId) {
+      // ── 4. Sustituir variables en la copia ───────────────────────────────
+      const resolvedData = await resolveImageUrls(data, supabase);
+      await replaceVariables(tempDocId, resolvedData, accessToken);
+      await insertImageVariables(tempDocId, resolvedData, accessToken);
+    }
 
     // ── 5. Exportar a PDF ──────────────────────────────────────────────────
     const buffer = await exportToPdf(tempDocId, accessToken);
 
     const fileName = sanitizeFileName(template.name as string) + '.pdf';
+
+    // ── 5b. Capturar HTML para vista previa (mientras el temp doc sigue vivo) ─
+    let previewHtml: string | undefined;
+    try {
+      const { bodyHtml, headerHtml, footerHtml, margins, fontFamily } =
+        await fetchGoogleDocContent(tempDocId, accessToken);
+      previewHtml = wrapWithPageLayout(bodyHtml, template.name as string, {
+        headerHtml: headerHtml || undefined,
+        footerHtml: footerHtml || undefined,
+        fontFamily: fontFamily || undefined,
+        marginLeft: margins?.left,
+        marginRight: margins?.right,
+      });
+    } catch (e) {
+      console.warn('[generateFromGoogleDoc] No se pudo capturar HTML para vista previa:', e);
+    }
 
     // ── 6. (Opcional) Subir a Storage y registrar ──────────────────────────
     if (!legalProcessId) {
@@ -131,6 +159,7 @@ export async function generateFromGoogleDoc(
         document_name: fileName,
         storage_path: storagePath,
         is_preview: false,
+        html_content: previewHtml ?? null,
       })
       .select('id')
       .single();
@@ -192,6 +221,68 @@ export async function generateGoogleDocPreviewHtml(
   const html = wrapWithPageLayout(previewHeader + substitutedHtml, template.name as string);
 
   return { html, name: template.name as string };
+}
+
+export interface PrepareGoogleDocPreviewResult {
+  html: string;
+  tempDocId: string;
+  name: string;
+}
+
+/**
+ * Prepara un preview de Google Docs ejecutando el pipeline completo de Docs API
+ * (copy → replaceVariables → insertImageVariables → fetchHTML) pero sin exportar PDF.
+ * El doc temporal queda vivo en Google Drive para que approveDocumentPreviews() lo exporte
+ * directamente (incluyendo cualquier edición que el usuario haya hecho en Google Docs).
+ */
+export async function prepareGoogleDocPreview(input: {
+  googleDocTemplateId: string;
+  data: Record<string, string>;
+  organizationId: string;
+}): Promise<PrepareGoogleDocPreviewResult> {
+  const { googleDocTemplateId, data, organizationId } = input;
+
+  const supabase = await createClient({ admin: true });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+
+  const { data: template, error } = await db
+    .from('google_doc_templates')
+    .select('id, name, google_doc_id, organization_id, created_by')
+    .eq('id', googleDocTemplateId)
+    .eq('organization_id', organizationId)
+    .single();
+
+  if (error || !template) throw new Error('Plantilla de Google Doc no encontrada');
+
+  const createdBy = template.created_by as string | null;
+  if (!createdBy) {
+    throw new Error('La plantilla no tiene created_by: no se puede obtener el token de Google.');
+  }
+  const accessToken = await getValidAccessToken(createdBy);
+
+  // Crear copia temporal y sustituir variables via Docs API
+  const copyName = `${template.name as string} — preview ${new Date().toISOString()}`;
+  const tempDocId = await copyTemplate(template.google_doc_id as string, accessToken, copyName);
+
+  // Sustituir variables (la copia queda viva — NO se llama deleteDocument aquí)
+  const resolvedData = await resolveImageUrls(data, supabase);
+  await replaceVariables(tempDocId, resolvedData, accessToken);
+  await insertImageVariables(tempDocId, resolvedData, accessToken);
+
+  // Obtener HTML del doc ya sustituido para mostrar en el preview
+  const { bodyHtml, headerHtml, footerHtml, margins, fontFamily } =
+    await fetchGoogleDocContent(tempDocId, accessToken);
+
+  const html = wrapWithPageLayout(bodyHtml, template.name as string, {
+    headerHtml: headerHtml ?? undefined,
+    footerHtml: footerHtml ?? undefined,
+    fontFamily: fontFamily ?? undefined,
+    marginLeft: margins?.left,
+    marginRight: margins?.right,
+  });
+
+  return { html, tempDocId, name: template.name as string };
 }
 
 /**

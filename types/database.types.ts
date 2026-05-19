@@ -537,6 +537,7 @@ export type Database = {
           created_at: string
           document_name: string | null
           file_url: string | null
+          google_doc_temp_id: string | null
           google_doc_template_id: string | null
           html_content: string | null
           id: string
@@ -550,6 +551,7 @@ export type Database = {
           created_at?: string
           document_name?: string | null
           file_url?: string | null
+          google_doc_temp_id?: string | null
           google_doc_template_id?: string | null
           html_content?: string | null
           id?: string
@@ -563,6 +565,7 @@ export type Database = {
           created_at?: string
           document_name?: string | null
           file_url?: string | null
+          google_doc_temp_id?: string | null
           google_doc_template_id?: string | null
           html_content?: string | null
           id?: string

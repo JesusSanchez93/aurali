@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { FileText, Pencil, Eye } from 'lucide-react';
+import { FileText, Pencil, Eye, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import Tiptap, { type TiptapHandle } from '@/components/common/tip-tap';
 import VariablesPanel from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables-panel';
@@ -35,6 +35,8 @@ type PreviewDoc = {
   document_name: string | null;
   html_content: string | null;
   tiptap_content: unknown;
+  google_doc_temp_id?: string | null;
+  file_url?: string | null;
   created_at: string;
 };
 
@@ -188,6 +190,16 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
                       <span className="text-xs font-medium text-white drop-shadow">{t('thumbnail_expand_label')}</span>
                     </div>
                   </button>
+                ) : doc.file_url ? (
+                  <a
+                    href={doc.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 bg-muted/30 transition-colors hover:bg-muted/50"
+                  >
+                    <FileText className="h-8 w-8 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground/70" />
+                    <span className="text-xs text-muted-foreground/60 transition-colors group-hover:text-muted-foreground">{t('btn_view')} PDF</span>
+                  </a>
                 ) : (
                   <div className="flex h-28 items-center justify-center bg-muted/30">
                     <span className="text-xs text-muted-foreground/60">{t('no_preview_content')}</span>
@@ -198,15 +210,37 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
                 <div className="flex items-center justify-between border-t bg-muted/20 px-4 py-2.5">
                   <span className="text-[11px] text-muted-foreground">{t('card_footer_label')}</span>
                   <div className="flex items-center gap-1.5">
-                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setViewingDoc(doc)}>
-                      <Eye className="mr-1 h-3 w-3" />
-                      {t('btn_view')}
-                    </Button>
-                    {!readOnly && (
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEdit(doc)}>
-                        <Pencil className="mr-1 h-3 w-3" />
-                        {t('btn_edit')}
+                    {doc.html_content ? (
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setViewingDoc(doc)}>
+                        <Eye className="mr-1 h-3 w-3" />
+                        {t('btn_view')}
                       </Button>
+                    ) : doc.file_url ? (
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" asChild>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <Eye className="mr-1 h-3 w-3" />
+                          {t('btn_view')}
+                        </a>
+                      </Button>
+                    ) : null}
+                    {!readOnly && (
+                      doc.google_doc_temp_id ? (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
+                          <a
+                            href={`https://docs.google.com/document/d/${doc.google_doc_temp_id}/edit`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="mr-1 h-3 w-3" />
+                            {t('btn_open_google_docs')}
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEdit(doc)}>
+                          <Pencil className="mr-1 h-3 w-3" />
+                          {t('btn_edit')}
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>

@@ -30,7 +30,7 @@ const logger = createLogger('WORKFLOW_NODE');
 import { render } from '@react-email/render';
 import { resend } from '@/lib/resend';
 import { generateDocument, generatePreviewHtml } from '@/lib/documents/generateDocument';
-import { generateFromGoogleDoc, generateGoogleDocPreviewHtml } from '@/lib/google/generateFromDoc';
+import { generateFromGoogleDoc, prepareGoogleDocPreview } from '@/lib/google/generateFromDoc';
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
@@ -887,6 +887,7 @@ async function executeGenerateDocument(
       let html: string;
       let name: string;
       let tiptapContent: unknown = null;
+      let tempDocId: string | null = null;
       let isGoogleDoc = false;
 
       try {
@@ -900,11 +901,11 @@ async function executeGenerateDocument(
         isGoogleDoc = !!googleTpl;
 
         if (isGoogleDoc) {
-          ({ html, name } = await generateGoogleDocPreviewHtml(
-            tid,
-            templateData,
-            context.legalProcess.organization_id ?? '',
-          ));
+          ({ html, name, tempDocId } = await prepareGoogleDocPreview({
+            googleDocTemplateId: tid,
+            data:                templateData,
+            organizationId:      context.legalProcess.organization_id ?? '',
+          }));
         } else {
           ({ html, name, tiptapContent } = await generatePreviewHtml(tid, templateData, {
             legalProcessId: context.legalProcess.id,
@@ -926,6 +927,7 @@ async function executeGenerateDocument(
             tiptap_content:         null,
             document_name:          name,
             file_url:               null,
+            google_doc_temp_id:     tempDocId,
           }
         : {
             legal_process_id: context.legalProcess.id,

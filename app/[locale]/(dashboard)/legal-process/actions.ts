@@ -930,11 +930,11 @@ export async function getDocumentPreviews(legalProcessId: string) {
 
   const { data } = await (supabase as any)
     .from('generated_documents')
-    .select('id, document_name, html_content, tiptap_content, created_at')
+    .select('id, document_name, html_content, tiptap_content, google_doc_temp_id, created_at')
     .eq('legal_process_id', legalProcessId)
     .eq('is_preview', true)
     .order('created_at', { ascending: true }) as {
-      data: { id: string; document_name: string | null; html_content: string | null; tiptap_content: unknown; created_at: string }[] | null;
+      data: { id: string; document_name: string | null; html_content: string | null; tiptap_content: unknown; google_doc_temp_id: string | null; created_at: string }[] | null;
     };
 
   return data ?? [];
@@ -996,10 +996,10 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
   // Fetch preview records — these contain the selected template IDs AND any edits
   const { data: previewDocs, error: previewDocsError } = await db
     .from('generated_documents')
-    .select('template_id, google_doc_template_id, tiptap_content')
+    .select('template_id, google_doc_template_id, tiptap_content, google_doc_temp_id')
     .eq('legal_process_id', legalProcessId)
     .eq('is_preview', true) as {
-      data: { template_id: string | null; google_doc_template_id: string | null; tiptap_content: unknown }[] | null;
+      data: { template_id: string | null; google_doc_template_id: string | null; tiptap_content: unknown; google_doc_temp_id: string | null }[] | null;
       error: { message: string } | null;
     };
 
@@ -1014,6 +1014,8 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
         data:                templateData,
         organizationId:      organizationId ?? '',
         legalProcessId,
+        // Reutilizar el doc temporal ya sustituido (incluyendo edits del usuario en Google Docs)
+        existingTempDocId:   preview.google_doc_temp_id ?? undefined,
       });
     } else if (preview.template_id) {
       await generateDocument({
@@ -1057,11 +1059,11 @@ export async function getFinalDocuments(legalProcessId: string) {
 
   const { data } = await (supabase as any)
     .from('generated_documents')
-    .select('id, document_name, html_content, tiptap_content, created_at')
+    .select('id, document_name, html_content, tiptap_content, file_url, created_at')
     .eq('legal_process_id', legalProcessId)
     .eq('is_preview', false)
     .order('created_at', { ascending: true }) as {
-      data: { id: string; document_name: string | null; html_content: string | null; tiptap_content: unknown; created_at: string }[] | null;
+      data: { id: string; document_name: string | null; html_content: string | null; tiptap_content: unknown; file_url: string | null; created_at: string }[] | null;
     };
 
   return data ?? [];

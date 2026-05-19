@@ -397,6 +397,7 @@
       "card_footer_label": "Preview",
       "btn_view": "View",
       "btn_edit": "Edit",
+      "btn_open_google_docs": "Open in Google Docs",
       "btn_edit_document": "Edit this document",
       "btn_close": "Close",
       "btn_cancel": "Cancel",
