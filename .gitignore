@@ -42,10 +42,16 @@ yarn-error.log*
 next-env.d.ts
 
 # Claude Code local settings
+.claude.json
+.claude/settings.json
 .claude/settings.local.json
+.claude/CLAUDE.md
 .mcp.json
 skills-lock.json
 .agents/
+
+# CodeGraph index (generated, machine-specific)
+.codegraph/
 
 # Sentry Config File
 .env.sentry-build-plugin
