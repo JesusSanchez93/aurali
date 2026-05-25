@@ -44,7 +44,7 @@ export default function ClientList({ data }: ClientListProps) {
 
     return (
         <div className="mt-8 space-y-4">
-            <div className="grid gap-4 md:grid-cols-1">
+            <div className="grid gap-7 md:grid-cols-1">
                 {data.map((client, index) => (
                     <ClientCard
                         key={client.id}
