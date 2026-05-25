@@ -4,10 +4,12 @@ import { tiptapToHTML } from '@/lib/tiptap-to-html';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const browser = await getBrowser();
   const page = await browser.newPage();
-
-  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('legal_templates')

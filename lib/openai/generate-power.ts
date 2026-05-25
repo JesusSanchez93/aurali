@@ -23,7 +23,6 @@ export async function generatePower(input: PowerInput) {
 
   const content = completion.choices[0].message.content;
 
-  console.log('content: ', typeof content);
 
   const { error } = await supabase.from('test_document').insert({
     title: 'Poder especial',

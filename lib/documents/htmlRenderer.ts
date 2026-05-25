@@ -25,9 +25,9 @@ export function substituteVars(
     if (!Object.prototype.hasOwnProperty.call(data, key)) return match;
     const value = data[key] ?? '';
     if (isImageUrl(value)) {
-      return `<img src="${value}" alt="" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;display:inline-block;" />`;
+      return `<img src="${escapeHtml(value)}" alt="" style="max-height:56px;max-width:180px;object-fit:contain;vertical-align:middle;display:inline-block;" />`;
     }
-    return value;
+    return escapeHtml(value);
   });
 }
 
@@ -253,16 +253,18 @@ export function wrapWithPageLayout(
   options: PageLayoutOptions = {},
 ): string {
   const { headerHtml, footerHtml, fontFamily = 'Inter', suppressTopBottomPageMargin = false, marginLeft = 3, marginRight = 3 } = options;
+  // Strip characters that could break CSS context (quotes, semicolons, braces)
+  const safeFont = fontFamily.replace(/['"`;{}\\]/g, '').trim() || 'Inter';
   const topBottomMargin = suppressTopBottomPageMargin ? '0' : '2.5cm';
   // Determine font import: explicit entry, dynamic Google Fonts URL, or nothing for system fonts
-  const fontImportUrl = GOOGLE_FONT_IMPORTS[fontFamily]
-    ?? (!SYSTEM_FONTS.has(fontFamily)
-      ? `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:ital,wght@0,400;0,700;1,400&display=swap`
+  const fontImportUrl = GOOGLE_FONT_IMPORTS[safeFont]
+    ?? (!SYSTEM_FONTS.has(safeFont)
+      ? `https://fonts.googleapis.com/css2?family=${encodeURIComponent(safeFont)}:ital,wght@0,400;0,700;1,400&display=swap`
       : undefined);
   const fontLinkTag = fontImportUrl ? `<link rel="stylesheet" href="${fontImportUrl}" />` : '';
   // Use correct fallback category (serif vs sans-serif) so Puppeteer picks the right generic
-  const fallback = SERIF_FONTS.has(fontFamily) ? 'serif' : 'sans-serif';
-  const fontStack = `'${fontFamily}', ${fallback}`;
+  const fallback = SERIF_FONTS.has(safeFont) ? 'serif' : 'sans-serif';
+  const fontStack = `'${safeFont}', ${fallback}`;
 
   return `<!DOCTYPE html>
 <html lang="es">

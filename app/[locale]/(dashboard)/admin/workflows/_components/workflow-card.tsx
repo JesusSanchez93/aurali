@@ -22,6 +22,7 @@ import { es } from 'date-fns/locale'
 import { Loader2, Pencil, Trash2, Upload, Workflow } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteGlobalWorkflow, updateGlobalWorkflow } from '../actions'
+import { sanitizeSvg } from '@/lib/sanitize-svg'
 
 export type WorkflowItem = {
   id: string
@@ -112,7 +113,7 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
             {wf.icon_svg ? (
               <span
                 className="flex h-8 w-8 items-center justify-center [&_svg]:h-full [&_svg]:w-full"
-                dangerouslySetInnerHTML={{ __html: wf.icon_svg }}
+                dangerouslySetInnerHTML={{ __html: sanitizeSvg(wf.icon_svg) }}
               />
             ) : (
               <Workflow className="h-8 w-8" />
@@ -306,7 +307,7 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
                   <span className="text-xs text-muted-foreground">Vista previa:</span>
                   <span
                     className="flex h-8 w-8 items-center justify-center [&_svg]:h-full [&_svg]:w-full"
-                    dangerouslySetInnerHTML={{ __html: iconSvg }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeSvg(iconSvg) }}
                   />
                 </div>
               )}

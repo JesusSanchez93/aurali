@@ -4,12 +4,49 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin();
 
+const securityHeaders = [
+  // A05 — Clickjacking (X-Frame-Options redundant with CSP frame-ancestors, but kept for older browsers)
+  { key: 'X-Frame-Options', value: 'DENY' },
+  // A05 — MIME sniffing
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  // A02 — Limit referrer info sent to third parties
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  // A05 — Disable unnecessary browser features
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(), payment=()' },
+  // A05 — Content Security Policy
+  // unsafe-inline required: Next.js hydration scripts + TipTap inline styles
+  // unsafe-eval required: Next.js dev mode (remove in prod if possible)
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      // Supabase realtime + storage + auth, Sentry tunneled via /monitoring
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com ${process.env.NEXT_PUBLIC_APP_URL ?? ''}`,
+      "frame-ancestors 'none'",
+    ].join('; '),
+  },
+];
+
 const nextConfig: NextConfig = {
   experimental: {
     viewTransition: true,
     serverActions: {
       bodySizeLimit: '20mb',
     },
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: securityHeaders,
+      },
+    ];
   },
 };
 

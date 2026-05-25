@@ -1,9 +1,14 @@
 import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const formData = await request.formData();
     const audio = formData.get('audio');
@@ -59,7 +64,7 @@ INSTRUCCIONES DE REDACCIÓN:
     const text = completion.choices[0].message.content?.trim() ?? raw;
     return NextResponse.json({ text });
   } catch (error) {
-    console.error('[transcribe-audio]', error);
+    console.error('[transcribe-audio]', error instanceof Error ? error.message : 'unknown error');
     return NextResponse.json({ error: 'Error procesando el audio' }, { status: 500 });
   }
 }

@@ -7,6 +7,7 @@ import { CheckCircle2, ArrowRight, Workflow as WorkflowIcon } from 'lucide-react
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { selectWorkflowForOrg } from './actions'
+import { sanitizeSvg } from '@/lib/sanitize-svg'
 import { toast } from 'sonner'
 
 type WorkflowOption = {
@@ -80,7 +81,7 @@ export function WorkflowSelectionForm({ workflows }: Props) {
                     {wf.icon_svg ? (
                       <span
                         className="flex h-4 w-4 items-center justify-center [&_svg]:h-full [&_svg]:w-full"
-                        dangerouslySetInnerHTML={{ __html: wf.icon_svg }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeSvg(wf.icon_svg) }}
                       />
                     ) : (
                       <WorkflowIcon className="h-3.5 w-3.5" />

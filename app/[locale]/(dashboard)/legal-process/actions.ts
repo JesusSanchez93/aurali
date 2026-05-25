@@ -229,12 +229,13 @@ export async function createLegalProcessDraft(values: {
     }
 
     const organizationId = profile.current_organization_id;
+    const normalizedEmail = values.email.trim().toLowerCase();
 
   // Look up existing client scoped to this org to avoid cross-org matches
     const { data: client } = await supabase
       .from('clients')
       .select('id')
-      .eq('email', values.email)
+      .eq('email', normalizedEmail)
       .eq('organization_id', organizationId)
       .maybeSingle();
 
@@ -247,7 +248,7 @@ export async function createLegalProcessDraft(values: {
           status: 'draft',
           document_id: values.document_id,
           document_number: values.document_number,
-          email: values.email,
+          email: normalizedEmail,
           created_by: user.id,
           organization_id: organizationId,
         })
@@ -260,7 +261,7 @@ export async function createLegalProcessDraft(values: {
           const { data: existingClient } = await supabase
             .from('clients')
             .select('id')
-            .eq('email', values.email)
+            .eq('email', normalizedEmail)
             .eq('organization_id', organizationId)
             .single();
           clientId = existingClient?.id;
@@ -304,7 +305,7 @@ export async function createLegalProcessDraft(values: {
           document_slug: values.document_slug,
           document_number: values.document_number,
           client_id: clientId,
-          email: values.email,
+          email: normalizedEmail,
           created_by: user.id,
         });
 
@@ -354,7 +355,7 @@ export async function createLegalProcessDraft(values: {
       metadata: {
         document_slug: values.document_slug,
         assigned_to: values.assigned_to,
-        client_email: values.email,
+        client_email: normalizedEmail,
         trace_id: traceId,
       },
     });
