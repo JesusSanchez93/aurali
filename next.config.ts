@@ -27,7 +27,8 @@ const securityHeaders = [
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
       // Supabase realtime + storage + auth, Sentry tunneled via /monitoring
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com ${process.env.NEXT_PUBLIC_APP_URL ?? ''}`,
+      // Local Supabase (dev only) speaks plain http/ws on 127.0.0.1:54321
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com ${process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:54321 ws://127.0.0.1:54321' : ''} ${process.env.NEXT_PUBLIC_APP_URL ?? ''}`,
       "frame-ancestors 'none'",
     ].join('; '),
   },
