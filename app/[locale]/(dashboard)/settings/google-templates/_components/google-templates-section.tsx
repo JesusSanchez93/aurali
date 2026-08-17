@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { FileText, Plus, Pencil, Trash2, ExternalLink, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 import type { VariableGroup } from '@/components/common/tip-tap/variable-types';
 import {

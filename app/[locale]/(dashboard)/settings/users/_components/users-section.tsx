@@ -10,7 +10,7 @@ import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
 import { FormSelect } from '@/components/common/form/form-select';
 import { Spinner } from '@/components/ui/spinner';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { UserPlus, Trash2, ShieldCheck, User, X, Mail } from 'lucide-react';
 import Sheet from '@/components/common/sheet';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';

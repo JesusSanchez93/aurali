@@ -13,7 +13,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Sparkles, Plus, Pencil, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { AiVariable } from '@/app/[locale]/(dashboard)/settings/ai-variables/actions';
 import { deleteAiVariable } from '@/app/[locale]/(dashboard)/settings/ai-variables/actions';
 import { AiVariableForm } from './ai-variable-form';

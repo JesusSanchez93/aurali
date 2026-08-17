@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { CheckCircle2, ArrowRight, Workflow } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { selectWorkflowForOrg } from '@/app/[locale]/onboarding/workflow-selection/actions'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 type WorkflowOption = {
   id: string

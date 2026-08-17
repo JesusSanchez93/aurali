@@ -11,7 +11,7 @@ import {
   type OnConnect,
   type Connection,
 } from '@xyflow/react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Save, Loader2, ArrowLeft, Eye, ChevronLeft, ChevronRight, AlignCenterHorizontal, AlignCenterVertical } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Sparkles, Lightbulb, Check, X, AlertTriangle, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import type { AiVariable } from '@/app/[locale]/(dashboard)/settings/ai-variables/actions';
 import { createAiVariable, updateAiVariable } from '@/app/[locale]/(dashboard)/settings/ai-variables/actions';
 import { validatePrompt, PROMPT_MAX_LENGTH } from '@/lib/ai-variables/validate-prompt';

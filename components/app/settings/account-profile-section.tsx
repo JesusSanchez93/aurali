@@ -17,7 +17,7 @@ import { CountrySelector } from '@/components/ui/country-selector';
 import { RegionSelector } from '@/components/ui/region-selector';
 import { CitySelector } from '@/components/ui/city-selector';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SignatureInput } from '@/components/common/signature-input';
 

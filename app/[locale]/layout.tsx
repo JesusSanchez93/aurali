@@ -2,7 +2,7 @@ import { Geist } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import '../globals.css';
 import { Suspense } from 'react';
-import { Toaster } from '@/components/ui/sonner';
+import { Toaster } from '@/components/ui/toaster';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -90,7 +90,7 @@ export default async function RootLayout({
               {children}
               <SpeedInsights />
             </ThemeProvider>
-            <Toaster position="top-right" richColors />
+            <Toaster position="top-right" />
           </Suspense>
         </NextIntlClientProvider>
       </body>

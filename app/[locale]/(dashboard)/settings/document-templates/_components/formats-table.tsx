@@ -7,7 +7,7 @@ import { FileText, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { deleteTemplate } from '../actions';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 type Template = {
     id: string;

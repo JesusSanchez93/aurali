@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, FileText } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { addOrgDocument, removeOrgDocument, toggleOrgDocument } from '../actions';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import type { OrgDocument, CatalogDocumentOption } from '../actions';

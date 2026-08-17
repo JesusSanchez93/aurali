@@ -20,7 +20,7 @@ import { Link } from '@/i18n/routing'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Loader2, Pencil, Trash2, Upload, Workflow } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { deleteGlobalWorkflow, updateGlobalWorkflow } from '../actions'
 import { sanitizeSvg } from '@/lib/sanitize-svg'
 

@@ -12,7 +12,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
 import { FormSelect } from '@/components/common/form/form-select';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { addCatalogBank, updateCatalogBank, deleteCatalogBank, toggleCatalogBank } from '../actions';
 import Sheet from '@/components/common/sheet';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';

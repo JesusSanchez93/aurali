@@ -8,7 +8,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { selectWorkflowForOrg } from './actions'
 import { sanitizeSvg } from '@/lib/sanitize-svg'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 type WorkflowOption = {
   id: string

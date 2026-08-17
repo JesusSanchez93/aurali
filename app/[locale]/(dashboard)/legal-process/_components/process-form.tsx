@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { useForm } from 'react-hook-form';
 import { useTransition, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { FormSelect } from '@/components/common/form/form-select';
 import { useTranslations } from 'next-intl';
 import { FormInput } from '@/components/common/form/form-input';

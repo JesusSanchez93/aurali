@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { saveOrgBanks } from '../actions';
 import { useTranslations } from 'next-intl';
 import { useMultiSelect } from '@/hooks/use-multi-select';

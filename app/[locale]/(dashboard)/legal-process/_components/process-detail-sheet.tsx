@@ -10,7 +10,7 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { ActionReasonDialog } from '@/components/common/action-reason-dialog';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import {
     getLegalProcessDetail,
     archiveLegalProcess,

@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { addOrgBank, removeOrgBank, updateOrgBankLegalRep, toggleOrgBank } from '../actions';
 import Sheet from '@/components/common/sheet';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';

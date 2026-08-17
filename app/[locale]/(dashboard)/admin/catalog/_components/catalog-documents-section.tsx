@@ -11,7 +11,7 @@ import { Plus, Trash2, EyeOff, Eye, Search, Pencil } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { addCatalogDocument, updateCatalogDocument, deleteCatalogDocument, toggleCatalogDocument } from '../actions';
 import Sheet from '@/components/common/sheet';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';

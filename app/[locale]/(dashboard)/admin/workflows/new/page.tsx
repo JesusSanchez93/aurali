@@ -11,7 +11,7 @@ import { FormTextarea } from '@/components/common/form/form-textarea'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Link } from '@/i18n/routing'
 import { createGlobalWorkflow } from '../actions'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 const schema = z.object({
   name: z.string().min(1, 'El nombre es requerido').trim(),
