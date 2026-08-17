@@ -126,7 +126,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         setActioning(true);
         try {
             await archiveLegalProcess(processId, note || undefined);
-            toast.success(processT('archive.success'));
+            toast.success(processT('archive.success'), { description: processT('archive.success_description') });
             loadData(processId);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : commonT('error'));
@@ -140,7 +140,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         setActioning(true);
         try {
             await declineLegalProcess(processId, note || undefined);
-            toast.success(processT('decline.success'));
+            toast.success(processT('decline.success'), { description: processT('decline.success_description') });
             loadData(processId);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : commonT('error'));
@@ -154,7 +154,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         setActioning(true);
         try {
             await revertArchivedProcess(processId);
-            toast.success(processT('archive.revert_success'));
+            toast.success(processT('archive.revert_success'), { description: processT('archive.revert_success_description') });
             loadData(processId);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : commonT('error'));

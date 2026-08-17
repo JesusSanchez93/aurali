@@ -295,6 +295,7 @@
     "resend_email": {
       "trigger": "Resend welcome email",
       "success": "Email sent successfully",
+      "success_description": "The client will receive the form link again.",
       "error": "Failed to send email"
     },
     "archive": {
@@ -304,11 +305,13 @@
       "confirm_button": "Archive",
       "cancel_button": "Cancel",
       "success": "Process archived",
+      "success_description": "The process is now inactive. Its data is preserved and you can revert this action anytime.",
       "revert_trigger": "Revert archive",
       "revert_confirm_title": "Revert archive",
       "revert_confirm_description": "Do you want to restore this process to its previous status? The process will return to the state it was in before being archived.",
       "revert_confirm_button": "Restore",
       "revert_success": "Process restored",
+      "revert_success_description": "The process is back to the state it was in before being archived.",
       "note_label": "Note",
       "note_placeholder": "Add an optional note..."
     },
@@ -319,6 +322,7 @@
       "confirm_button": "Decline",
       "cancel_button": "Cancel",
       "success": "Process declined",
+      "success_description": "The process was marked as rejected and will not continue. This action cannot be undone.",
       "note_label": "Note",
       "note_placeholder": "Add an optional note..."
     },

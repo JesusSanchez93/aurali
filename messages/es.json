@@ -295,6 +295,7 @@
     "resend_email": {
       "trigger": "Reenviar email de inicio",
       "success": "Email reenviado correctamente",
+      "success_description": "El cliente recibirá nuevamente el enlace para completar el formulario.",
       "error": "No se pudo reenviar el email"
     },
     "archive": {
@@ -304,11 +305,13 @@
       "confirm_button": "Archivar",
       "cancel_button": "Cancelar",
       "success": "Proceso archivado",
+      "success_description": "El proceso quedó inactivo. Sus datos se conservan y puedes revertir esta acción cuando quieras.",
       "revert_trigger": "Revertir archivo",
       "revert_confirm_title": "Revertir archivo",
       "revert_confirm_description": "¿Deseas restaurar este proceso a su estado anterior? El proceso volverá al estado en que se encontraba antes de ser archivado.",
       "revert_confirm_button": "Restaurar",
       "revert_success": "Proceso restaurado",
+      "revert_success_description": "El proceso volvió al estado en que se encontraba antes de ser archivado.",
       "note_label": "Nota",
       "note_placeholder": "Agrega una nota opcional..."
     },
@@ -319,6 +322,7 @@
       "confirm_button": "Declinar",
       "cancel_button": "Cancelar",
       "success": "Proceso declinado",
+      "success_description": "El proceso fue marcado como rechazado y no continuará. Esta acción no se puede deshacer.",
       "note_label": "Nota",
       "note_placeholder": "Agrega una nota opcional..."
     },

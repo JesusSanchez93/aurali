@@ -148,11 +148,11 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
     .filter(Boolean)
     .join(' ') || listT('no_name');
 
-  const runAction = async (fn: () => Promise<void>, successMsg: string) => {
+  const runAction = async (fn: () => Promise<void>, successMsg: string, successDescription?: string) => {
     setActioning(true);
     try {
       await fn();
-      toast.success(successMsg);
+      toast.success(successMsg, { description: successDescription });
       onRefresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : commonT('error'));
@@ -162,10 +162,18 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
   };
 
   const handleArchiveWithNote = (note: string) =>
-    runAction(() => archiveLegalProcess(process.id, note || undefined), t('archive.success'));
+    runAction(
+      () => archiveLegalProcess(process.id, note || undefined),
+      t('archive.success'),
+      t('archive.success_description'),
+    );
 
   const handleDeclineWithNote = (note: string) =>
-    runAction(() => declineLegalProcess(process.id, note || undefined), t('decline.success'));
+    runAction(
+      () => declineLegalProcess(process.id, note || undefined),
+      t('decline.success'),
+      t('decline.success_description'),
+    );
 
   return (
     <>
@@ -266,7 +274,11 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
                       {isDraft && (
                         <>
                           <DropdownMenuItem
-                            onClick={() => runAction(() => resendDraftEmail(process.id), t('resend_email.success'))}
+                            onClick={() => runAction(
+                              () => resendDraftEmail(process.id),
+                              t('resend_email.success'),
+                              t('resend_email.success_description'),
+                            )}
                             className="gap-2"
                           >
                             <SendHorizonal className="h-4 w-4" />
@@ -327,6 +339,7 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
         onConfirm={() => runAction(
           () => revertArchivedProcess(process.id),
           t('archive.revert_success'),
+          t('archive.revert_success_description'),
         )}
         title={t('archive.revert_confirm_title')}
         description={t('archive.revert_confirm_description')}
