@@ -21,10 +21,10 @@ export async function AuthShell({ children, variant }: AuthShellProps) {
   const description = variant === 'login' ? t('loginDescription') : t('signUpDescription');
 
   return (
-    <div className="relative min-h-svh overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.18),_transparent_32%),linear-gradient(180deg,_#ffffff_0%,_#fafafa_54%,_#f5f3ff_100%)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(30,27,75,0.08)_1px,_transparent_0)] [background-size:22px_22px]" />
-      <div className="absolute left-[8%] top-[12%] h-36 w-36 rounded-full bg-[rgba(124,58,237,0.12)] blur-3xl" />
-      <div className="absolute bottom-[10%] right-[8%] h-40 w-40 rounded-full bg-[rgba(245,158,11,0.12)] blur-3xl" />
+    <div className="relative min-h-svh overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.18),_transparent_32%),linear-gradient(180deg,_#ffffff_0%,_#fafafa_54%,_#f5f3ff_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(124,58,237,0.22),_transparent_32%),linear-gradient(180deg,_#0a0a0f_0%,_#0d0d12_54%,_#12101c_100%)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(30,27,75,0.08)_1px,_transparent_0)] [background-size:22px_22px] dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.06)_1px,_transparent_0)]" />
+      <div className="absolute left-[8%] top-[12%] h-36 w-36 rounded-full bg-[rgba(124,58,237,0.12)] blur-3xl dark:bg-[rgba(124,58,237,0.2)]" />
+      <div className="absolute bottom-[10%] right-[8%] h-40 w-40 rounded-full bg-[rgba(245,158,11,0.12)] blur-3xl dark:bg-[rgba(245,158,11,0.16)]" />
 
       <div className="relative z-10 flex min-h-svh flex-col">
         <header className="px-4 py-4 sm:px-6 lg:px-8">
@@ -34,7 +34,7 @@ export async function AuthShell({ children, variant }: AuthShellProps) {
             <div className="flex items-center gap-2">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/80 px-4 py-2 text-sm font-medium text-[#1E1B4B] shadow-sm backdrop-blur transition-colors hover:bg-white"
+                className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/80 px-4 py-2 text-sm font-medium text-[#1E1B4B] shadow-sm backdrop-blur transition-colors hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
               >
                 <ArrowLeft className="h-4 w-4" />
                 {t('backHome')}
@@ -49,13 +49,13 @@ export async function AuthShell({ children, variant }: AuthShellProps) {
             <section className="order-1 lg:col-start-1 lg:row-start-1">
               <div className="max-w-lg space-y-5 lg:max-w-md">
                 <div>
-                  <Link href="/" className="mb-2 inline-flex items-center gap-3 text-[#1E1B4B]">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1E1B4B] text-sm font-bold text-white shadow-[0_14px_30px_-18px_rgba(30,27,75,0.75)]">
+                  <Link href="/" className="mb-2 inline-flex items-center gap-3 text-[#1E1B4B] dark:text-white">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1E1B4B] text-sm font-bold text-white shadow-[0_14px_30px_-18px_rgba(30,27,75,0.75)] dark:bg-white dark:text-[#1E1B4B]">
                       A
                     </span>
                     <p className="text-xl font-bold tracking-tight">Aurali</p>
                   </Link>
-                  <p className="text-xs font-medium uppercase tracking-[0.22em] text-[#6B7280]">
+                  <p className="text-xs font-medium uppercase tracking-[0.22em] text-[#6B7280] dark:text-slate-400">
                     {t('brandLine')}
                   </p>
                 </div>
@@ -70,15 +70,15 @@ export async function AuthShell({ children, variant }: AuthShellProps) {
             </section>
 
             <section className="order-3 lg:col-start-1 lg:row-start-2">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(124,58,237,0.16)] bg-white/78 px-3.5 py-2 text-xs font-semibold text-[#1E1B4B] backdrop-blur">
-                <ShieldCheck className="h-4 w-4 text-violet-600" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[rgba(124,58,237,0.16)] bg-white/78 px-3.5 py-2 text-xs font-semibold text-[#1E1B4B] backdrop-blur dark:border-[rgba(124,58,237,0.3)] dark:bg-white/5 dark:text-white">
+                <ShieldCheck className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                 {t('eyebrow')}
               </div>
               <div className="max-w-lg space-y-3 lg:max-w-md">
-                <h1 className="max-w-[14ch] text-3xl font-bold tracking-tight text-[#111827] sm:text-4xl lg:text-[2.65rem]">
+                <h1 className="max-w-[14ch] text-3xl font-bold tracking-tight text-[#111827] sm:text-4xl lg:text-[2.65rem] dark:text-white">
                   {title}
                 </h1>
-                <p className="max-w-xl text-sm leading-7 text-[#6B7280] sm:text-base">
+                <p className="max-w-xl text-sm leading-7 text-[#6B7280] sm:text-base dark:text-slate-400">
                   {description}
                 </p>
               </div>

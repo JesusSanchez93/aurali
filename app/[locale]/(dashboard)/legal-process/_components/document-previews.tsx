@@ -263,12 +263,7 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
           </DialogHeader>
 
           <div
-            className="min-h-0 flex-1 overflow-y-auto py-8 px-4"
-            style={{
-              backgroundColor: '#f3f4f6',
-              backgroundImage: 'radial-gradient(circle, #d1d5db 1px, transparent 1px)',
-              backgroundSize: '20px 20px',
-            }}
+            className="min-h-0 flex-1 overflow-y-auto py-8 px-4 bg-[#f3f4f6] [background-image:radial-gradient(circle,_#d1d5db_1px,_transparent_1px)] [background-size:20px_20px] dark:bg-[#1a1a1f] dark:[background-image:radial-gradient(circle,_#3f3f46_1px,_transparent_1px)]"
           >
             {viewingDoc?.html_content && (
               <div className="overflow-x-auto">

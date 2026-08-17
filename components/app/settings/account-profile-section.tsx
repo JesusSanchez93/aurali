@@ -149,7 +149,7 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
           <h2 className="text-lg font-semibold">{t('personal_data')}</h2>
           <p className="text-sm text-muted-foreground">{t('personal_data_description')}</p>
         </div>
-        <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] flex flex-col sm:flex-row gap-8">
+        <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none flex flex-col sm:flex-row gap-8">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -276,7 +276,7 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
 
         {signatureUrl ? (
           /* ── Has signature: card with preview + metadata ── */
-          <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] flex flex-col sm:flex-row gap-8">
+          <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none flex flex-col sm:flex-row gap-8">
             {/* Signature canvas area */}
             <div className="flex-shrink-0 w-full sm:w-auto">
               <div className="relative flex w-full sm:w-72 items-center justify-center rounded-lg border border-dashed p-2">
@@ -286,14 +286,14 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
                   alt="Firma"
                   className="relative z-10 block max-h-full max-w-full object-contain"
                 />
-                <span className="pointer-events-none absolute left-[8%] right-[8%] top-[70%] border-t border-dashed border-slate-300" />
+                <span className="pointer-events-none absolute left-[8%] right-[8%] top-[70%] border-t border-dashed border-slate-300 dark:border-slate-600" />
               </div>
             </div>
 
             {/* Metadata + actions */}
             <div className="flex flex-1 flex-col gap-4 w-full">
               {/* Status badge */}
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-green-100 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                 {t('signature_registered')}
               </span>
@@ -375,7 +375,7 @@ export default function AccountProfileSection({ profile, documentTypeOptions, me
           <h2 className="text-lg font-semibold">{t('organizations_title')}</h2>
           <p className="text-sm text-muted-foreground">{t('organizations_description')}</p>
         </div>
-        <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] flex flex-col gap-8">
+        <div className="rounded-xl border border-[#a9b4b9]/20 bg-white p-6 shadow-[0px_12px_32px_rgba(42,52,57,0.06)] dark:border-white/10 dark:bg-slate-900 dark:shadow-none flex flex-col gap-8">
         {memberships.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('organizations_empty')}</p>
         ) : (

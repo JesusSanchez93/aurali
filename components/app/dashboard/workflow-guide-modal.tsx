@@ -164,9 +164,9 @@ function DocNodesIllustration() {
 
 const STATUS_CLASSES: Record<string, string> = {
   draft:          'bg-muted text-muted-foreground',
-  completed:      'bg-blue-50 text-blue-700 border-blue-200',
-  approved:       'bg-green-50 text-green-700 border-green-200',
-  documents_sent: 'bg-purple-50 text-purple-700 border-purple-200',
+  completed:      'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/50',
+  approved:       'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/50',
+  documents_sent: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/50',
   finished:       'bg-foreground text-background',
 }
 
@@ -228,7 +228,7 @@ function ProcessPreviewIllustration() {
                 
 
                 <div className="flex w-[88px] shrink-0 flex-col items-end gap-2">
-                  <div className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-50 px-2 py-2 text-[11px] font-medium text-blue-700">
+                  <div className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-50 px-2 py-2 text-[11px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
                     <History className="h-3.5 w-3.5" />
                     {t('illustrations.preview.history')}
                   </div>

@@ -42,6 +42,11 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     --sidebar-background: 0 0% 98%;
+
+    --landing-bg: #FAFAFA;
+    --landing-surface: #FFFFFF;
+    --landing-text: #111827;
+    --landing-muted: #6B7280;
   }
 
   .dark {
@@ -79,6 +84,11 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     --sidebar-background: 240 5.9% 10%;
+
+    --landing-bg: #0a0a0f;
+    --landing-surface: #13111a;
+    --landing-text: #F5F5F7;
+    --landing-muted: #A1A1AA;
   }
 }
 

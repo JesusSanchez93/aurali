@@ -83,10 +83,10 @@ export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin, connecte
           </li>
         </ol>
 
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400">
           <strong>Importante:</strong> el Google Doc debe estar compartido con la cuenta que conectes
           (al menos con permiso de <em>Lector</em>).{' '}
-          <Button variant="link" size="sm" className="h-auto p-0 text-xs text-amber-800 underline" asChild>
+          <Button variant="link" size="sm" className="h-auto p-0 text-xs text-amber-800 underline dark:text-amber-400" asChild>
             <a href="https://support.google.com/docs/answer/2494822" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1">
               Cómo compartir un Doc <ExternalLink className="h-3 w-3" />
             </a>

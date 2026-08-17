@@ -88,7 +88,7 @@ export const CustomNode = memo(function CustomNode({
             deleteElements({ nodes: [{ id }] });
           }}
           className={cn(
-            'absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-red-50 text-destructive shadow-sm transition-opacity hover:bg-destructive hover:text-destructive-foreground ring-1 ring-white',
+            'absolute -right-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-red-50 text-destructive shadow-sm transition-opacity hover:bg-destructive hover:text-destructive-foreground ring-1 ring-white dark:bg-red-950/60 dark:ring-slate-900',
             isNodeSelected && selectedCount === 1 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
           )}
         >

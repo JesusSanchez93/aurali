@@ -58,17 +58,17 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
 
       {/* Feedback del flujo OAuth */}
       {google === 'connected' && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-400">
           Cuenta de Google conectada correctamente.
         </div>
       )}
       {google === 'error' && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">
           Error al conectar la cuenta de Google. Verifica que las credenciales estén bien configuradas e inténtalo de nuevo.
         </div>
       )}
       {google === 'cancelled' && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400">
           Conexión cancelada.
         </div>
       )}

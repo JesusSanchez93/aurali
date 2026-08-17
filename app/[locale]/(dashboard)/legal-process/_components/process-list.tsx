@@ -6,7 +6,7 @@ import { Database } from '@/types/database.types';
 import { useSearchParams } from 'next/navigation';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Mail, Phone, CalendarDays, Loader2, MoreHorizontal, Archive, XCircle, RotateCcw, SendHorizonal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -183,7 +183,7 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
         />
         {/* Dot grid — right half, above gradient */}
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 w-1/2 rounded-r-xl opacity-40"
+          className="pointer-events-none absolute inset-y-0 right-0 w-1/2 rounded-r-xl opacity-40 dark:opacity-[0.06]"
           style={{
             backgroundImage: 'radial-gradient(circle, white 2px, transparent 2px)',
             backgroundSize: '14px 14px',

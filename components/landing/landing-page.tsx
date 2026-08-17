@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/common/logo';
+import { ThemeSwitcher } from '@/components/app/theme-switcher';
 
 const entryTransition = { duration: 0.5, ease: 'easeOut' as const };
 const sectionViewport = { once: true, margin: '-80px' };
@@ -197,10 +198,6 @@ export function LandingPage({
         ['--landing-primary' as string]: '#1E1B4B',
         ['--landing-accent' as string]: '#7C3AED',
         ['--landing-highlight' as string]: '#F59E0B',
-        ['--landing-bg' as string]: '#FAFAFA',
-        ['--landing-surface' as string]: '#FFFFFF',
-        ['--landing-text' as string]: '#111827',
-        ['--landing-muted' as string]: '#6B7280',
       }}
     >
       <LandingNav
@@ -271,7 +268,7 @@ function LandingNav({
         className={cn(
           'fixed inset-x-0 top-0 z-50 transition-all duration-300',
           scrolled
-            ? 'border-b border-black/5 bg-white/80 shadow-[0_12px_40px_-28px_rgba(30,27,75,0.35)] backdrop-blur-md'
+            ? 'border-b border-black/5 bg-white/80 shadow-[0_12px_40px_-28px_rgba(30,27,75,0.35)] backdrop-blur-md dark:border-white/10 dark:bg-black/40'
             : 'bg-transparent',
         )}
       >
@@ -287,14 +284,14 @@ function LandingNav({
                   key={link.href}
                   href={link.href}
                   onClick={(e) => scrollToSection(e, link.href)}
-                  className="relative rounded-full px-4 py-2 text-sm font-medium transition-colors hover:text-[var(--landing-primary)]"
+                  className="relative rounded-full px-4 py-2 text-sm font-medium transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white"
                   whileTap={{ scale: 0.92 }}
                   transition={{ type: 'spring', stiffness: 600, damping: 20 }}
                 >
                   {activeSection === link.href && (
                     <motion.div
                       layoutId="nav-pill"
-                      className="absolute inset-0 rounded-full bg-[rgba(30,27,75,0.07)]"
+                      className="absolute inset-0 rounded-full bg-[rgba(30,27,75,0.07)] dark:bg-white/10"
                       transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                     />
                   )}
@@ -302,7 +299,7 @@ function LandingNav({
                     className={cn(
                       'relative z-10 transition-colors',
                       activeSection === link.href
-                        ? 'text-[var(--landing-primary)]'
+                        ? 'text-[var(--landing-primary)] dark:text-white'
                         : 'text-[color:var(--landing-muted)]',
                     )}
                   >
@@ -315,24 +312,28 @@ function LandingNav({
 
           <div className="hidden items-center gap-3 lg:flex">
             <LandingLanguageSwitcher />
+            <ThemeSwitcher />
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }}>
               <Button
                 asChild
-                className="rounded-full border-0 bg-[var(--landing-highlight)] px-6 text-[var(--landing-primary)] shadow-[0_16px_30px_-18px_rgba(245,158,11,0.8)] hover:bg-[#f8ab27]"
+                className="rounded-full border-0 bg-[var(--landing-highlight)] px-6 text-[#1E1B4B] shadow-[0_16px_30px_-18px_rgba(245,158,11,0.8)] hover:bg-[#f8ab27]"
               >
                 <Link href={accessHref}>{accessLabel}</Link>
               </Button>
             </motion.div>
           </div>
 
-          <button
-            type="button"
-            onClick={onMenuToggle}
-            aria-label={t('nav.mobileAria')}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white/80 text-[var(--landing-primary)] shadow-sm backdrop-blur lg:hidden"
-          >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <ThemeSwitcher />
+            <button
+              type="button"
+              onClick={onMenuToggle}
+              aria-label={t('nav.mobileAria')}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white/80 text-[var(--landing-primary)] shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-white"
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -344,7 +345,7 @@ function LandingNav({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="fixed inset-x-0 bottom-0 top-[76px] z-40 bg-white/18 backdrop-blur-md lg:hidden"
+              className="fixed inset-x-0 bottom-0 top-[76px] z-40 bg-white/18 backdrop-blur-md lg:hidden dark:bg-black/40"
               style={{ willChange: 'opacity' }}
               onClick={onClose}
             />
@@ -353,7 +354,7 @@ function LandingNav({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -18 }}
               transition={entryTransition}
-              className="fixed inset-x-0 top-[76px] z-50 border-t border-black/5 bg-white/95 px-4 pb-6 pt-3 shadow-lg backdrop-blur lg:hidden"
+              className="fixed inset-x-0 top-[76px] z-50 border-t border-black/5 bg-white/95 px-4 pb-6 pt-3 shadow-lg backdrop-blur lg:hidden dark:border-white/10 dark:bg-[#0d0d12]/98"
               style={{ willChange: 'transform, opacity' }}
             >
               <div className="mx-auto flex max-w-7xl flex-col gap-2">
@@ -365,14 +366,14 @@ function LandingNav({
                     key={link.href}
                     href={link.href}
                     onClick={(e) => { scrollToSection(e, link.href); onClose(); }}
-                    className="rounded-2xl px-4 py-3 text-sm font-medium text-[var(--landing-primary)] hover:bg-[rgba(124,58,237,0.08)]"
+                    className="rounded-2xl px-4 py-3 text-sm font-medium text-[var(--landing-primary)] hover:bg-[rgba(124,58,237,0.08)] dark:text-white dark:hover:bg-white/10"
                   >
                     {link.label}
                   </a>
                 ))}
                 <Button
                   asChild
-                  className="mt-2 rounded-full border-0 bg-[var(--landing-highlight)] text-[var(--landing-primary)] hover:bg-[#f8ab27]"
+                  className="mt-2 rounded-full border-0 bg-[var(--landing-highlight)] text-[#1E1B4B] hover:bg-[#f8ab27]"
                 >
                   <Link href={accessHref}>{accessLabel}</Link>
                 </Button>
@@ -406,7 +407,7 @@ function LandingLanguageSwitcher() {
         <Button
           type="button"
           variant="outline"
-          className="h-11 gap-2 rounded-full border-black/10 bg-white/80 px-3 text-[var(--landing-primary)] shadow-sm backdrop-blur hover:bg-white"
+          className="h-11 gap-2 rounded-full border-black/10 bg-white/80 px-3 text-[var(--landing-primary)] shadow-sm backdrop-blur hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
           aria-label={t('nav.language')}
         >
           <div className="h-5 w-5 overflow-hidden rounded-full border border-black/10 shadow-sm">
@@ -420,14 +421,14 @@ function LandingLanguageSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-44 rounded-2xl border border-black/5 bg-white/95 p-1 shadow-[0_16px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur"
+        className="w-44 rounded-2xl border border-black/5 bg-white/95 p-1 shadow-[0_16px_40px_-24px_rgba(30,27,75,0.35)] backdrop-blur dark:border-white/10 dark:bg-[#13111a]/95"
       >
         <DropdownMenuItem
           onClick={() => onLocaleChange('es')}
           disabled={locale === 'es'}
           className={cn(
             'cursor-pointer gap-3 rounded-xl py-2.5',
-            locale === 'es' && 'bg-[rgba(124,58,237,0.08)] font-semibold text-[var(--landing-primary)]',
+            locale === 'es' && 'bg-[rgba(124,58,237,0.08)] font-semibold text-[var(--landing-primary)] dark:bg-violet-500/20 dark:text-white',
           )}
         >
           <div className="h-5 w-5 overflow-hidden rounded-full border border-black/10 shadow-sm">
@@ -442,7 +443,7 @@ function LandingLanguageSwitcher() {
           disabled={locale === 'en'}
           className={cn(
             'cursor-pointer gap-3 rounded-xl py-2.5',
-            locale === 'en' && 'bg-[rgba(124,58,237,0.08)] font-semibold text-[var(--landing-primary)]',
+            locale === 'en' && 'bg-[rgba(124,58,237,0.08)] font-semibold text-[var(--landing-primary)] dark:bg-violet-500/20 dark:text-white',
           )}
         >
           <div className="h-5 w-5 overflow-hidden rounded-full border border-black/10 shadow-sm">
@@ -475,7 +476,15 @@ function HeroSection({ t }: { t: Translator }) {
         backgroundSize: '22px 22px, auto',
       }}
     >
-      <div className="absolute inset-x-0 top-20 -z-10 h-[32rem] bg-[radial-gradient(circle,_rgba(124,58,237,0.18)_0%,_rgba(124,58,237,0)_62%)] blur-3xl" />
+      <div
+        className="absolute inset-0 -z-20 hidden dark:block"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.07) 1px, transparent 0), linear-gradient(180deg, #0a0a0f 0%, #0d0d12 58%, #12101c 100%)',
+          backgroundSize: '22px 22px, auto',
+        }}
+      />
+      <div className="absolute inset-x-0 top-20 -z-10 h-[32rem] bg-[radial-gradient(circle,_rgba(124,58,237,0.18)_0%,_rgba(124,58,237,0)_62%)] blur-3xl dark:bg-[radial-gradient(circle,_rgba(124,58,237,0.28)_0%,_rgba(124,58,237,0)_62%)]" />
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
         <motion.div
@@ -485,8 +494,8 @@ function HeroSection({ t }: { t: Translator }) {
           className="max-w-2xl space-y-7 lg:pl-1"
         >
           <motion.div variants={staggerItem} style={{ willChange: 'transform, opacity' }}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(124,58,237,0.16)] bg-white/72 px-4 py-2 text-sm font-medium text-[var(--landing-primary)] backdrop-blur">
-              <Sparkles className="h-4 w-4 text-[var(--landing-accent)]" />
+            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(124,58,237,0.16)] bg-white/72 px-4 py-2 text-sm font-medium text-[var(--landing-primary)] backdrop-blur dark:border-violet-400/20 dark:bg-white/5 dark:text-white">
+              <Sparkles className="h-4 w-4 text-[var(--landing-accent)] dark:text-violet-300" />
               {t('hero.eyebrow')}
             </span>
           </motion.div>
@@ -494,7 +503,7 @@ function HeroSection({ t }: { t: Translator }) {
           <motion.div variants={staggerItem} style={{ willChange: 'transform, opacity' }}>
             <h1 className="max-w-[12ch] text-5xl font-bold tracking-tight text-[var(--landing-text)] sm:text-6xl lg:text-7xl">
               {t('hero.titleLine1')}
-              <span className="block text-[var(--landing-primary)]">{t('hero.titleLine2')}</span>
+              <span className="block text-[var(--landing-primary)] dark:text-white">{t('hero.titleLine2')}</span>
             </h1>
           </motion.div>
 
@@ -515,7 +524,7 @@ function HeroSection({ t }: { t: Translator }) {
               <Button
                 asChild
                 size="lg"
-                className="w-full rounded-full border-0 bg-[var(--landing-highlight)] px-7 text-[var(--landing-primary)] shadow-[0_22px_40px_-22px_rgba(245,158,11,0.9)] hover:bg-[#f8ab27] sm:w-auto"
+                className="w-full rounded-full border-0 bg-[var(--landing-highlight)] px-7 text-[#1E1B4B] shadow-[0_22px_40px_-22px_rgba(245,158,11,0.9)] hover:bg-[#f8ab27] sm:w-auto"
               >
                 <Link href="/auth/login">{t('hero.primaryCta')}</Link>
               </Button>
@@ -527,7 +536,7 @@ function HeroSection({ t }: { t: Translator }) {
               href="#how-it-works"
               onClick={(e) => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
               style={{ willChange: 'transform', cursor: 'pointer' }}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 bg-white/80 px-7 py-3 text-sm font-medium text-[var(--landing-primary)] shadow-sm backdrop-blur"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 bg-white/80 px-7 py-3 text-sm font-medium text-[var(--landing-primary)] shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-white"
             >
               {t('hero.secondaryCta')}
               <ArrowRight className="h-4 w-4" />
@@ -550,19 +559,19 @@ function HeroSection({ t }: { t: Translator }) {
           />
 
           <div className="relative mx-auto max-w-xl">
-            <Card className="overflow-hidden rounded-[2rem] border-white/35 bg-white/65 shadow-[0_32px_80px_-40px_rgba(30,27,75,0.45)] backdrop-blur-xl">
+            <Card className="overflow-hidden rounded-[2rem] border-white/35 bg-white/65 shadow-[0_32px_80px_-40px_rgba(30,27,75,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
               <CardContent className="p-0">
-                <div className="border-b border-black/5 px-6 py-5">
+                <div className="border-b border-black/5 px-6 py-5 dark:border-white/10">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--landing-accent)]">
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--landing-accent)] dark:text-violet-300">
                         {t('hero.visual.label')}
                       </p>
-                      <h2 className="mt-2 text-xl font-bold tracking-tight text-[var(--landing-primary)]">
+                      <h2 className="mt-2 text-xl font-bold tracking-tight text-[var(--landing-primary)] dark:text-white">
                         {t('hero.visual.title')}
                       </h2>
                     </div>
-                    <span className="rounded-full bg-[rgba(124,58,237,0.12)] px-3 py-1 text-xs font-medium text-[var(--landing-accent)]">
+                    <span className="rounded-full bg-[rgba(124,58,237,0.12)] px-3 py-1 text-xs font-medium text-[var(--landing-accent)] dark:bg-violet-500/20 dark:text-violet-300">
                       {t('hero.visual.badge')}
                     </span>
                   </div>
@@ -575,15 +584,15 @@ function HeroSection({ t }: { t: Translator }) {
                       initial={{ opacity: 0, x: 16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.45, delay: 0.4 + index * 0.1, ease: 'easeOut' }}
-                      className="flex items-center gap-4 rounded-2xl border border-white/50 bg-white/70 px-4 py-3 shadow-[0_18px_30px_-28px_rgba(17,24,39,0.45)]"
+                      className="flex items-center gap-4 rounded-2xl border border-white/50 bg-white/70 px-4 py-3 shadow-[0_18px_30px_-28px_rgba(17,24,39,0.45)] dark:border-white/10 dark:bg-white/5"
                       style={{ willChange: 'transform, opacity' }}
                     >
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(30,27,75,0.08)] text-[var(--landing-primary)]">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[rgba(30,27,75,0.08)] text-[var(--landing-primary)] dark:bg-white/10 dark:text-white">
                         <step.icon className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-[var(--landing-text)]">{step.label}</p>
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[rgba(17,24,39,0.06)]">
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[rgba(17,24,39,0.06)] dark:bg-white/10">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${68 + index * 8}%` }}
@@ -611,7 +620,7 @@ function SocialProofBar({ t }: { t: Translator }) {
   const pills = [t('socialProof.pills.one'), t('socialProof.pills.two'), t('socialProof.pills.three')];
 
   return (
-    <section className="border-y border-black/5 bg-white/70 backdrop-blur-sm">
+    <section className="border-y border-black/5 bg-white/70 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-0 lg:flex-row lg:items-center lg:justify-between">
         <motion.p {...itemMotion} className="text-sm font-medium text-[var(--landing-muted)]">
           {t('socialProof.title')}
@@ -626,7 +635,7 @@ function SocialProofBar({ t }: { t: Translator }) {
         >
           {legalIcons.map((Icon, index) => (
             <motion.div key={index} variants={staggerItem} whileHover={{ rotate: 5, scale: 1.1 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }}>
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-[var(--landing-muted)] shadow-sm">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-[var(--landing-muted)] shadow-sm dark:border-white/10 dark:bg-white/5">
                 <Icon className="h-5 w-5" />
               </div>
             </motion.div>
@@ -644,7 +653,7 @@ function SocialProofBar({ t }: { t: Translator }) {
             <motion.span
               key={pill}
               variants={staggerItem}
-              className="rounded-full border border-[rgba(124,58,237,0.14)] bg-[rgba(124,58,237,0.08)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--landing-primary)]"
+              className="rounded-full border border-[rgba(124,58,237,0.14)] bg-[rgba(124,58,237,0.08)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--landing-primary)] dark:border-violet-400/20 dark:bg-violet-500/20 dark:text-violet-200"
             >
               {pill}
             </motion.span>
@@ -675,11 +684,11 @@ function ProblemSection({ t, painPoints }: { t: Translator; painPoints: Array<{ 
             transition={{ duration: 0.2 }}
             style={{ willChange: 'transform, opacity' }}
           >
-            <Card className="h-full rounded-3xl border-white/35 bg-white/60 backdrop-blur-xl shadow-[0_24px_60px_-40px_rgba(30,27,75,0.35)]">
+            <Card className="h-full rounded-3xl border-white/35 bg-white/60 backdrop-blur-xl shadow-[0_24px_60px_-40px_rgba(30,27,75,0.35)] dark:border-white/10 dark:bg-white/5">
               <CardContent className="flex h-full flex-col gap-5 p-7">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-1 rounded-full bg-[var(--landing-accent)]" />
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(124,58,237,0.08)] text-[var(--landing-accent)]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(124,58,237,0.08)] text-[var(--landing-accent)] dark:bg-violet-500/20 dark:text-violet-300">
                     <point.icon className="h-5 w-5" />
                   </div>
                 </div>
@@ -698,7 +707,7 @@ function ProblemSection({ t, painPoints }: { t: Translator; painPoints: Array<{ 
 
 function FeaturesSection({ t, features }: { t: Translator; features: Array<{ icon: ComponentType<{ className?: string }>; title: string; description: string }>; }) {
   return (
-    <section id="features" className="bg-white/70 px-4 py-20 sm:px-6 lg:px-8">
+    <section id="features" className="bg-white/70 px-4 py-20 sm:px-6 lg:px-8 dark:bg-white/5">
       <SectionHeader eyebrow={t('features.eyebrow')} title={t('features.title')} description={t('features.description')} />
 
       <motion.div
@@ -716,9 +725,9 @@ function FeaturesSection({ t, features }: { t: Translator; features: Array<{ ico
             transition={{ duration: 0.2 }}
             style={{ willChange: 'transform, opacity' }}
           >
-            <Card className="h-full rounded-3xl border-white/40 bg-white/62 backdrop-blur-xl shadow-[0_24px_60px_-38px_rgba(17,24,39,0.28)]">
+            <Card className="h-full rounded-3xl border-white/40 bg-white/62 backdrop-blur-xl shadow-[0_24px_60px_-38px_rgba(17,24,39,0.28)] dark:border-white/10 dark:bg-white/5">
               <CardContent className="space-y-5 p-7">
-                <motion.div whileHover={{ rotate: 5, scale: 1.1 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(30,27,75,0.08)] text-[var(--landing-primary)]">
+                <motion.div whileHover={{ rotate: 5, scale: 1.1 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(30,27,75,0.08)] text-[var(--landing-primary)] dark:bg-white/10 dark:text-white">
                   <feature.icon className="h-6 w-6" />
                 </motion.div>
                 <div>
@@ -746,7 +755,7 @@ function HowItWorksSection({ t, steps }: { t: Translator; steps: Array<{ title: 
 
       <div ref={ref} className="mx-auto mt-14 max-w-7xl">
         <div className="relative mx-auto max-w-3xl md:hidden">
-          <div className="absolute bottom-12 left-[1.15rem] top-12 w-px bg-[rgba(30,27,75,0.12)]" />
+          <div className="absolute bottom-12 left-[1.15rem] top-12 w-px bg-[rgba(30,27,75,0.12)] dark:bg-white/10" />
           <motion.div className="absolute bottom-12 left-[1.15rem] top-12 w-px origin-top bg-gradient-to-b from-[var(--landing-accent)] to-[var(--landing-highlight)]" style={{ scaleY: mobileScale, willChange: 'transform' }} />
           <div className="space-y-8">
             {steps.map((step, index) => (
@@ -754,7 +763,7 @@ function HowItWorksSection({ t, steps }: { t: Translator; steps: Array<{ title: 
                 <div className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--landing-primary)] text-sm font-bold text-white shadow-lg">
                   {index + 1}
                 </div>
-                <div className="rounded-3xl border border-white/40 bg-white/70 p-6 shadow-[0_20px_45px_-34px_rgba(30,27,75,0.3)] backdrop-blur-xl">
+                <div className="rounded-3xl border border-white/40 bg-white/70 p-6 shadow-[0_20px_45px_-34px_rgba(30,27,75,0.3)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[var(--landing-accent)]">0{index + 1}</p>
                   <h3 className="mt-3 text-xl font-bold tracking-tight text-[var(--landing-text)]">{step.title}</h3>
                   <p className="mt-3 text-sm leading-7 text-[var(--landing-muted)]">{step.description}</p>
@@ -765,15 +774,15 @@ function HowItWorksSection({ t, steps }: { t: Translator; steps: Array<{ title: 
         </div>
 
         <div className="relative hidden md:block">
-          <div className="absolute left-[8%] right-[8%] top-10 h-px bg-[rgba(30,27,75,0.1)]" />
+          <div className="absolute left-[8%] right-[8%] top-10 h-px bg-[rgba(30,27,75,0.1)] dark:bg-white/10" />
           <motion.div className="absolute left-[8%] right-[8%] top-10 h-px origin-left bg-gradient-to-r from-[var(--landing-accent)] to-[var(--landing-highlight)]" style={{ scaleX: desktopScale, willChange: 'transform' }} />
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {steps.map((step, index) => (
               <motion.div key={step.title} {...itemMotion} className="relative pt-16">
-                <div className="absolute left-0 top-0 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-[rgba(124,58,237,0.08)] text-3xl font-bold tracking-tight text-[var(--landing-accent)] shadow-inner">
+                <div className="absolute left-0 top-0 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-[rgba(124,58,237,0.08)] text-3xl font-bold tracking-tight text-[var(--landing-accent)] shadow-inner dark:bg-violet-500/20 dark:text-violet-300">
                   0{index + 1}
                 </div>
-                <Card className="h-full rounded-3xl border-white/35 bg-white/68 backdrop-blur-xl shadow-[0_22px_50px_-36px_rgba(30,27,75,0.28)]">
+                <Card className="h-full rounded-3xl border-white/35 bg-white/68 backdrop-blur-xl shadow-[0_22px_50px_-36px_rgba(30,27,75,0.28)] dark:border-white/10 dark:bg-white/5">
                   <CardContent className="space-y-4 p-7">
                     <h3 className="text-xl font-bold tracking-tight text-[var(--landing-text)]">{step.title}</h3>
                     <p className="text-sm leading-7 text-[var(--landing-muted)]">{step.description}</p>
@@ -790,7 +799,7 @@ function HowItWorksSection({ t, steps }: { t: Translator; steps: Array<{ title: 
 
 function BenefitsSection({ t, benefits }: { t: Translator; benefits: string[] }) {
   return (
-    <section id="benefits" className="bg-white/75 px-4 py-20 sm:px-6 lg:px-8">
+    <section id="benefits" className="bg-white/75 px-4 py-20 sm:px-6 lg:px-8 dark:bg-white/5">
       <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div>
           <SectionHeader eyebrow={t('benefits.eyebrow')} title={t('benefits.title')} description={t('benefits.description')} align="left" />
@@ -811,9 +820,9 @@ function BenefitsSection({ t, benefits }: { t: Translator; benefits: string[] })
           className="grid gap-4"
         >
           {benefits.map((benefit) => (
-            <motion.div key={benefit} variants={staggerItem} className="rounded-3xl border border-white/40 bg-white/68 px-5 py-5 shadow-[0_18px_45px_-34px_rgba(17,24,39,0.24)] backdrop-blur-xl">
+            <motion.div key={benefit} variants={staggerItem} className="rounded-3xl border border-white/40 bg-white/68 px-5 py-5 shadow-[0_18px_45px_-34px_rgba(17,24,39,0.24)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(245,158,11,0.16)] text-[var(--landing-highlight)]">
+                <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(245,158,11,0.16)] text-[var(--landing-highlight)] dark:bg-amber-500/20">
                   <CheckCircle2 className="h-4 w-4" />
                 </span>
                 <p className="text-base leading-7 text-[var(--landing-text)]">{benefit}</p>
@@ -846,12 +855,12 @@ function TestimonialsSection({ t, testimonials }: { t: Translator; testimonials:
               className="snap-start pb-1"
               style={{ willChange: 'transform, opacity' }}
             >
-              <Card className="relative h-full overflow-hidden rounded-[2rem] border border-[rgba(30,27,75,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,245,255,0.86)_100%)] backdrop-blur-xl shadow-[0_22px_52px_-36px_rgba(17,24,39,0.25)]">
+              <Card className="relative h-full overflow-hidden rounded-[2rem] border border-[rgba(30,27,75,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,245,255,0.86)_100%)] backdrop-blur-xl shadow-[0_22px_52px_-36px_rgba(17,24,39,0.25)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(124,58,237,0.08)_100%)]">
                 <div className="absolute -right-8 top-5 h-24 w-24 rounded-full bg-[rgba(124,58,237,0.1)] blur-2xl" />
-                <div className="absolute bottom-4 left-5 h-16 w-16 rounded-full border border-[rgba(124,58,237,0.1)] bg-[rgba(255,255,255,0.45)]" />
+                <div className="absolute bottom-4 left-5 h-16 w-16 rounded-full border border-[rgba(124,58,237,0.1)] bg-[rgba(255,255,255,0.45)] dark:bg-[rgba(255,255,255,0.06)]" />
                 <CardContent className="relative space-y-6 p-7">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex rounded-full border border-[rgba(124,58,237,0.14)] bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--landing-accent)]">
+                    <span className="inline-flex rounded-full border border-[rgba(124,58,237,0.14)] bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--landing-accent)] dark:border-violet-400/20 dark:bg-violet-500/20 dark:text-violet-300">
                       Testimonio
                     </span>
                     <span className="text-4xl font-semibold leading-none text-[rgba(124,58,237,0.22)]">“</span>
@@ -859,7 +868,7 @@ function TestimonialsSection({ t, testimonials }: { t: Translator; testimonials:
                   <p className="text-base leading-8 text-[var(--landing-text)]">“{testimonial.quote}”</p>
                   <div>
                     <div className="mb-3 h-px w-16 bg-gradient-to-r from-[var(--landing-accent)] to-transparent" />
-                    <p className="font-semibold text-[var(--landing-primary)]">{testimonial.author}</p>
+                    <p className="font-semibold text-[var(--landing-primary)] dark:text-white">{testimonial.author}</p>
                     <p className="text-sm text-[var(--landing-muted)]">{testimonial.role}</p>
                   </div>
                 </CardContent>
@@ -900,7 +909,7 @@ function FinalCtaSection({ t }: { t: Translator }) {
           <h2 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl">{t('finalCta.title')}</h2>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-white/75">{t('finalCta.description')}</p>
           <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }} className="mt-8 inline-flex">
-            <Button asChild size="lg" className="rounded-full border-0 bg-[var(--landing-highlight)] px-8 text-[var(--landing-primary)] hover:bg-[#f8ab27]">
+            <Button asChild size="lg" className="rounded-full border-0 bg-[var(--landing-highlight)] px-8 text-[#1E1B4B] hover:bg-[#f8ab27]">
               <Link href="/auth/login">
                 {t('finalCta.cta')}
                 <ArrowRight className="h-4 w-4" />
@@ -915,13 +924,13 @@ function FinalCtaSection({ t }: { t: Translator }) {
 
 function LandingFooter({ t }: { t: Translator }) {
   return (
-    <footer className="border-t border-black/5 bg-white/70 px-4 py-10 sm:px-6 lg:px-8">
+    <footer className="border-t border-black/5 bg-white/70 px-4 py-10 sm:px-6 lg:px-8 dark:border-white/10 dark:bg-white/5">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 text-sm text-[var(--landing-muted)] md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--landing-primary)] text-sm font-bold text-white">A</span>
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1E1B4B] text-sm font-bold text-white">A</span>
             <div>
-              <p className="text-lg font-bold tracking-tight text-[var(--landing-primary)]">Aurali</p>
+              <p className="text-lg font-bold tracking-tight text-[var(--landing-primary)] dark:text-white">Aurali</p>
               <p className="mt-1">{t('footer.tagline')}</p>
             </div>
           </div>
@@ -929,9 +938,9 @@ function LandingFooter({ t }: { t: Translator }) {
 
         <div className="flex flex-col gap-3 md:items-end">
           <div className="flex flex-wrap gap-5">
-            <a href="#" className="transition-colors hover:text-[var(--landing-primary)]">{t('footer.links.privacy')}</a>
-            <a href="#" className="transition-colors hover:text-[var(--landing-primary)]">{t('footer.links.terms')}</a>
-            <a href="mailto:hola@aurali.app" className="transition-colors hover:text-[var(--landing-primary)]">{t('footer.links.contact')}</a>
+            <a href="#" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.privacy')}</a>
+            <a href="#" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.terms')}</a>
+            <a href="mailto:hola@aurali.app" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.contact')}</a>
           </div>
           <p>{t('footer.copy')}</p>
         </div>
@@ -956,7 +965,7 @@ function SectionHeader({
       {...itemMotion}
       className={cn('mx-auto max-w-3xl', align === 'center' ? 'text-center' : 'text-left')}
     >
-      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--landing-accent)]">{eyebrow}</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--landing-accent)] dark:text-violet-300">{eyebrow}</p>
       <h2 className="mt-4 text-4xl font-bold tracking-tight text-[var(--landing-text)] sm:text-5xl">{title}</h2>
       <p className="mt-5 text-lg leading-relaxed text-[var(--landing-muted)]">{description}</p>
     </motion.div>
@@ -965,10 +974,10 @@ function SectionHeader({
 
 function StatCard({ prefix, suffix, value, label }: { prefix: string; suffix: string; value: number; label: string }) {
   return (
-    <Card className="rounded-[2rem] border-white/40 bg-white/72 backdrop-blur-xl shadow-[0_24px_60px_-38px_rgba(30,27,75,0.3)]">
+    <Card className="rounded-[2rem] border-white/40 bg-white/72 backdrop-blur-xl shadow-[0_24px_60px_-38px_rgba(30,27,75,0.3)] dark:border-white/10 dark:bg-white/5">
       <CardContent className="flex items-end justify-between gap-6 p-7">
         <div>
-          <div className="text-4xl font-bold tracking-tight text-[var(--landing-primary)] sm:text-5xl">
+          <div className="text-4xl font-bold tracking-tight text-[var(--landing-primary)] sm:text-5xl dark:text-white">
             {prefix}
             <CountUp value={value} />
             {suffix}

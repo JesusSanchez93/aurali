@@ -119,7 +119,13 @@ export function WorkflowCanvas({
         panActivationKeyCode="Meta"
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={16} size={1} className="opacity-50" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={16}
+          size={1}
+          className="opacity-50"
+          color="hsl(var(--muted-foreground))"
+        />
         <Controls className="rounded-lg border bg-card shadow-sm" />
         <MiniMap
           nodeColor={(node) => {
