@@ -240,10 +240,13 @@ export function GoogleTemplatesSection({ templates, connection, locale, variable
                 if (filtered.length === 0) return null;
                 return (
                   <div key={group.key}>
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {group.label}
-                    </p>
-                    <div className="flex flex-col gap-0.5">
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.label}
+                      </p>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
                       {filtered.map(({ key, label }) => {
                         const fullKey = `${group.key.toUpperCase()}.${key}`;
                         return (
@@ -255,10 +258,10 @@ export function GoogleTemplatesSection({ templates, connection, locale, variable
                             void navigator.clipboard.writeText(`{${fullKey}}`);
                             toast.success(`{${fullKey}} copiado`);
                           }}
-                          className="group flex items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-muted transition-colors"
+                          className="group flex min-w-0 items-center gap-3 rounded px-2 py-1.5 text-left hover:bg-muted transition-colors"
                         >
                           <code className="shrink-0 font-mono text-[11px] text-foreground">{`{${fullKey}}`}</code>
-                          <span className="text-xs text-muted-foreground group-hover:text-foreground">{label}</span>
+                          <span className="min-w-0 truncate text-xs text-muted-foreground group-hover:text-foreground">{label}</span>
                         </button>
                         );
                       })}
