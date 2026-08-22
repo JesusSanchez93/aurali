@@ -399,17 +399,19 @@ export async function getLegalProcessDetail(legalProcessId: string) {
 
   if (clientData) {
     if (clientData.document_front_image && !clientData.document_front_image.startsWith('http')) {
-      const { data: frontData } = await supabase.storage
+      const { data: frontData, error: frontError } = await supabase.storage
         .from('documents')
         .createSignedUrl(clientData.document_front_image, 3600);
       if (frontData) clientData.document_front_image = frontData.signedUrl;
+      else console.error('createSignedUrl failed for document_front_image', frontError);
     }
 
     if (clientData.document_back_image && !clientData.document_back_image.startsWith('http')) {
-      const { data: backData } = await supabase.storage
+      const { data: backData, error: backError } = await supabase.storage
         .from('documents')
         .createSignedUrl(clientData.document_back_image, 3600);
       if (backData) clientData.document_back_image = backData.signedUrl;
+      else console.error('createSignedUrl failed for document_back_image', backError);
     }
   }
 
