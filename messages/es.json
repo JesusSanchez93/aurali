@@ -718,19 +718,23 @@
       "eyebrow": "Prueba social",
       "title": "Abogados que quieren operar con menos fricción",
       "description": "Referencias de muestra para visualizar cómo se vería la credibilidad comercial de Aurali en producción.",
+      "closeAria": "Cerrar testimonio",
       "items": {
         "one": {
           "quote": "Aurali nos dio una forma clara de estandarizar procesos sin perder criterio jurídico. Hoy el equipo sabe qué sigue en cada caso.",
+          "extended": "Antes dependíamos de hojas de cálculo y mensajes sueltos para saber en qué iba cada caso. Con Aurali, cada expediente tiene un flujo claro: sabemos qué documento falta, quién debe firmar y cuándo notificar al cliente. Eso nos permitió tomar más casos sin sacrificar la calidad del acompañamiento jurídico.\n\nLo que más valoramos es la trazabilidad: cualquier persona del equipo puede abrir un caso y entender de inmediato en qué etapa está, sin tener que preguntar. Eso nos ha dado más tranquilidad frente a los clientes y ha reducido los tiempos de respuesta en más de la mitad.",
           "author": "María Fernanda Rojas",
           "role": "Socia, Estudio Rojas Legal"
         },
         "two": {
           "quote": "La generación de documentos dejó de ser un cuello de botella. Ahora revisamos y aprobamos, en lugar de redactar desde cero.",
+          "extended": "La redacción de documentos nos tomaba horas por caso, sobre todo cuando había que ajustar variables a mano. Ahora generamos el documento con la información correcta desde el primer intento y el equipo legal solo revisa y aprueba. Reducimos el tiempo de entrega a la mitad.\n\nAdemás, dejamos de depender de una sola persona para saber el estado de cada documento. El sistema notifica automáticamente a quien corresponde, así que podemos escalar el número de casos sin aumentar el equipo al mismo ritmo.",
           "author": "Sebastián Mejía",
           "role": "Director jurídico, Lex Norte"
         },
         "three": {
           "quote": "Pasamos de coordinar por mensajes sueltos a trabajar con un flujo visible para todo el equipo y el cliente.",
+          "extended": "Trabajar como abogada independiente significa que cada minuto cuenta. Aurali me da visibilidad total de cada proceso activo, automatiza las notificaciones a mis clientes y me deja enfocarme en la estrategia legal en lugar de perseguir actualizaciones por chat.\n\nAntes perdía tiempo revisando conversaciones antiguas para recordar en qué había quedado con cada cliente. Ahora todo queda registrado en el proceso, así que puedo retomar cualquier caso en segundos y dar una respuesta mucho más profesional.",
           "author": "Valentina Pardo",
           "role": "Abogada independiente"
         }

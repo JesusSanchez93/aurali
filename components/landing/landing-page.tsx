@@ -10,6 +10,7 @@ import {
   Gavel,
   Landmark,
   Menu,
+  Quote,
   Scale,
   Sparkles,
   X,
@@ -174,9 +175,9 @@ export function LandingPage({
 
   const testimonials = useMemo(
     () => [
-      { quote: t('testimonials.items.one.quote'), author: t('testimonials.items.one.author'), role: t('testimonials.items.one.role') },
-      { quote: t('testimonials.items.two.quote'), author: t('testimonials.items.two.author'), role: t('testimonials.items.two.role') },
-      { quote: t('testimonials.items.three.quote'), author: t('testimonials.items.three.author'), role: t('testimonials.items.three.role') },
+      { quote: t('testimonials.items.one.quote'), extended: t('testimonials.items.one.extended'), author: t('testimonials.items.one.author'), role: t('testimonials.items.one.role') },
+      { quote: t('testimonials.items.two.quote'), extended: t('testimonials.items.two.extended'), author: t('testimonials.items.two.author'), role: t('testimonials.items.two.role') },
+      { quote: t('testimonials.items.three.quote'), extended: t('testimonials.items.three.extended'), author: t('testimonials.items.three.author'), role: t('testimonials.items.three.role') },
     ],
     [t],
   );
@@ -467,9 +468,14 @@ function HeroSection({ t }: { t: Translator }) {
     { icon: FileBadge2, label: t('hero.visual.steps.review') },
   ];
 
+  const trustStats = [
+    { value: '80%', label: t('benefits.stats.time') },
+    { value: '3x', label: t('benefits.stats.capacity') },
+  ];
+
   return (
     <section
-      className="relative isolate overflow-hidden px-4 pb-16 pt-32 sm:px-6 sm:pt-36 lg:px-8 lg:pb-24"
+      className="relative isolate overflow-hidden px-4 pb-20 pt-32 sm:px-6 sm:pt-36 lg:px-8 lg:pb-28"
       style={{
         backgroundImage:
           'radial-gradient(circle at 1px 1px, rgba(30,27,75,0.11) 1px, transparent 0), linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(250,250,250,1) 58%, rgba(245,243,255,0.55) 100%)',
@@ -485,13 +491,14 @@ function HeroSection({ t }: { t: Translator }) {
         }}
       />
       <div className="absolute inset-x-0 top-20 -z-10 h-[32rem] bg-[radial-gradient(circle,_rgba(124,58,237,0.18)_0%,_rgba(124,58,237,0)_62%)] blur-3xl dark:bg-[radial-gradient(circle,_rgba(124,58,237,0.28)_0%,_rgba(124,58,237,0)_62%)]" />
+      <div className="absolute right-[-8rem] top-40 -z-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,_rgba(245,158,11,0.18)_0%,_rgba(245,158,11,0)_65%)] blur-3xl dark:bg-[radial-gradient(circle,_rgba(245,158,11,0.14)_0%,_rgba(245,158,11,0)_65%)]" />
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="max-w-2xl space-y-7 lg:pl-1"
+          className="max-w-2xl space-y-8 lg:pl-1"
         >
           <motion.div variants={staggerItem} style={{ willChange: 'transform, opacity' }}>
             <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(124,58,237,0.16)] bg-white/72 px-4 py-2 text-sm font-medium text-[var(--landing-primary)] backdrop-blur dark:border-violet-400/20 dark:bg-white/5 dark:text-white">
@@ -501,9 +508,11 @@ function HeroSection({ t }: { t: Translator }) {
           </motion.div>
 
           <motion.div variants={staggerItem} style={{ willChange: 'transform, opacity' }}>
-            <h1 className="max-w-[12ch] text-5xl font-bold tracking-tight text-[var(--landing-text)] sm:text-6xl lg:text-7xl">
+            <h1 className="max-w-[13ch] text-5xl font-bold tracking-tight text-[var(--landing-text)] sm:text-6xl lg:text-[5.25rem] lg:leading-[1.02]">
               {t('hero.titleLine1')}
-              <span className="block text-[var(--landing-primary)] dark:text-white">{t('hero.titleLine2')}</span>
+              <span className="mt-1 block bg-gradient-to-r from-[var(--landing-primary)] via-[var(--landing-accent)] to-[var(--landing-primary)] bg-clip-text text-transparent dark:from-white dark:via-violet-300 dark:to-white">
+                {t('hero.titleLine2')}
+              </span>
             </h1>
           </motion.div>
 
@@ -542,6 +551,21 @@ function HeroSection({ t }: { t: Translator }) {
               <ArrowRight className="h-4 w-4" />
             </motion.a>
           </motion.div>
+
+          <motion.div
+            variants={staggerItem}
+            style={{ willChange: 'transform, opacity' }}
+            className="flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-black/5 pt-6 dark:border-white/10"
+          >
+            {trustStats.map((stat) => (
+              <div key={stat.label} className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold tracking-tight text-[var(--landing-primary)] dark:text-white">
+                  {stat.value}
+                </span>
+                <span className="text-sm text-[var(--landing-muted)]">{stat.label}</span>
+              </div>
+            ))}
+          </motion.div>
         </motion.div>
 
         <motion.div
@@ -571,7 +595,11 @@ function HeroSection({ t }: { t: Translator }) {
                         {t('hero.visual.title')}
                       </h2>
                     </div>
-                    <span className="rounded-full bg-[rgba(124,58,237,0.12)] px-3 py-1 text-xs font-medium text-[var(--landing-accent)] dark:bg-violet-500/20 dark:text-violet-300">
+                    <span className="relative flex items-center gap-2 rounded-full bg-[rgba(124,58,237,0.12)] px-3 py-1 text-xs font-medium text-[var(--landing-accent)] dark:bg-violet-500/20 dark:text-violet-300">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--landing-accent)] opacity-60 dark:bg-violet-300" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--landing-accent)] dark:bg-violet-300" />
+                      </span>
                       {t('hero.visual.badge')}
                     </span>
                   </div>
@@ -609,6 +637,31 @@ function HeroSection({ t }: { t: Translator }) {
               </CardContent>
             </Card>
 
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={reducedMotion ? { opacity: 1, scale: 1, y: 0 } : { opacity: 1, scale: 1, y: [0, -6, 0] }}
+              transition={reducedMotion ? { duration: 0.5, delay: 0.9 } : { delay: 0.9, duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -left-8 -top-6 hidden items-center gap-2.5 rounded-2xl border border-white/50 bg-white/90 px-4 py-3 shadow-[0_20px_40px_-24px_rgba(30,27,75,0.5)] backdrop-blur-xl sm:flex dark:border-white/10 dark:bg-[#16141f]/90"
+              style={{ willChange: 'transform, opacity' }}
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+                <FileBadge2 className="h-4 w-4" />
+              </span>
+              <span className="text-sm font-semibold text-[var(--landing-text)]">{t('hero.visual.floating.document')}</span>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: -10 }}
+              animate={reducedMotion ? { opacity: 1, scale: 1, y: 0 } : { opacity: 1, scale: 1, y: [0, 6, 0] }}
+              transition={reducedMotion ? { duration: 0.5, delay: 1.1 } : { delay: 1.1, duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute -bottom-6 -right-4 hidden items-center gap-2.5 rounded-2xl border border-white/50 bg-white/90 px-4 py-3 shadow-[0_20px_40px_-24px_rgba(30,27,75,0.5)] backdrop-blur-xl sm:flex dark:border-white/10 dark:bg-[#16141f]/90"
+              style={{ willChange: 'transform, opacity' }}
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(124,58,237,0.15)] text-[var(--landing-accent)] dark:text-violet-300">
+                <MailCheck className="h-4 w-4" />
+              </span>
+              <span className="text-sm font-semibold text-[var(--landing-text)]">{t('hero.visual.floating.client')}</span>
+            </motion.div>
           </div>
         </motion.div>
       </div>
@@ -835,12 +888,45 @@ function BenefitsSection({ t, benefits }: { t: Translator; benefits: string[] })
   );
 }
 
-function TestimonialsSection({ t, testimonials }: { t: Translator; testimonials: Array<{ quote: string; author: string; role: string }>; }) {
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
+
+type Testimonial = { quote: string; extended: string; author: string; role: string };
+
+function TestimonialsSection({ t, testimonials }: { t: Translator; testimonials: Testimonial[] }) {
+  const [selected, setSelected] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (selected === null) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelected(null);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [selected]);
+
   return (
     <section className="px-4 py-20 sm:px-6 lg:px-8">
       <SectionHeader eyebrow={t('testimonials.eyebrow')} title={t('testimonials.title')} description={t('testimonials.description')} />
 
-      <div className="mx-auto mt-12 max-w-7xl overflow-x-auto pb-4">
+      {/* overflow-x-auto forces overflow-y to compute as `auto` too (CSS spec rule for mixed
+          overflow values), which clips vertical overflow at this container's edges. The card's
+          hover:-translate-y-1 pushes the top row right up against that edge with no headroom,
+          clipping the top border. `pt-2` gives it room so the border stays visible on hover. */}
+      <div className="mx-auto mt-12 max-w-7xl overflow-x-auto pb-4 pt-2">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
@@ -848,36 +934,158 @@ function TestimonialsSection({ t, testimonials }: { t: Translator; testimonials:
           viewport={sectionViewport}
           className="grid min-w-full snap-x snap-mandatory auto-cols-[84%] grid-flow-col gap-5 md:grid-flow-row md:grid-cols-3"
         >
-          {testimonials.map((testimonial) => (
+          {testimonials.map((testimonial, index) => (
             <motion.div
               key={testimonial.author}
               variants={staggerItem}
               className="snap-start pb-1"
               style={{ willChange: 'transform, opacity' }}
             >
-              <Card className="relative h-full overflow-hidden rounded-[2rem] border border-[rgba(30,27,75,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,245,255,0.86)_100%)] backdrop-blur-xl shadow-[0_22px_52px_-36px_rgba(17,24,39,0.25)] dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(124,58,237,0.08)_100%)]">
-                <div className="absolute -right-8 top-5 h-24 w-24 rounded-full bg-[rgba(124,58,237,0.1)] blur-2xl" />
-                <div className="absolute bottom-4 left-5 h-16 w-16 rounded-full border border-[rgba(124,58,237,0.1)] bg-[rgba(255,255,255,0.45)] dark:bg-[rgba(255,255,255,0.06)]" />
-                <CardContent className="relative space-y-6 p-7">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex rounded-full border border-[rgba(124,58,237,0.14)] bg-white/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--landing-accent)] dark:border-violet-400/20 dark:bg-violet-500/20 dark:text-violet-300">
-                      Testimonio
-                    </span>
-                    <span className="text-4xl font-semibold leading-none text-[rgba(124,58,237,0.22)]">“</span>
-                  </div>
-                  <p className="text-base leading-8 text-[var(--landing-text)]">“{testimonial.quote}”</p>
-                  <div>
-                    <div className="mb-3 h-px w-16 bg-gradient-to-r from-[var(--landing-accent)] to-transparent" />
-                    <p className="font-semibold text-[var(--landing-primary)] dark:text-white">{testimonial.author}</p>
-                    <p className="text-sm text-[var(--landing-muted)]">{testimonial.role}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              {selected === index ? (
+                // Placeholder keeps the grid cell's size so siblings don't reflow while the
+                // real layoutId element lives only inside the modal (see note below).
+                <div className="h-full w-full rounded-[2rem]" aria-hidden />
+              ) : (
+                <motion.button
+                  type="button"
+                  layoutId={`testimonial-card-${index}`}
+                  onClick={() => setSelected(index)}
+                  className="block h-full w-full rounded-[2rem] text-left"
+                  style={{ willChange: 'transform' }}
+                >
+                  <Card className="relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-[rgba(30,27,75,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(248,245,255,0.86)_100%)] backdrop-blur-xl shadow-[0_22px_52px_-36px_rgba(17,24,39,0.25)] transition-transform duration-200 hover:-translate-y-1 dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(124,58,237,0.08)_100%)]">
+                    <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[rgba(124,58,237,0.1)] blur-2xl" />
+                    <CardContent className="relative flex h-full flex-col p-7">
+                      <motion.div
+                        layoutId={`testimonial-quote-${index}`}
+                        transition={{ layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }}
+                        className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(124,58,237,0.1)] text-[var(--landing-accent)] dark:bg-violet-500/20 dark:text-violet-300"
+                      >
+                        <Quote className="h-5 w-5 fill-current" />
+                      </motion.div>
+                      <p className="mt-5 flex-1 text-base leading-8 text-[var(--landing-text)]">{testimonial.quote}</p>
+                      <motion.div
+                        layoutId={`testimonial-author-${index}`}
+                        transition={{ layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }}
+                        className="mt-6 flex items-center gap-3 border-t border-[rgba(30,27,75,0.08)] pt-5 dark:border-white/10"
+                      >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--landing-primary)] to-[var(--landing-accent)] text-sm font-semibold text-white">
+                          {getInitials(testimonial.author)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-[var(--landing-primary)] dark:text-white">{testimonial.author}</p>
+                          <p className="truncate text-sm text-[var(--landing-muted)]">{testimonial.role}</p>
+                        </div>
+                      </motion.div>
+                    </CardContent>
+                  </Card>
+                </motion.button>
+              )}
             </motion.div>
           ))}
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {selected !== null && (
+          <TestimonialModal
+            key="testimonial-modal"
+            t={t}
+            testimonial={testimonials[selected]}
+            index={selected}
+            onClose={() => setSelected(null)}
+          />
+        )}
+      </AnimatePresence>
     </section>
+  );
+}
+
+function TestimonialModal({
+  t,
+  testimonial,
+  index,
+  onClose,
+}: {
+  t: Translator;
+  testimonial: Testimonial;
+  index: number;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <motion.div
+        className="fixed inset-0 z-[70] bg-[rgba(10,8,20,0.55)] backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.25 }}
+        onClick={onClose}
+      />
+      <div className="fixed inset-0 z-[71] flex items-center justify-center p-4 sm:p-6" onClick={onClose}>
+        <motion.div
+          layoutId={`testimonial-card-${index}`}
+          transition={{ layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-lg"
+          style={{ willChange: 'transform' }}
+        >
+          <Card className="relative overflow-hidden rounded-[2rem] border border-[rgba(30,27,75,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,245,255,0.95)_100%)] shadow-[0_50px_100px_-40px_rgba(17,24,39,0.45)] dark:border-white/10 dark:bg-[linear-gradient(180deg,#16141f_0%,#1b1730_100%)]">
+            <div className="absolute -right-14 -top-14 h-48 w-48 rounded-full bg-[rgba(124,58,237,0.14)] blur-3xl" />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('testimonials.closeAria')}
+              className="absolute right-5 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/5 text-[var(--landing-muted)] transition-colors hover:bg-black/10 hover:text-[var(--landing-text)] dark:bg-white/10 dark:hover:bg-white/15"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <CardContent className="relative space-y-6 p-8 sm:p-10">
+              <motion.div
+                layoutId={`testimonial-author-${index}`}
+                transition={{ layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }}
+                className="flex items-center gap-4 border-b border-[rgba(30,27,75,0.08)] pb-6 dark:border-white/10"
+              >
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--landing-primary)] to-[var(--landing-accent)] text-base font-semibold text-white">
+                  {getInitials(testimonial.author)}
+                </span>
+                <div>
+                  <p className="font-semibold text-[var(--landing-primary)] dark:text-white">{testimonial.author}</p>
+                  <p className="text-sm text-[var(--landing-muted)]">{testimonial.role}</p>
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, delay: 0.4 }}
+              >
+                {testimonial.extended.split('\n\n').map((paragraph, paragraphIndex) => (
+                  <p
+                    key={paragraphIndex}
+                    className={cn(
+                      'text-lg leading-8 text-[var(--landing-text)] sm:text-xl sm:leading-9',
+                      paragraphIndex > 0 && 'mt-4',
+                    )}
+                  >
+                    {paragraphIndex === 0 && (
+                      <motion.span
+                        layoutId={`testimonial-quote-${index}`}
+                        transition={{ layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }}
+                        className="mb-1 mr-3 inline-flex h-8 w-8 float-left items-center justify-center rounded-xl bg-[rgba(124,58,237,0.1)] text-[var(--landing-accent)] dark:bg-violet-500/20 dark:text-violet-300"
+                      >
+                        <Quote className="h-4 w-4 fill-current" />
+                      </motion.span>
+                    )}
+                    {paragraph}
+                  </p>
+                ))}
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </>
   );
 }
 

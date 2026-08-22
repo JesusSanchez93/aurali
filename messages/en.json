@@ -718,19 +718,23 @@
       "eyebrow": "Social proof",
       "title": "Lawyers who want to run with less friction",
       "description": "Placeholder references to show how Aurali credibility content could look in production.",
+      "closeAria": "Close testimonial",
       "items": {
         "one": {
           "quote": "Aurali gave us a clear way to standardize processes without losing legal judgment. Today the team always knows what comes next in each case.",
+          "extended": "We used to rely on spreadsheets and scattered messages to know where each case stood. With Aurali, every file follows a clear flow: we know which document is missing, who needs to sign, and when to notify the client. That let us take on more cases without sacrificing the quality of our legal guidance.\n\nWhat we value most is traceability: anyone on the team can open a case and immediately understand what stage it's in, without having to ask around. That's given us more confidence in front of clients and cut our response times by more than half.",
           "author": "Maria Fernanda Rojas",
           "role": "Partner, Rojas Legal Studio"
         },
         "two": {
           "quote": "Document generation stopped being a bottleneck. Now we review and approve instead of drafting everything from scratch.",
+          "extended": "Drafting documents used to take hours per case, especially when variables had to be adjusted by hand. Now we generate the document with the right information on the first try, and the legal team just reviews and approves. We cut delivery time in half.\n\nWe also stopped depending on one person to know the status of every document. The system automatically notifies whoever's responsible, so we can scale the number of cases we handle without growing the team at the same pace.",
           "author": "Sebastian Mejia",
           "role": "Legal Director, Lex Norte"
         },
         "three": {
           "quote": "We moved from scattered messages to a visible workflow for both the team and the client.",
+          "extended": "Working as an independent lawyer means every minute counts. Aurali gives me full visibility into every active process, automates client notifications, and lets me focus on legal strategy instead of chasing updates over chat.\n\nI used to waste time scrolling through old conversations to remember where I'd left things with each client. Now everything is logged in the process itself, so I can pick up any case in seconds and respond in a much more professional way.",
           "author": "Valentina Pardo",
           "role": "Independent lawyer"
         }
