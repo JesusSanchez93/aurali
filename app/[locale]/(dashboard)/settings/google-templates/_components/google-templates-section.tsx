@@ -142,6 +142,18 @@ export function GoogleTemplatesSection({ templates, connection, locale, variable
         </div>
       )}
 
+      {/* Cómo funciona la conexión — siempre visible, no solo cuando falta conectar */}
+      <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>
+          La conexión con Google es <strong className="text-foreground">personal, no de la organización</strong>.
+          Cada plantilla usa la cuenta de Google de <strong className="text-foreground">quien la creó</strong> (columna &quot;Cuenta de Google&quot;
+          abajo) para generar documentos — no la tuya, aunque tú también estés conectado. Si esa persona
+          desconecta su cuenta o su acceso caduca, generar documentos con esa plantilla fallará hasta que
+          esa misma persona vuelva a conectarse aquí.
+        </span>
+      </div>
+
       {/* Tabla */}
       {templates.length === 0 ? (
         <div className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center animate-in fade-in-50">
@@ -157,6 +169,7 @@ export function GoogleTemplatesSection({ templates, connection, locale, variable
               <tr className="border-b bg-muted/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nombre</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Google Doc</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cuenta de Google</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Creado</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Acciones</th>
               </tr>
@@ -181,6 +194,22 @@ export function GoogleTemplatesSection({ templates, connection, locale, variable
                       </Badge>
                       <ExternalLink className="h-3 w-3" />
                     </a>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{tpl.ownerName ?? '—'}</span>
+                      {tpl.ownerConnected ? (
+                        <Badge variant="secondary" className="gap-1 text-[10px] text-green-700 dark:text-green-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                          Conectado
+                        </Badge>
+                      ) : (
+                        <Badge variant="destructive" className="gap-1 text-[10px]" title="Esta plantilla no generará documentos hasta que esta persona reconecte su cuenta de Google">
+                          <AlertCircle className="h-3 w-3" />
+                          Reconectar
+                        </Badge>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(tpl.created_at).toLocaleDateString('es-CO', {
