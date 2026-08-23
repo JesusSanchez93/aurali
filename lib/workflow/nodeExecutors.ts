@@ -318,11 +318,13 @@ async function executeSendEmail(
   const rawFormUrl = (context.legalProcess as unknown as Record<string, unknown>).form_url as string | undefined;
   const formUrl = context.legalProcess.status === 'draft' ? rawFormUrl : undefined;
 
-  // Strip {{form_url}} BEFORE substituteVars so the URL never gets injected into the body
-  // (TipTap may render it as <a href="{{form_url}}">{{form_url}}</a>)
+  // Strip the form_url placeholder BEFORE substituteVars so the raw URL never gets
+  // injected into the body — it's shown only as the CTA button below. Templates may
+  // use either the legacy {{form_url}} token or the current {FORM_URL} convention
+  // (case-insensitive, single or double braces), and TipTap may wrap it in <a>.
   const cleanedTemplate = resolveBodyHtml(cfg.body)
-    .replace(/<a[^>]*>\s*\{\{form_url\}\}\s*<\/a>/gi, '')
-    .replace(/\{\{form_url\}\}/gi, '')
+    .replace(/<a[^>]*>\s*\{\{?form_url\}?\}\s*<\/a>/gi, '')
+    .replace(/\{\{?form_url\}?\}/gi, '')
     .replace(/<p>(\s|&nbsp;)*<\/p>/g, '');
 
   const bodyHtml = substituteVars(cleanedTemplate, context);

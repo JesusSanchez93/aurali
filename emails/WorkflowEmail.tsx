@@ -50,12 +50,12 @@ export function WorkflowEmail({
       <Body style={styles.body}>
         <Container style={styles.container}>
 
-          {/* Header */}
-          <Section style={{ ...styles.header, backgroundColor: t.primaryColor }}>
+          {/* Wordmark — small and quiet, not a colored letterhead banner */}
+          <Section style={styles.header}>
             {t.logoUrl ? (
-              <Img src={t.logoUrl} alt={t.orgName} height={32} style={styles.logo} />
+              <Img src={t.logoUrl} alt={t.orgName} height={22} style={styles.logo} />
             ) : (
-              <Text style={styles.headerTitle}>{t.orgName}</Text>
+              <Text style={{ ...styles.headerTitle, color: t.primaryColor }}>{t.orgName}</Text>
             )}
           </Section>
 
@@ -75,16 +75,16 @@ export function WorkflowEmail({
                   color: t.ctaTextColor,
                 }}
               >
-                {ctaLabel ?? 'Completar formulario →'}
+                {ctaLabel ?? 'Completar formulario'}
               </Button>
             </Section>
           )}
 
           {/* Footer */}
+          <Hr style={styles.divider} />
           <Section style={styles.footer}>
-            <Hr style={styles.divider} />
             <Text style={styles.footerText}>
-              Este mensaje fue generado automáticamente por {t.orgName}.
+              {t.orgName}
             </Text>
           </Section>
 
@@ -96,57 +96,53 @@ export function WorkflowEmail({
 
 const styles = {
   body: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#ffffff',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     padding: 0,
     margin: 0,
   },
   container: {
-    maxWidth: '600px',
+    maxWidth: '480px',
     margin: '0 auto',
     backgroundColor: '#ffffff',
-    borderRadius: '8px',
-    overflow: 'hidden',
   },
   header: {
-    padding: '24px',
+    padding: '40px 8px 24px',
   },
   headerTitle: {
-    color: '#ffffff',
-    fontSize: '22px',
-    fontWeight: '700',
+    fontSize: '14px',
+    fontWeight: '600',
+    letterSpacing: '0.02em',
     margin: 0,
   },
   logo: {
     display: 'block',
   },
   content: {
-    padding: '32px',
-    fontSize: '14px',
-    lineHeight: '1.7',
-    color: '#111827',
+    padding: '0 8px',
+    fontSize: '15px',
+    lineHeight: '1.65',
+    color: '#1F2937',
   },
   ctaSection: {
-    textAlign: 'center' as const,
-    padding: '0 32px 32px',
+    padding: '28px 8px 8px',
   },
   button: {
-    fontWeight: '700',
-    padding: '14px 28px',
-    borderRadius: '8px',
-    fontSize: '16px',
+    fontWeight: '500',
+    padding: '11px 22px',
+    borderRadius: '6px',
+    fontSize: '14px',
     textDecoration: 'none',
     display: 'inline-block',
   },
   footer: {
-    padding: '0 32px 24px',
+    padding: '20px 8px 40px',
   },
   divider: {
     borderTop: '1px solid #E5E7EB',
-    margin: '0 0 16px',
+    margin: '32px 8px 0',
   },
   footerText: {
-    textAlign: 'center' as const,
     color: '#9CA3AF',
     fontSize: '12px',
     margin: 0,
