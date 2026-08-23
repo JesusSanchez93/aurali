@@ -5,6 +5,7 @@ import { Tables } from '@/types/database.types';
 import { revalidatePath } from 'next/cache';
 import { resumeWorkflow } from '@/lib/workflow/workflowRunner';
 import { validateDocumentImages } from '@/lib/anthropic/validateDocument';
+import { logClientAction } from '@/lib/audit/logClientAction';
 
 type PersonalDataActionResult =
     | { success: true }
@@ -205,6 +206,11 @@ export async function updatePersonalDataAction(
 
             // Block only on invalid — error degrades gracefully (user advances)
             if (validation.status === 'invalid') {
+                await logClientAction({
+                    legalProcessId,
+                    action: 'client_document_validation_failed',
+                    metadata: { errors: validation.errors, email, document_number },
+                });
                 return {
                     success: false,
                     validationError: {
@@ -215,6 +221,16 @@ export async function updatePersonalDataAction(
             }
         }
     }
+
+    await logClientAction({
+        legalProcessId,
+        action: 'client_personal_data_submitted',
+        metadata: {
+            email,
+            uploaded_front_image: !!newFrontPath,
+            uploaded_back_image: !!newBackPath,
+        },
+    });
 
     return { success: true };
 }
@@ -364,6 +380,12 @@ export async function deleteImageAction(
 
     revalidatePath('/(public)/legal-process', 'layout');
 
+    await logClientAction({
+        legalProcessId,
+        action: 'client_image_deleted',
+        metadata: { field },
+    });
+
     return { success: true };
 }
 
@@ -492,6 +514,18 @@ export async function updateBankingInformationAction(
     }
 
     revalidatePath('/(public)/legal-process', 'layout');
+
+    await logClientAction({
+        legalProcessId,
+        action: 'client_banking_info_submitted',
+        metadata: {
+            bank_name,
+            uploaded_bank_request: !!bankRequestPath,
+            uploaded_bank_response: !!bankResponsePath,
+            uploaded_statement: !!statementPath,
+        },
+    });
+
     return { success: true };
 }
 
@@ -595,6 +629,12 @@ export async function updateInfoAboutEventsAction(
     }
 
     revalidatePath('/(public)/legal-process', 'layout');
+
+    await logClientAction({
+        legalProcessId,
+        action: 'client_process_completed',
+    });
+
     return { success: true };
 }
 

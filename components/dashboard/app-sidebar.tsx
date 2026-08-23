@@ -3,6 +3,7 @@
 import {
   Home, Scale, Settings, Users, ShieldCheck, BookOpen,
   Sparkles, Building2, FileText, ChevronRight, Workflow, IdCard, Globe,
+  ShieldAlert,
 } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -69,6 +70,7 @@ export const adminItems: NavItem[] = [
   { titleKey: 'admin_clients', url: '/admin/clients',   icon: Users      },
   { titleKey: 'workflows',     url: '/admin/workflows', icon: ShieldCheck},
   { titleKey: 'catalog',       url: '/admin/catalog',   icon: BookOpen   },
+  { titleKey: 'admin_audit',   url: '/admin/audit',     icon: ShieldAlert},
 ];
 
 // ── Variants ──────────────────────────────────────────────────────────────────

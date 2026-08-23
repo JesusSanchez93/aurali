@@ -50,6 +50,7 @@
       "workflows": "Workflows",
       "powers": "Powers",
       "admin_clients": "Clients",
+      "admin_audit": "Audit",
       "catalog": "Global Catalog",
       "banks": "Banks",
       "document_types": "Document Types",
@@ -364,6 +365,13 @@
         "document_preview_updated": "Draft updated",
         "payment_confirmed": "Payment confirmed",
         "workflow_notification": "Notification sent",
+        "client_form_link_opened": "Client opened the form link",
+        "client_form_link_invalid": "Access attempt with invalid link",
+        "client_personal_data_submitted": "Client submitted personal data",
+        "client_document_validation_failed": "Document validation failed",
+        "client_banking_info_submitted": "Client submitted banking information",
+        "client_image_deleted": "Client deleted an uploaded image",
+        "client_process_completed": "Client completed the form",
         "default": "Event"
       },
       "node_types": {
