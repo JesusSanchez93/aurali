@@ -47,12 +47,18 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
       </div>
 
       {/* Guía de configuración */}
-      <GoogleSetupGuide credentialsConfigured={credentialsConfigured} isSuperAdmin={isSuperAdmin} connected={connection.connected} canManage={canManageGoogleConnection} />
+      <GoogleSetupGuide
+        credentialsConfigured={credentialsConfigured}
+        isSuperAdmin={isSuperAdmin}
+        connected={connection.connected}
+        canManage={canManageGoogleConnection && !connection.otherConnection}
+      />
 
       {/* Estado de conexión */}
       <GoogleConnection
         connected={connection.connected}
         email={connection.email}
+        otherConnection={connection.otherConnection}
         locale={locale}
         disabled={!credentialsConfigured}
         canManage={canManageGoogleConnection}
@@ -72,6 +78,16 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
       {google === 'cancelled' && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400">
           Conexión cancelada.
+        </div>
+      )}
+      {google === 'forbidden' && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400">
+          Solo un administrador de la organización puede conectar Google.
+        </div>
+      )}
+      {google === 'already_connected' && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400">
+          Otro administrador de la organización ya conectó una cuenta de Google. Solo puede haber una conexión activa por organización.
         </div>
       )}
 

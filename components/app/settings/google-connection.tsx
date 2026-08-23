@@ -9,13 +9,19 @@ import { toast } from '@/lib/toast';
 interface Props {
   connected: boolean;
   email: string | null;
+  /**
+   * Set when the current user is not connected but another active org member
+   * already is — only one Google connection is allowed per organization, so
+   * connecting is blocked and this is shown instead.
+   */
+  otherConnection?: { name: string | null; email: string | null } | null;
   locale: string;
   disabled?: boolean;
   /** Only ORG_ADMIN / SUPERADMIN can connect, reconnect or disconnect Google. */
   canManage?: boolean;
 }
 
-export function GoogleConnection({ connected, email, locale, disabled = false, canManage = false }: Props) {
+export function GoogleConnection({ connected, email, otherConnection = null, locale, disabled = false, canManage = false }: Props) {
   const [isConnected, setIsConnected] = useState(connected);
   const [connectedEmail, setConnectedEmail] = useState(email);
   const [isPending, startTransition] = useTransition();
@@ -64,12 +70,25 @@ export function GoogleConnection({ connected, email, locale, disabled = false, c
               <span className="text-xs text-muted-foreground">{connectedEmail}</span>
               <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">Conectado</Badge>
             </div>
+          ) : otherConnection ? (
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              <span className="text-xs text-muted-foreground">
+                {otherConnection.name ?? otherConnection.email ?? 'Otro administrador'}
+              </span>
+              <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">Conectado</Badge>
+            </div>
           ) : (
             <p className="text-xs text-muted-foreground">No conectado</p>
           )}
           {!canManage && (
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               Solo un administrador de la organización puede conectar o desconectar Google.
+            </p>
+          )}
+          {canManage && otherConnection && (
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Solo puede haber una conexión de Google por organización. {otherConnection.name ?? 'Ese administrador'} debe desconectarla antes de que puedas conectar la tuya.
             </p>
           )}
         </div>
@@ -93,12 +112,12 @@ export function GoogleConnection({ connected, email, locale, disabled = false, c
                 Desconectar
               </Button>
             </>
-          ) : (
+          ) : !otherConnection ? (
             <Button size="sm" onClick={handleConnect} disabled={disabled}>
               <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
               Conectar Google
             </Button>
-          )}
+          ) : null}
         </div>
       )}
     </div>

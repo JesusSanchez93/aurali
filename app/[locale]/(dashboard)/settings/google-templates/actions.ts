@@ -37,8 +37,16 @@ export type GoogleDocTemplate = {
 };
 
 export type GoogleConnectionStatus = {
+  /** True when the CURRENT user has their own Google account connected. */
   connected: boolean;
   email: string | null;
+  /**
+   * Set when the current user is NOT connected but another active member of
+   * the organization already is. Only one Google connection is allowed per
+   * organization at a time, so the UI uses this to block connecting a second
+   * account and to explain whose connection is active instead.
+   */
+  otherConnection: { name: string | null; email: string | null } | null;
 };
 
 // ─── Read ──────────────────────────────────────────────────────────────────────
@@ -86,15 +94,59 @@ export async function getGoogleDocTemplates(): Promise<GoogleDocTemplate[]> {
 }
 
 export async function getGoogleConnectionStatus(): Promise<GoogleConnectionStatus> {
-  const { db, userId } = await getOrgContext();
+  const { db, userId, orgId } = await getOrgContext();
   const { data } = await db
     .from('google_oauth_tokens')
     .select('google_email')
     .eq('user_id', userId)
     .maybeSingle();
+
+  if (data) {
+    return { connected: true, email: data.google_email ?? null, otherConnection: null };
+  }
+
+  // Not connected themselves — check whether another active member of the
+  // organization already has a connection. Only one Google connection is
+  // allowed per organization, so this blocks connecting a second account.
+  const { data: members } = await db
+    .from('organization_members')
+    .select('user_id')
+    .eq('organization_id', orgId)
+    .eq('active', true)
+    .neq('user_id', userId);
+
+  const memberIds = (members ?? []).map((m: { user_id: string }) => m.user_id);
+  if (memberIds.length === 0) {
+    return { connected: false, email: null, otherConnection: null };
+  }
+
+  // google_oauth_tokens RLS only allows reading one's own row, so the admin
+  // client is required to check whether ANOTHER member is connected.
+  const adminDb = (await createClient({ admin: true })) as DB;
+  const { data: tokens } = await adminDb
+    .from('google_oauth_tokens')
+    .select('user_id, google_email')
+    .in('user_id', memberIds)
+    .limit(1);
+
+  const other = (tokens ?? [])[0] as { user_id: string; google_email: string | null } | undefined;
+  if (!other) {
+    return { connected: false, email: null, otherConnection: null };
+  }
+
+  const { data: profile } = await db
+    .from('profiles')
+    .select('firstname, lastname, email')
+    .eq('id', other.user_id)
+    .maybeSingle();
+  const name = profile
+    ? [profile.firstname, profile.lastname].filter(Boolean).join(' ') || profile.email
+    : null;
+
   return {
-    connected: !!data,
-    email: data?.google_email ?? null,
+    connected: false,
+    email: null,
+    otherConnection: { name, email: other.google_email ?? null },
   };
 }
 
