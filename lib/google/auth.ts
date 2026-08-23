@@ -158,6 +158,13 @@ export async function getValidAccessToken(userId: string): Promise<string> {
     .single();
 
   if (error || !data) {
+    console.error('[getValidAccessToken] No se encontró token de Google', {
+      userId,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      errorCode: error?.code ?? null,
+      errorMessage: error?.message ?? null,
+      errorDetails: error?.details ?? null,
+    });
     throw new Error(
       'No tienes una cuenta de Google conectada. Ve a Configuración → Google Docs.',
     );
