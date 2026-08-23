@@ -398,6 +398,28 @@ function sanitizeFileName(name: string) {
         .toLowerCase();
 }
 
+const PRODUCT_TYPE_LABELS: Record<string, string> = {
+    bank_account: 'Cuenta bancaria',
+    credit_card: 'Tarjeta de crédito',
+    debit_card: 'Tarjeta débito',
+};
+
+const CARD_BRAND_LABELS: Record<string, string> = {
+    visa: 'Visa',
+    mastercard: 'Mastercard',
+    american_express: 'American Express',
+    diners_club: 'Diners Club',
+    discover: 'Discover',
+    other: 'Otra',
+};
+
+const BANK_ACCOUNT_TYPE_LABELS: Record<string, string> = {
+    savings: 'Ahorro',
+    revolving: 'Rotativo',
+    free_investment: 'Libre inversión',
+    express_credit: 'Crédito exprés',
+};
+
 export async function updateBankingInformationAction(
     legalProcessId: string,
     formData: FormData
@@ -408,7 +430,31 @@ export async function updateBankingInformationAction(
     const bank_id = formData.get('bank_id') as string;
     const bank_name = formData.get('bank_name') as string | null;
     const bank_slug = formData.get('bank_slug') as string | null;
-    const last_4_digits = formData.get('last_4_digits') as string;
+
+    // One or more financial products (type + last 4 digits + brand/account-type
+    // metadata), sent as a JSON array
+    const productsRaw = formData.get('products') as string | null;
+    let products: { type: string; last_4_digits: string; card_brand?: string; account_type?: string }[] = [];
+    try {
+        products = productsRaw ? JSON.parse(productsRaw) : [];
+    } catch {
+        products = [];
+    }
+
+    // Kept for backward compatibility with the dashboard detail view and the
+    // BANKING.LAST_4_DIGITS document template variable, which only know about
+    // a single joined string — not the new per-product structure.
+    const last_4_digits = products
+        .map((p) => {
+            const detail = p.card_brand
+                ? CARD_BRAND_LABELS[p.card_brand] ?? p.card_brand
+                : p.account_type
+                    ? BANK_ACCOUNT_TYPE_LABELS[p.account_type] ?? p.account_type
+                    : null;
+            const typeLabel = PRODUCT_TYPE_LABELS[p.type] ?? p.type;
+            return `${typeLabel}${detail ? ` ${detail}` : ''} terminada en ${p.last_4_digits}`;
+        })
+        .join(', ') || null;
 
     // Handle files
     const uploadFile = async (file: File, path: string) => {
@@ -485,6 +531,7 @@ export async function updateBankingInformationAction(
         bank_name,
         bank_slug,
         last_4_digits,
+        products,
         bank_request: bankRequestPath,
         bank_response: bankResponsePath,
         latest_account_statement: statementPath,

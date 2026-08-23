@@ -721,6 +721,7 @@ export type Database = {
           lost_card: boolean
           no_signal: boolean
           organization_id: string
+          products: Json
           used_to_operate_stolen_amount: boolean
         }
         Insert: {
@@ -745,6 +746,7 @@ export type Database = {
           lost_card?: boolean
           no_signal?: boolean
           organization_id: string
+          products?: Json
           used_to_operate_stolen_amount?: boolean
         }
         Update: {
@@ -769,6 +771,7 @@ export type Database = {
           lost_card?: boolean
           no_signal?: boolean
           organization_id?: string
+          products?: Json
           used_to_operate_stolen_amount?: boolean
         }
         Relationships: [
