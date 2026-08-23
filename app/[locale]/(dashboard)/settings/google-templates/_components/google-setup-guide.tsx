@@ -75,11 +75,13 @@ export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin, connecte
             Serás redirigido aquí con tu cuenta conectada. Ya puedes crear plantillas.
           </li>
           <li className="flex gap-2">
-            <span className="font-semibold text-foreground shrink-0">4.</span>
-            En el Google Doc, escribe las variables con el formato{' '}
-            <code className="rounded bg-muted px-1 text-xs">{'{GRUPO.VARIABLE}'}</code>{' '}
-            — por ejemplo: <code className="rounded bg-muted px-1 text-xs">{'{CLIENT.FIRST_NAME}'}</code>,{' '}
-            <code className="rounded bg-muted px-1 text-xs">{'{PROCESS.ID}'}</code>.
+            <span className="font-semibold text-foreground shrink-0 mr-1">4.</span>
+            <span>
+              En el Google Doc, escribe las variables con el formato{' '}
+              <code className="inline-block rounded bg-muted px-1 text-xs">{'{GRUPO.VARIABLE}'}</code>{' '}
+              — por ejemplo: <code className="inline-block rounded bg-muted px-1 text-xs">{'{CLIENT.FIRST_NAME}'}</code>,{' '}
+              <code className="inline-block rounded bg-muted px-1 text-xs">{'{PROCESS.ID}'}</code>.
+            </span>
           </li>
         </ol>
 
