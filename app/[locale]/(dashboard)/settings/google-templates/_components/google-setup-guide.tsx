@@ -9,6 +9,8 @@ interface Props {
   credentialsConfigured: boolean;
   isSuperAdmin: boolean;
   connected?: boolean;
+  /** Only ORG_ADMIN / SUPERADMIN can act on the connection — others shouldn't see "click here" instructions for a button they don't have. */
+  canManage?: boolean;
 }
 
 function Step({ number, title, children }: { number: number; title: string; children: React.ReactNode }) {
@@ -33,17 +35,20 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
-export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin, connected }: Props) {
+export function GoogleSetupGuide({ credentialsConfigured, isSuperAdmin, connected, canManage = true }: Props) {
   const [adminOpen, setAdminOpen] = useState(!credentialsConfigured);
 
   // Si ya está conectado y no es superadmin, no hay nada que mostrar
   if (connected && !isSuperAdmin) return null;
 
+  // Sin nada que gestionar (no puede conectar) y sin sección de superadmin que mostrar
+  if (!canManage && !connected && !isSuperAdmin) return null;
+
   return (
     <div className="space-y-0 rounded-lg border divide-y">
 
-      {/* ── Sección del abogado (solo cuando no está conectado) ── */}
-      {!connected && <div className="px-4 py-4 space-y-3">
+      {/* ── Sección del abogado (solo cuando no está conectado y puede gestionarlo) ── */}
+      {!connected && canManage && <div className="px-4 py-4 space-y-3">
         <div className="flex items-center gap-2">
           <div className="flex h-4 w-4 items-center justify-center shrink-0">
             <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">

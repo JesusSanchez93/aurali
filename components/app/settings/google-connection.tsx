@@ -11,9 +11,11 @@ interface Props {
   email: string | null;
   locale: string;
   disabled?: boolean;
+  /** Only ORG_ADMIN / SUPERADMIN can connect, reconnect or disconnect Google. */
+  canManage?: boolean;
 }
 
-export function GoogleConnection({ connected, email, locale, disabled = false }: Props) {
+export function GoogleConnection({ connected, email, locale, disabled = false, canManage = false }: Props) {
   const [isConnected, setIsConnected] = useState(connected);
   const [connectedEmail, setConnectedEmail] = useState(email);
   const [isPending, startTransition] = useTransition();
@@ -65,33 +67,40 @@ export function GoogleConnection({ connected, email, locale, disabled = false }:
           ) : (
             <p className="text-xs text-muted-foreground">No conectado</p>
           )}
+          {!canManage && (
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Solo un administrador de la organización puede conectar o desconectar Google.
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {isConnected ? (
-          <>
-            <Button size="sm" variant="secondary" onClick={handleConnect} disabled={isPending}>
-              <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
-              Reconectar
+      {canManage && (
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <>
+              <Button size="sm" variant="secondary" onClick={handleConnect} disabled={isPending}>
+                <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
+                Reconectar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDisconnect}
+                disabled={isPending}
+              >
+                <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={handleConnect} disabled={disabled}>
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+              Conectar Google
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDisconnect}
-              disabled={isPending}
-            >
-              <LogOut className="mr-1.5 h-3.5 w-3.5" />
-              Desconectar
-            </Button>
-          </>
-        ) : (
-          <Button size="sm" onClick={handleConnect} disabled={disabled}>
-            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-            Conectar Google
-          </Button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -18,6 +18,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('system_role, current_organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.system_role !== 'SUPERADMIN') {
+    const { data: membership } = await supabase
+      .from('organization_members')
+      .select('id')
+      .eq('organization_id', profile?.current_organization_id ?? '')
+      .eq('user_id', user.id)
+      .eq('role', 'ORG_ADMIN')
+      .eq('active', true)
+      .maybeSingle();
+
+    if (!membership) {
+      return NextResponse.json(
+        { error: 'Solo un administrador de la organización puede conectar Google.' },
+        { status: 403 },
+      );
+    }
+  }
+
   // El locale para el redirect de regreso se extrae de la cabecera Referer o se usa 'es' por defecto
   const referer = request.headers.get('referer') ?? '';
   const localeMatch = referer.match(/\/([a-z]{2})\//);

@@ -28,6 +28,7 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
   ]);
 
   const isSuperAdmin = profile?.system_role === 'SUPERADMIN';
+  const canManageGoogleConnection = isSuperAdmin || profile?.org_role === 'ORG_ADMIN';
 
   // Verificar en el servidor si las credenciales OAuth están configuradas
   const credentialsConfigured = !!(
@@ -46,7 +47,7 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
       </div>
 
       {/* Guía de configuración */}
-      <GoogleSetupGuide credentialsConfigured={credentialsConfigured} isSuperAdmin={isSuperAdmin} connected={connection.connected} />
+      <GoogleSetupGuide credentialsConfigured={credentialsConfigured} isSuperAdmin={isSuperAdmin} connected={connection.connected} canManage={canManageGoogleConnection} />
 
       {/* Estado de conexión */}
       <GoogleConnection
@@ -54,6 +55,7 @@ export default async function GoogleTemplatesPage({ params, searchParams }: Prop
         email={connection.email}
         locale={locale}
         disabled={!credentialsConfigured}
+        canManage={canManageGoogleConnection}
       />
 
       {/* Feedback del flujo OAuth */}
