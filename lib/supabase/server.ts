@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from '@/types/database.types'
 
@@ -29,21 +30,31 @@ export async function createClient(options?: { admin?: boolean }) {
     );
   }
 
-  const supabaseKey = options?.admin
-    ? process.env.SUPABASE_SECRET_KEY
-    : supabaseAnonKey;
+  if (options?.admin) {
+    const serviceKey = process.env.SUPABASE_SECRET_KEY;
+    if (!serviceKey) {
+      throw new Error(
+        'Missing Supabase secret key. Set SUPABASE_SECRET_KEY for admin operations.',
+      );
+    }
 
-  if (!supabaseKey) {
-    throw new Error(
-      'Missing Supabase secret key. Set SUPABASE_SECRET_KEY for admin operations.',
-    );
+    // Deliberately NOT using createServerClient/cookies here: @supabase/ssr's
+    // cookie-aware client authenticates requests with whatever user session it
+    // finds in cookies (if any), overriding the service-role key on the
+    // Authorization header — silently defeating the RLS bypass this option
+    // exists for. The plain supabase-js client has no session/cookie storage,
+    // so it always authenticates as service_role, regardless of the calling
+    // request's cookies.
+    return createSupabaseJsClient<Database>(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
   }
 
   const cookieStore = await cookies();
 
   return createServerClient<Database>(
     supabaseUrl,
-    supabaseKey,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
