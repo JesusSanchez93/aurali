@@ -907,6 +907,7 @@ async function executeGenerateDocument(
             googleDocTemplateId: tid,
             data:                templateData,
             organizationId:      context.legalProcess.organization_id ?? '',
+            legalProcessId:      context.legalProcess.id,
           }));
         } else {
           ({ html, name, tiptapContent } = await generatePreviewHtml(tid, templateData, {

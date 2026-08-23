@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getValidAccessToken } from '@/lib/google/auth';
 import { fetchGoogleDocContent } from '@/lib/google/docsClient';
 import { substituteVars, wrapWithPageLayout } from '@/lib/documents/htmlRenderer';
+import { extractAiVariableKeysFromText, resolveAiVariables, warnIfUnresolvedAiVars } from '@/lib/anthropic/resolveAiVariables';
 import {
   copyTemplate,
   replaceVariables,
@@ -28,6 +29,33 @@ import {
   exportToPdf,
   deleteDocument,
 } from '@/lib/google/googleDocPdfService';
+
+/**
+ * Scans the (already-copied) doc for `{AI_XXX}` tokens and resolves them via
+ * Claude, merging the results into `data` in place — mirrors the equivalent
+ * step in the TipTap pipeline (lib/documents/generateDocument.ts). Without
+ * this, AI variables are simply absent from the map `replaceVariables()`
+ * iterates over, so their placeholder is never targeted by a replaceAllText
+ * request and survives verbatim into the exported PDF.
+ */
+async function resolveAiVariablesForGoogleDoc(
+  tempDocId: string,
+  accessToken: string,
+  data: Record<string, string>,
+  legalProcessId: string,
+  organizationId: string,
+): Promise<void> {
+  try {
+    const { bodyHtml, headerHtml, footerHtml } = await fetchGoogleDocContent(tempDocId, accessToken);
+    const aiKeys = extractAiVariableKeysFromText(`${bodyHtml} ${headerHtml ?? ''} ${footerHtml ?? ''}`);
+    if (aiKeys.length === 0) return;
+
+    const aiValues = await resolveAiVariables(legalProcessId, organizationId, aiKeys);
+    Object.assign(data, aiValues);
+  } catch (e) {
+    console.error('[resolveAiVariablesForGoogleDoc] Error resolving AI variables:', e);
+  }
+}
 
 export interface GenerateFromDocInput {
   /** UUID de la fila google_doc_templates */
@@ -99,6 +127,11 @@ export async function generateFromGoogleDoc(
 
   try {
     if (!existingTempDocId) {
+      // ── 3b. Resolver variables de IA (prefijo AI_) antes de sustituir ──────
+      if (legalProcessId) {
+        await resolveAiVariablesForGoogleDoc(tempDocId, accessToken, data, legalProcessId, organizationId);
+      }
+
       // ── 4. Sustituir variables en la copia ───────────────────────────────
       const resolvedData = await resolveImageUrls(data, supabase);
       await replaceVariables(tempDocId, resolvedData, accessToken);
@@ -121,6 +154,9 @@ export async function generateFromGoogleDoc(
         fontFamily: fontFamily || undefined,
         marginLeft: margins?.left,
         marginRight: margins?.right,
+      });
+      warnIfUnresolvedAiVars(`${bodyHtml} ${headerHtml ?? ''} ${footerHtml ?? ''}`, {
+        googleDocTemplateId, templateName: template.name, legalProcessId,
       });
     } catch (e) {
       console.warn('[generateFromGoogleDoc] No se pudo capturar HTML para vista previa:', e);
@@ -239,8 +275,10 @@ export async function prepareGoogleDocPreview(input: {
   googleDocTemplateId: string;
   data: Record<string, string>;
   organizationId: string;
+  /** Needed to resolve AI_ variables (fetches case context via legal_process_clients/banks). */
+  legalProcessId?: string;
 }): Promise<PrepareGoogleDocPreviewResult> {
-  const { googleDocTemplateId, data, organizationId } = input;
+  const { googleDocTemplateId, data, organizationId, legalProcessId } = input;
 
   const supabase = await createClient({ admin: true });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -265,6 +303,11 @@ export async function prepareGoogleDocPreview(input: {
   const copyName = `${template.name as string} — preview ${new Date().toISOString()}`;
   const tempDocId = await copyTemplate(template.google_doc_id as string, accessToken, copyName);
 
+  // Resolver variables de IA (prefijo AI_) antes de sustituir
+  if (legalProcessId) {
+    await resolveAiVariablesForGoogleDoc(tempDocId, accessToken, data, legalProcessId, organizationId);
+  }
+
   // Sustituir variables (la copia queda viva — NO se llama deleteDocument aquí)
   const resolvedData = await resolveImageUrls(data, supabase);
   await replaceVariables(tempDocId, resolvedData, accessToken);
@@ -280,6 +323,9 @@ export async function prepareGoogleDocPreview(input: {
     fontFamily: fontFamily ?? undefined,
     marginLeft: margins?.left,
     marginRight: margins?.right,
+  });
+  warnIfUnresolvedAiVars(`${bodyHtml} ${headerHtml ?? ''} ${footerHtml ?? ''}`, {
+    googleDocTemplateId, templateName: template.name, legalProcessId,
   });
 
   return { html, tempDocId, name: template.name as string };

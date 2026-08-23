@@ -24,7 +24,7 @@ import {
   buildPuppeteerFooterTemplate,
 } from './htmlRenderer';
 import { htmlToPdf } from './pdfGenerator';
-import { extractAiVariableKeys, resolveAiVariables } from '@/lib/anthropic/resolveAiVariables';
+import { extractAiVariableKeys, resolveAiVariables, warnIfUnresolvedAiVars } from '@/lib/anthropic/resolveAiVariables';
 import { DEFAULT_TEMPLATES } from './templates/index';
 import { generateHTML } from '@tiptap/html/server';
 import { Node, mergeAttributes } from '@tiptap/core';
@@ -435,6 +435,7 @@ export async function generateDocument(
 
   // ── 4. Substitute any remaining tokens in HTML (edge cases) ───────────────
   const resolvedBody = substituteVars(bodyHtml, data);
+  warnIfUnresolvedAiVars(resolvedBody, { templateId, templateName: template.name, legalProcessId });
 
   // ── 5. Resolve header/footer and wrap in page layout ─────────────────────
   // Header/footer are NOT embedded in the body HTML — they are passed as

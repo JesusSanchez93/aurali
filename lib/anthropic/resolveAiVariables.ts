@@ -35,13 +35,46 @@ interface ProcessBanking {
 }
 
 /**
- * Scans TipTap JSON for variable nodes whose key starts with "AI_".
- * Returns deduplicated list of keys (without braces).
+ * Scans TipTap JSON for AI_ variable references — both proper `variable` chip
+ * nodes (`{"variable":"AI_XXX"}`, inserted via the autocomplete dropdown) AND
+ * plain `{AI_XXX}` text typed/pasted directly into the editor without going
+ * through the chip flow. The latter never produces a chip node, so relying on
+ * the chip pattern alone silently skips it — resolveAiVariables() is never
+ * called for that key, and the literal `{AI_XXX}` token survives untouched
+ * into the final document. Returns a deduplicated list of keys (no braces).
  */
 export function extractAiVariableKeys(content: unknown): string[] {
   const str = JSON.stringify(content ?? '');
-  const matches = [...str.matchAll(/"variable":"(AI_\w+)"/g)];
-  return [...new Set(matches.map((m) => m[1]))];
+  return extractAiVariableKeysFromText(str);
+}
+
+/**
+ * Same extraction, but over a plain string (HTML, Google Doc text, etc.)
+ * rather than TipTap JSON — matches literal `{AI_XXX}` occurrences directly.
+ * Used by both the TipTap and Google Docs pipelines.
+ */
+export function extractAiVariableKeysFromText(text: string): string[] {
+  const chipMatches = [...text.matchAll(/"variable":"(AI_\w+)"/g)];
+  const literalMatches = [...text.matchAll(/\{(AI_\w+)\}/g)];
+  return [...new Set([...chipMatches, ...literalMatches].map((m) => m[1]))];
+}
+
+/**
+ * Logs a clear warning when any `{AI_XXX}` token remains unreplaced in the
+ * final rendered content. Unlike static variables, an unresolved AI token is
+ * never expected/acceptable — it means the generated document was shipped
+ * with a literal, meaningless placeholder in it. Both generation pipelines
+ * otherwise fail completely silently on this (no error, no audit entry), so
+ * this is the only signal ops has to catch it after the fact.
+ */
+export function warnIfUnresolvedAiVars(finalHtml: string, context: Record<string, unknown>): void {
+  const remaining = [...new Set([...finalHtml.matchAll(/\{(AI_\w+)\}/g)].map((m) => m[1]))];
+  if (remaining.length > 0) {
+    console.error('[warnIfUnresolvedAiVars] Unresolved AI variable placeholder(s) in generated document', {
+      keys: remaining,
+      ...context,
+    });
+  }
 }
 
 /**
