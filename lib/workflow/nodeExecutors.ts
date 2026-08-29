@@ -489,7 +489,7 @@ function executeManualAction(node: WorkflowNodeRow, _context: ExecutionContext):
     status: 'waiting',
     output: {
       waiting_for: 'manual_action',
-      instructions: (node.config as { instructions?: string }).instructions ?? '',
+      instructions: (node.config as { instructions?: unknown }).instructions ?? '',
       assignee: (node.config as { assignee?: string }).assignee ?? 'lawyer',
     },
   };

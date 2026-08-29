@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { PlayCircle, RotateCcw, FileCheck, FilePlus } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import {
   getPendingManualAction,
   retryFailedWorkflow,
@@ -385,19 +386,36 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
         {action.nodeTitle}
       </Button>
 
-      <ConfirmDialog
-        isOpen={confirming}
-        onClose={() => dispatch({ type: 'SET_CONFIRMING', value: false })}
-        onConfirm={handleManualConfirm}
-        title={action.nodeTitle}
-        description={
-          action.instructions
-            ? `${action.instructions}\n\nEsta acción no se puede deshacer.`
-            : 'Esta acción avanzará el flujo al siguiente paso. Esta acción no se puede deshacer.'
-        }
-        confirmLabel="Confirmar"
-        cancelLabel="Cancelar"
-      />
+      <Dialog open={confirming} onOpenChange={(open) => { if (!open) dispatch({ type: 'SET_CONFIRMING', value: false }); }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{action.nodeTitle}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            {action.instructions ? (
+              <div
+                className="[&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-5 [&_ul]:pl-5 [&_p]:leading-relaxed [&_strong]:font-semibold [&>*+*]:mt-1.5"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(action.instructions) }}
+              />
+            ) : (
+              <p>Esta acción avanzará el flujo al siguiente paso.</p>
+            )}
+            <p>Esta acción no se puede deshacer.</p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={() => dispatch({ type: 'SET_CONFIRMING', value: false })} disabled={executing}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => { handleManualConfirm(); dispatch({ type: 'SET_CONFIRMING', value: false }); }}
+              disabled={executing}
+            >
+              {executing ? <Spinner className="mr-2 h-4 w-4" /> : null}
+              Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

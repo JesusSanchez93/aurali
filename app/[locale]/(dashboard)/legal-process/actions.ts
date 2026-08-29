@@ -737,11 +737,18 @@ export async function getPendingManualAction(
     if (!node) continue;
 
     if (node.type === 'manual_action') {
+      const rawInstructions = (node.config as { instructions?: unknown } | null)?.instructions;
+      const instructions = !rawInstructions
+        ? null
+        : typeof rawInstructions === 'string'
+          ? rawInstructions.replace(/\n/g, '<br>')
+          : tiptapJsonToBodyHtml(rawInstructions);
+
       return {
         kind:          'manual_action',
         workflowRunId: run.id,
         nodeTitle:     node.title,
-        instructions:  (node.config?.instructions as string | null) ?? null,
+        instructions,
       };
     }
 

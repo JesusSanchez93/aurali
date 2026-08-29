@@ -123,7 +123,7 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
     defaultTitle: 'Acción Manual',
     defaultConfig: { instructions: '', assignee: 'lawyer' },
     configSchema: [
-      { key: 'instructions', label: 'Instrucciones', type: 'textarea', placeholder: 'Descripción de la tarea...', required: true },
+      { key: 'instructions', label: 'Instrucciones', type: 'richtext', placeholder: 'Descripción de la tarea...', required: true },
       {
         key: 'assignee', label: 'Asignado a', type: 'select', required: true,
         options: [
