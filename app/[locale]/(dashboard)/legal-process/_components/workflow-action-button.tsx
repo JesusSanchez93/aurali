@@ -6,7 +6,7 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { PlayCircle, RotateCcw, FileCheck, FilePlus, Paperclip } from 'lucide-react';
+import { PlayCircle, RotateCcw, FileCheck, FilePlus } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import {
   getPendingManualAction,
@@ -32,7 +32,6 @@ type State = {
   action: PendingWorkflowAction | null;
   templates: { id: string; name: string }[];
   selectedTemplateIds: string[];
-  selectedDocumentIds: string[];
 };
 
 type ReducerAction =
@@ -42,8 +41,7 @@ type ReducerAction =
   | { type: 'EXEC_START' }
   | { type: 'EXEC_DONE' }
   | { type: 'SET_TEMPLATES'; templates: { id: string; name: string }[] }
-  | { type: 'TOGGLE_TEMPLATE'; id: string }
-  | { type: 'TOGGLE_DOCUMENT'; id: string };
+  | { type: 'TOGGLE_TEMPLATE'; id: string };
 
 const initialState: State = {
   loading: true,
@@ -52,7 +50,6 @@ const initialState: State = {
   action: null,
   templates: [],
   selectedTemplateIds: [],
-  selectedDocumentIds: [],
 };
 
 function reducer(state: State, action: ReducerAction): State {
@@ -70,19 +67,12 @@ function reducer(state: State, action: ReducerAction): State {
           ? state.selectedTemplateIds.filter((id) => id !== action.id)
           : [...state.selectedTemplateIds, action.id],
       };
-    case 'TOGGLE_DOCUMENT':
-      return {
-        ...state,
-        selectedDocumentIds: state.selectedDocumentIds.includes(action.id)
-          ? state.selectedDocumentIds.filter((id) => id !== action.id)
-          : [...state.selectedDocumentIds, action.id],
-      };
     default: return state;
   }
 }
 
 export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: Props) {
-  const [{ loading, confirming, executing, action, templates, selectedTemplateIds, selectedDocumentIds }, dispatch] = useReducer(reducer, initialState);
+  const [{ loading, confirming, executing, action, templates, selectedTemplateIds }, dispatch] = useReducer(reducer, initialState);
 
   const fetchAction = useCallback(() => {
     dispatch({ type: 'FETCH_START' });
@@ -128,7 +118,7 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
     }
   };
 
-  // ── Document preview: approve → generate final PDFs and resume workflow ──
+  // ── Document preview: approve → generate final PDFs, then auto-send all to the client ──
   const handleApproveDocuments = async () => {
     dispatch({ type: 'EXEC_START' });
     const loadingToast = toast.loading('Generando PDFs finales...', {
@@ -136,14 +126,26 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
     });
     try {
       await approveDocumentPreviews(legalProcessId);
+
+      // The approval step resumes the workflow, which may immediately land on the
+      // send_email node waiting for attachments — send all generated documents
+      // right away instead of requiring a second manual click.
+      const nextAction = await getPendingManualAction(legalProcessId);
+      if (nextAction?.kind === 'document_attachment_selection') {
+        await confirmEmailAttachments(
+          legalProcessId,
+          nextAction.availableDocuments.map((d) => d.id),
+        );
+      }
+
       toast.dismiss(loadingToast);
-      toast.success('PDFs generados exitosamente', {
-        description: 'Los documentos fueron enviados al cliente.',
+      toast.success('Documentos enviados al cliente', {
+        description: 'Se generaron los PDFs finales y se enviaron por correo.',
       });
       onSuccess();
     } catch (err) {
       toast.dismiss(loadingToast);
-      toast.error('Error al generar los PDFs', {
+      toast.error('Error al aprobar y enviar los documentos', {
         description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
       });
     } finally {
@@ -175,15 +177,15 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
     }
   };
 
-  // ── Document attachment selection: resume send_email with selected docs ──
+  // ── Document attachment selection: resume send_email with all generated docs ──
   const handleConfirmAttachments = async () => {
-    if (selectedDocumentIds.length === 0) return;
+    if (action?.kind !== 'document_attachment_selection' || action.availableDocuments.length === 0) return;
     dispatch({ type: 'EXEC_START' });
     const loadingToast = toast.loading('Enviando correo...', {
       description: 'Preparando adjuntos y enviando al cliente.',
     });
     try {
-      await confirmEmailAttachments(legalProcessId, selectedDocumentIds);
+      await confirmEmailAttachments(legalProcessId, action.availableDocuments.map((d) => d.id));
       toast.dismiss(loadingToast);
       toast.success('Correo enviado', {
         description: 'Los documentos fueron enviados al cliente.',
@@ -276,49 +278,28 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
   if (action.kind === 'document_attachment_selection') {
     return (
       <>
-        <Button size="sm" onClick={() => dispatch({ type: 'SET_CONFIRMING', value: true })} disabled={executing}>
+        <Button
+          size="sm"
+          onClick={() => dispatch({ type: 'SET_CONFIRMING', value: true })}
+          disabled={executing || action.availableDocuments.length === 0}
+        >
           {executing ? (
             <Spinner className="mr-2 h-4 w-4" />
           ) : (
-            <Paperclip className="mr-2 h-4 w-4" />
+            <FileCheck className="mr-2 h-4 w-4" />
           )}
-          {action.nodeTitle}
+          Enviar documentos al cliente
         </Button>
 
-        <Dialog open={confirming} onOpenChange={(open) => { if (!open) dispatch({ type: 'SET_CONFIRMING', value: false }); }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Seleccionar documentos para adjuntar</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-2 py-2">
-              {action.availableDocuments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay documentos generados disponibles.</p>
-              ) : (
-                action.availableDocuments.map((doc) => (
-                  <label key={doc.id} className="flex items-center gap-3 cursor-pointer rounded-md p-2 hover:bg-muted">
-                    <Checkbox
-                      checked={selectedDocumentIds.includes(doc.id)}
-                      onCheckedChange={() => dispatch({ type: 'TOGGLE_DOCUMENT', id: doc.id })}
-                    />
-                    <span className="text-sm">{doc.name}</span>
-                  </label>
-                ))
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => dispatch({ type: 'SET_CONFIRMING', value: false })} disabled={executing}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmAttachments}
-                disabled={executing || selectedDocumentIds.length === 0}
-              >
-                {executing ? <Spinner className="mr-2 h-4 w-4" /> : null}
-                Enviar correo
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+          isOpen={confirming}
+          onClose={() => dispatch({ type: 'SET_CONFIRMING', value: false })}
+          onConfirm={handleConfirmAttachments}
+          title="Enviar documentos al cliente"
+          description={`Se ${action.availableDocuments.length === 1 ? 'enviará 1 documento' : `enviarán ${action.availableDocuments.length} documentos`} generados por correo al cliente. Esta acción no se puede deshacer.`}
+          confirmLabel="Enviar"
+          cancelLabel="Cancelar"
+        />
       </>
     );
   }
@@ -337,16 +318,16 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
           ) : (
             <FileCheck className="mr-2 h-4 w-4" />
           )}
-          Aprobar documentos
+          Aprobar y enviar documentos al cliente
         </Button>
 
         <ConfirmDialog
           isOpen={confirming}
           onClose={() => dispatch({ type: 'SET_CONFIRMING', value: false })}
           onConfirm={handleApproveDocuments}
-          title="Aprobar documentos"
+          title="Aprobar y enviar documentos al cliente"
           description={`Se ${action.previewCount === 1 ? 'ha generado 1 vista previa' : `han generado ${action.previewCount} vistas previas`} de los documentos. Al aprobar, se generarán los PDFs finales y serán enviados al cliente. Esta acción no se puede deshacer.`}
-          confirmLabel="Aprobar y generar PDFs"
+          confirmLabel="Aprobar y enviar"
           cancelLabel="Cancelar"
         />
       </>
