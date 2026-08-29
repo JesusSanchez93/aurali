@@ -9,18 +9,7 @@ interface AiVariableRow {
   examples: string[] | null;
 }
 
-interface ProcessClient {
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  document_number: string | null;
-}
-
 interface ProcessBanking {
-  bank_name: string | null;
-  bank_last_4_digits: string | null;
-  fraud_incident_summary: string | null;
   bank_request: string | null;
   bank_response: string | null;
   latest_account_statement: string | null;
@@ -32,6 +21,21 @@ interface ProcessBanking {
   access_link: boolean | null;
   used_to_operate_stolen_amount: boolean | null;
   lost_card: boolean | null;
+}
+
+/**
+ * Substitutes `{GROUP.VARIABLE}` tokens in a prompt with real values from the
+ * template data map — the same catalog documented in Settings → Variables
+ * disponibles para tus plantillas. Unlike `substituteVars` in
+ * `lib/documents/htmlRenderer.ts`, this matches dotted keys (e.g.
+ * `{CLIENT.FIRST_NAME}`, `{BANKING.LAST_4_DIGITS}`). Unknown tokens are left
+ * as-is.
+ */
+function substituteStaticVars(template: string, data: Record<string, string>): string {
+  return template.replace(/\{([A-Z0-9_]+\.[A-Z0-9_]+)\}/g, (match, key: string) => {
+    if (!Object.prototype.hasOwnProperty.call(data, key)) return match;
+    return data[key] ?? '';
+  });
 }
 
 /**
@@ -79,12 +83,20 @@ export function warnIfUnresolvedAiVars(finalHtml: string, context: Record<string
 
 /**
  * Resolves AI variable keys by calling Claude with the full legal process context.
+ * `templateData` is the same GROUP.VARIABLE map built by
+ * `buildDocumentTemplateData()` (lib/workflow/nodeExecutors.ts) that the
+ * static `{GROUP.VARIABLE}` substitution already uses — passed in by the
+ * caller instead of re-queried here, so both systems always see the same
+ * data. Any `{GROUP.VARIABLE}` token written inside an AI variable's prompt
+ * is substituted with real values from this map before the prompt reaches
+ * Claude (see `substituteStaticVars`).
  * Returns a map of { key -> generated text } ready to merge into the data map.
  */
 export async function resolveAiVariables(
   legalProcessId: string,
   orgId: string,
   keys: string[],
+  templateData: Record<string, string>,
 ): Promise<Record<string, string>> {
   if (keys.length === 0) return {};
 
@@ -101,37 +113,32 @@ export async function resolveAiVariables(
 
   if (!aiVars || aiVars.length === 0) return {};
 
-  // Fetch process context in parallel
-  const [{ data: client }, { data: banking }] = await Promise.all([
-    db
-      .from('legal_process_clients')
-      .select('first_name, last_name, email, phone, document_number')
-      .eq('legal_process_id', legalProcessId)
-      .single() as Promise<{ data: ProcessClient | null }>,
-    db
-      .from('legal_process_banks')
-      .select(
-        'bank_name, bank_last_4_digits, fraud_incident_summary, bank_request, bank_response, latest_account_statement, complait_documents, file_complait, no_signal, bank_notification, access_website, access_link, used_to_operate_stolen_amount, lost_card',
-      )
-      .eq('legal_process_id', legalProcessId)
-      .single() as Promise<{ data: ProcessBanking | null }>,
-  ]);
+  // Fetch the process-attachment fields not covered by templateData (raw
+  // storage paths + fraud flags used only for the free-text context block).
+  const { data: banking } = await db
+    .from('legal_process_banks')
+    .select(
+      'bank_request, bank_response, latest_account_statement, complait_documents, file_complait, no_signal, bank_notification, access_website, access_link, used_to_operate_stolen_amount, lost_card',
+    )
+    .eq('legal_process_id', legalProcessId)
+    .maybeSingle() as { data: ProcessBanking | null };
 
-  // Build context text
+  // Build context text from the shared templateData map — same values as
+  // the rest of the document, so there's a single source of truth.
   const lines: string[] = ['=== CONTEXTO DEL CASO ==='];
-  if (client) {
-    const name = [client.first_name, client.last_name].filter(Boolean).join(' ');
-    if (name) lines.push(`Cliente: ${name}`);
-    if (client.email) lines.push(`Email: ${client.email}`);
-    if (client.phone) lines.push(`Teléfono: ${client.phone}`);
-    if (client.document_number) lines.push(`Número de documento: ${client.document_number}`);
+  const clientName = [templateData['CLIENT.FIRST_NAME'], templateData['CLIENT.LAST_NAME']].filter(Boolean).join(' ');
+  if (clientName) lines.push(`Cliente: ${clientName}`);
+  if (templateData['CLIENT.EMAIL']) lines.push(`Email: ${templateData['CLIENT.EMAIL']}`);
+  if (templateData['CLIENT.PHONE']) lines.push(`Teléfono: ${templateData['CLIENT.PHONE']}`);
+  if (templateData['CLIENT.DOCUMENT_NUMBER']) lines.push(`Número de documento: ${templateData['CLIENT.DOCUMENT_NUMBER']}`);
+  if (templateData['BANKING.NAME']) lines.push(`Banco/Entidad financiera: ${templateData['BANKING.NAME']}`);
+  if (templateData['BANKING.LAST_4_DIGITS']) {
+    lines.push(`Productos financieros afectados: ${templateData['BANKING.LAST_4_DIGITS']}`);
+  }
+  if (templateData['BANKING.FRAUD_INCIDENT_SUMMARY']) {
+    lines.push(`\nRelato del fraude, en palabras del cliente (única fuente de montos/valores del caso):\n${templateData['BANKING.FRAUD_INCIDENT_SUMMARY']}`);
   }
   if (banking) {
-    if (banking.bank_name) lines.push(`Banco: ${banking.bank_name}`);
-    if (banking.bank_last_4_digits) lines.push(`Últimos 4 dígitos del producto: ${banking.bank_last_4_digits}`);
-    if (banking.fraud_incident_summary) {
-      lines.push(`\nRelato del fraude (en palabras del cliente):\n${banking.fraud_incident_summary}`);
-    }
     const flags: string[] = [];
     if (banking.file_complait) flags.push('presentó denuncia');
     if (banking.no_signal) flags.push('se quedó sin señal antes del fraude');
@@ -182,10 +189,14 @@ export async function resolveAiVariables(
         ? `\n=== EJEMPLOS DE REDACCIÓN DEL ABOGADO ===\n${examples.map((ex, i) => `Ejemplo ${i + 1}: "${ex}"`).join('\n')}`
         : '';
 
+      // Resolve {GROUP.VARIABLE} tokens (same catalog as document templates)
+      // before the instruction ever reaches Claude.
+      const resolvedPrompt = substituteStaticVars(aiVar.prompt, templateData);
+
       const userContent: Anthropic.Messages.ContentBlockParam[] = [
         { type: 'text', text: contextText },
         ...docBlocks,
-        { type: 'text', text: `\n=== INSTRUCCIÓN ===\n${aiVar.prompt}${examplesText}` },
+        { type: 'text', text: `\n=== INSTRUCCIÓN ===\n${resolvedPrompt}${examplesText}` },
       ];
 
       const response = await anthropic.messages.create({
@@ -194,13 +205,26 @@ export async function resolveAiVariables(
         system:
           'Eres un asistente legal colombiano especializado en redacción de documentos jurídicos. ' +
           'Redacta el fragmento solicitado para un documento legal oficial basándote en el contexto del caso proporcionado. ' +
+          'Si la instrucción requiere montos o valores, extráelos y calcúlalos únicamente a partir del relato de los hechos '  +
+          'incluido en el contexto (nunca inventes cifras); si necesitas expresar un total, hazlo tanto en cifras como en letras. ' +
+          'Nunca dejes en tu respuesta un placeholder sin resolver, con cualquier sintaxis (por ejemplo `{ALGO}` o `{{algo}}`) — ' +
+          'si un dato puntual no está disponible en el contexto, redacta la frase sin ese dato en vez de dejar un token literal. ' +
           'Responde SOLO con el texto del fragmento, sin explicaciones, sin introducción, sin comillas, sin formato markdown.',
         messages: [{ role: 'user', content: userContent }],
       });
 
       const textBlock = response.content.find((b) => b.type === 'text');
       if (textBlock && textBlock.type === 'text') {
-        result[aiVar.key] = textBlock.text.trim();
+        const text = textBlock.text.trim();
+        const leftoverTokens = [...new Set([...text.matchAll(/\{\{[^{}]+\}\}|\{[A-Z0-9_]+\.[A-Z0-9_]+\}/g)].map((m) => m[0]))];
+        if (leftoverTokens.length > 0) {
+          console.error('[resolveAiVariables] Unresolved placeholder(s) left in AI-generated text', {
+            key: aiVar.key,
+            legalProcessId,
+            tokens: leftoverTokens,
+          });
+        }
+        result[aiVar.key] = text;
       }
     } catch (err) {
       console.error(`[resolveAiVariables] Error resolving ${aiVar.key}:`, err);

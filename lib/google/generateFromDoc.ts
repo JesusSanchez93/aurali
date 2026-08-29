@@ -50,7 +50,7 @@ async function resolveAiVariablesForGoogleDoc(
     const aiKeys = extractAiVariableKeysFromText(`${bodyHtml} ${headerHtml ?? ''} ${footerHtml ?? ''}`);
     if (aiKeys.length === 0) return;
 
-    const aiValues = await resolveAiVariables(legalProcessId, organizationId, aiKeys);
+    const aiValues = await resolveAiVariables(legalProcessId, organizationId, aiKeys, data);
     Object.assign(data, aiValues);
   } catch (e) {
     console.error('[resolveAiVariablesForGoogleDoc] Error resolving AI variables:', e);

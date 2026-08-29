@@ -405,7 +405,7 @@ export async function generateDocument(
     const aiKeys = extractAiVariableKeys(sourceContent);
     if (aiKeys.length > 0) {
       const orgId = organizationId ?? template.organization_id;
-      const aiValues = await resolveAiVariables(legalProcessId, orgId, aiKeys);
+      const aiValues = await resolveAiVariables(legalProcessId, orgId, aiKeys, data);
       Object.assign(data, aiValues);
     }
   }
@@ -626,7 +626,7 @@ export async function generatePreviewHtml(
     const aiKeys = extractAiVariableKeys(template.content);
     if (aiKeys.length > 0) {
       const orgId = options.organizationId ?? template.organization_id;
-      const aiValues = await resolveAiVariables(options.legalProcessId, orgId, aiKeys);
+      const aiValues = await resolveAiVariables(options.legalProcessId, orgId, aiKeys, data);
       Object.assign(data, aiValues);
     }
   }
