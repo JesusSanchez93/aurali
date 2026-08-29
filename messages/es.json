@@ -259,6 +259,7 @@
       "modal_title": "Registrar pago",
       "modal_description": "Registra un pago realizado por el cliente.",
       "field_amount": "Monto",
+      "use_total_btn": "Usar monto total",
       "field_method": "Medio de pago",
       "field_date": "Fecha de pago",
       "field_reference": "Referencia",

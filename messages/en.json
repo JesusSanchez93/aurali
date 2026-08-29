@@ -259,6 +259,7 @@
       "modal_title": "Register payment",
       "modal_description": "Record a payment made by the client.",
       "field_amount": "Amount",
+      "use_total_btn": "Use total amount",
       "field_method": "Payment method",
       "field_date": "Payment date",
       "field_reference": "Reference",

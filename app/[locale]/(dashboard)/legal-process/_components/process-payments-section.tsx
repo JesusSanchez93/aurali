@@ -54,6 +54,7 @@ export function ProcessPaymentsSection({ legalProcessId, fee, payments, onUpdate
   const [isPending, startTransition] = useTransition();
 
   const [amount, setAmount] = useState<number | undefined>(undefined);
+  const [amountKey, setAmountKey] = useState(0);
   const [method, setMethod] = useState<PaymentMethod | ''>('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [reference, setReference] = useState('');
@@ -73,8 +74,14 @@ export function ProcessPaymentsSection({ legalProcessId, fee, payments, onUpdate
     other: t('method_other'),
   };
 
+  function fillWithTotal() {
+    setAmount(remainingAmount);
+    setAmountKey((k) => k + 1);
+  }
+
   function resetForm() {
     setAmount(undefined);
+    setAmountKey((k) => k + 1);
     setMethod('');
     setPaymentDate(new Date().toISOString().split('T')[0]);
     setReference('');
@@ -177,14 +184,29 @@ export function ProcessPaymentsSection({ legalProcessId, fee, payments, onUpdate
             <div className="space-y-1.5">
               <Label>{t('field_amount')} *</Label>
               <CurrencyInput
+                key={amountKey}
                 value={amount}
                 onChange={setAmount}
                 max={remainingAmount || undefined}
                 disabled={isPending}
               />
-              {remainingAmount > 0 && (
-                <p className="text-xs text-muted-foreground">Máximo: {formatCOP(remainingAmount)}</p>
-              )}
+              <div className="flex items-center justify-between">
+                {remainingAmount > 0 ? (
+                  <p className="text-xs text-muted-foreground">Máximo: {formatCOP(remainingAmount)}</p>
+                ) : <span />}
+                {remainingAmount > 0 && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs"
+                    onClick={fillWithTotal}
+                    disabled={isPending}
+                  >
+                    {t('use_total_btn')}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Payment method */}
