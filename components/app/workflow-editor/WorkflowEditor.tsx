@@ -307,7 +307,7 @@ function WorkflowEditorInner({
                     <p className="mt-0.5 truncate text-xs font-normal text-muted-foreground">{cfg.description}</p>
                   </div>
                 </div>
-                <div className="flex shrink-0 justify-center items-center gap-0.5">
+                <div className="flex shrink-0 items-center gap-0.5">
                   <Button
                     variant="ghost"
                     size="icon"
