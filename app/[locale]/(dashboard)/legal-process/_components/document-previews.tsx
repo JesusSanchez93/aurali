@@ -141,8 +141,8 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
           </Badge>
         </div>
 
-        {/* ── Document cards ───────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* ── Document list ─────────────────────────────────────────────────── */}
+        <div className="divide-y rounded-lg border">
           {previews.map((doc) => {
             const createdAt = new Date(doc.created_at).toLocaleDateString('es', {
               day: '2-digit', month: 'short', year: 'numeric',
@@ -151,78 +151,33 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
             return (
               <div
                 key={doc.id}
-                className="overflow-hidden rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md"
+                className="flex items-center justify-between gap-4 px-4 py-3"
               >
-                {/* Card header */}
-                <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3">
-                  <span className="text-sm font-medium text-foreground">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-sm font-medium text-foreground">
                     {doc.document_name ?? t('document_fallback')}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">{createdAt}</span>
                 </div>
 
-                {/* Iframe thumbnail — clickable */}
-                {doc.html_content ? (
-                  <button
-                    type="button"
-                    className="group relative w-full cursor-pointer overflow-hidden bg-white"
-                    style={{ height: '260px' }}
-                    onClick={() => setViewingDoc(doc)}
-                    aria-label={t('thumbnail_expand_aria', { name: doc.document_name ?? t('document_fallback') })}
-                  >
-                    <iframe
-                      srcDoc={withPreviewStyles(doc.html_content)}
-                      title={doc.document_name ?? t('document_fallback')}
-                      sandbox="allow-same-origin"
-                      className="absolute inset-0"
-                      style={{
-                        width:           '794px',
-                        height:          '100%',
-                        transform:       'scale(0.39)',
-                        transformOrigin: 'top left',
-                        border:          'none',
-                        pointerEvents:   'none'
-                      }}
-                    />
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">
-                      <Eye className="h-6 w-6 text-white drop-shadow" />
-                      <span className="text-xs font-medium text-white drop-shadow">{t('thumbnail_expand_label')}</span>
-                    </div>
-                  </button>
-                ) : doc.file_url ? (
-                  <a
-                    href={doc.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-1.5 bg-muted/30 transition-colors hover:bg-muted/50"
-                  >
-                    <FileText className="h-8 w-8 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground/70" />
-                    <span className="text-xs text-muted-foreground/60 transition-colors group-hover:text-muted-foreground">{t('btn_view')} PDF</span>
-                  </a>
-                ) : (
-                  <div className="flex h-28 items-center justify-center bg-muted/30">
-                    <span className="text-xs text-muted-foreground/60">{t('no_preview_content')}</span>
-                  </div>
-                )}
-
-                {/* Card footer */}
-                <div className="flex items-center justify-between border-t bg-muted/20 px-4 py-2.5">
-                  <span className="text-[11px] text-muted-foreground">{t('card_footer_label')}</span>
-                  <div className="flex items-center gap-1.5">
-                    {doc.html_content ? (
-                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setViewingDoc(doc)}>
-                        <Eye className="mr-1 h-3 w-3" />
-                        {t('btn_view')}
-                      </Button>
-                    ) : doc.file_url ? (
-                      <Button size="sm" variant="ghost" className="h-7 text-xs" asChild>
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="shrink-0 text-[11px] text-muted-foreground">{createdAt}</span>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {readOnly && (
+                      doc.html_content ? (
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setViewingDoc(doc)}>
                           <Eye className="mr-1 h-3 w-3" />
                           {t('btn_view')}
-                        </a>
-                      </Button>
-                    ) : null}
+                        </Button>
+                      ) : doc.file_url ? (
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" asChild>
+                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                            <Eye className="mr-1 h-3 w-3" />
+                            {t('btn_view')}
+                          </a>
+                        </Button>
+                      ) : null
+                    )}
                     {!readOnly && (
                       doc.google_doc_temp_id ? (
                         <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
