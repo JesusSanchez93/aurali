@@ -1,4 +1,4 @@
-import { sileo } from 'sileo';
+import { toast as sonnerToast } from 'sonner';
 
 interface ToastOptions {
   description?: string;
@@ -6,10 +6,10 @@ interface ToastOptions {
 
 export const toast = {
   success: (message: string, options?: ToastOptions) =>
-    sileo.success({ title: message, description: options?.description }),
+    sonnerToast.success(message, { description: options?.description }),
   error: (message: string, options?: ToastOptions) =>
-    sileo.error({ title: message, description: options?.description }),
+    sonnerToast.error(message, { description: options?.description }),
   loading: (message: string, options?: ToastOptions) =>
-    sileo.show({ type: 'loading', title: message, description: options?.description }),
-  dismiss: (id: string) => sileo.dismiss(id),
+    sonnerToast.loading(message, { description: options?.description }),
+  dismiss: (id: string | number) => sonnerToast.dismiss(id),
 };
