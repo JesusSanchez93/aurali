@@ -194,6 +194,81 @@ export async function getValidAccessToken(userId: string): Promise<string> {
   return refreshed.access_token;
 }
 
+// ─── Refresh all (cron) ──────────────────────────────────────────────────────
+
+export interface RefreshAllTokensSummary {
+  refreshed: number;
+  /** Refresh tokens Google rejected as invalid_grant — deleted so the UI shows "no conectado" instead of failing silently at document-generation time. */
+  revoked: { userId: string; email: string | null; organizationId: string | null }[];
+  /** Refresh attempts that failed for a reason other than invalid_grant (e.g. network) — token kept as-is, safe to retry next run. */
+  failed: { userId: string; email: string | null; error: string }[];
+}
+
+/**
+ * Proactively refreshes the access_token for every connected Google account,
+ * regardless of current expiry. Meant to run on a schedule (see
+ * app/api/cron/refresh-google-tokens/route.ts) so:
+ *  - refresh tokens stay "active" (mitigates the 6-months-unused revocation),
+ *  - a dead refresh_token (invalid_grant — e.g. OAuth consent screen still in
+ *    "Testing" mode, where Google expires refresh tokens after 7 days) is
+ *    detected and cleaned up proactively, instead of failing mid-request when
+ *    a lawyer tries to generate a document.
+ */
+export async function refreshAllGoogleTokens(): Promise<RefreshAllTokensSummary> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = await createClient({ admin: true }) as any;
+
+  const { data: tokens, error } = await supabase
+    .from('google_oauth_tokens')
+    .select('user_id, refresh_token, google_email, organization_id');
+
+  if (error) throw new Error(`Error al listar tokens de Google: ${error.message}`);
+
+  const summary: RefreshAllTokensSummary = { refreshed: 0, revoked: [], failed: [] };
+
+  for (const row of (tokens ?? []) as {
+    user_id: string | null;
+    refresh_token: string;
+    google_email: string | null;
+    organization_id: string | null;
+  }[]) {
+    if (!row.user_id) continue;
+
+    try {
+      const refreshed = await refreshAccessToken(row.refresh_token);
+      const newExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
+
+      await supabase
+        .from('google_oauth_tokens')
+        .update({
+          access_token: refreshed.access_token,
+          expires_at: newExpiresAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', row.user_id);
+
+      summary.refreshed++;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+
+      if (message.includes('invalid_grant')) {
+        await supabase.from('google_oauth_tokens').delete().eq('user_id', row.user_id);
+        summary.revoked.push({ userId: row.user_id, email: row.google_email, organizationId: row.organization_id });
+        console.error('[refreshAllGoogleTokens] Refresh token inválido/revocado — cuenta desconectada', {
+          userId: row.user_id,
+          email: row.google_email,
+          organizationId: row.organization_id,
+        });
+      } else {
+        summary.failed.push({ userId: row.user_id, email: row.google_email, error: message });
+        console.error('[refreshAllGoogleTokens] Error al refrescar token', { userId: row.user_id, error: message });
+      }
+    }
+  }
+
+  return summary;
+}
+
 // ─── Revoke ────────────────────────────────────────────────────────────────────
 
 /**

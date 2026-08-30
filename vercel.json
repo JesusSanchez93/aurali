@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/refresh-google-tokens",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
