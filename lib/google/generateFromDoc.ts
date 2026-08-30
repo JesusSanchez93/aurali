@@ -68,13 +68,27 @@ export interface GenerateFromDocInput {
    * Opcional: si no se provee, se usa el campo `created_by` de la plantilla.
    */
   userId?: string;
-  /** Si se provee, el PDF se sube a Supabase Storage y se retorna URL */
+  /**
+   * Si se provee, el PDF se sube a Supabase Storage y se retorna URL — salvo
+   * que `dryRun` esté activo. También se usa (independientemente de `dryRun`)
+   * para resolver variables de IA (prefijo AI_) con el contexto real del caso.
+   */
   legalProcessId?: string;
+  /**
+   * Si es true, omite la subida a Storage + insert en `generated_documents`
+   * aunque se provea `legalProcessId`. La resolución de variables de IA sigue
+   * usando `legalProcessId` para el contexto del caso. Pensado para
+   * herramientas de prueba/dev que necesitan datos reales del caso sin
+   * asociar el resultado al proceso.
+   */
+  dryRun?: boolean;
   /**
    * ID de un doc temporal ya copiado y con variables sustituidas (de prepareGoogleDocPreview).
    * Si se provee, se omiten los pasos de copy + replace + image y se exporta directamente.
    */
   existingTempDocId?: string;
+  /** Callback opcional invocado antes de cada paso — permite reportar progreso n/total. */
+  onProgress?: (info: { step: number; total: number; label: string }) => void;
 }
 
 export interface GenerateFromDocResult {
@@ -88,9 +102,13 @@ export interface GenerateFromDocResult {
 export async function generateFromGoogleDoc(
   input: GenerateFromDocInput,
 ): Promise<GenerateFromDocResult> {
-  const { googleDocTemplateId, data, organizationId, userId, legalProcessId, existingTempDocId } = input;
+  const { googleDocTemplateId, data, organizationId, userId, legalProcessId, dryRun, existingTempDocId, onProgress } = input;
+  const willPersist = !!legalProcessId && !dryRun;
+  const totalSteps = willPersist ? 6 : 5;
+  const report = (step: number, label: string) => onProgress?.({ step, total: totalSteps, label });
 
   // ── 1. Cargar template ─────────────────────────────────────────────────────
+  report(1, 'Cargando plantilla de Google Docs');
   const supabase = await createClient({ admin: true });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
@@ -116,6 +134,7 @@ export async function generateFromGoogleDoc(
   const accessToken = await getValidAccessToken(effectiveUserId);
 
   // ── 3. Copiar y sustituir variables (omitir si ya existe un temp doc) ──────
+  report(2, 'Copiando plantilla en Google Drive');
   let tempDocId: string;
   if (existingTempDocId) {
     // Reutilizar el doc temporal ya preparado en prepareGoogleDocPreview()
@@ -128,17 +147,20 @@ export async function generateFromGoogleDoc(
   try {
     if (!existingTempDocId) {
       // ── 3b. Resolver variables de IA (prefijo AI_) antes de sustituir ──────
+      report(3, 'Resolviendo variables de IA');
       if (legalProcessId) {
         await resolveAiVariablesForGoogleDoc(tempDocId, accessToken, data, legalProcessId, organizationId);
       }
 
       // ── 4. Sustituir variables en la copia ───────────────────────────────
+      report(4, 'Sustituyendo variables');
       const resolvedData = await resolveImageUrls(data, supabase);
       await replaceVariables(tempDocId, resolvedData, accessToken);
       await insertImageVariables(tempDocId, resolvedData, accessToken);
     }
 
     // ── 5. Exportar a PDF ──────────────────────────────────────────────────
+    report(5, 'Exportando a PDF');
     const buffer = await exportToPdf(tempDocId, accessToken);
 
     const fileName = sanitizeFileName(template.name as string) + '.pdf';
@@ -163,10 +185,11 @@ export async function generateFromGoogleDoc(
     }
 
     // ── 6. (Opcional) Subir a Storage y registrar ──────────────────────────
-    if (!legalProcessId) {
+    if (!legalProcessId || dryRun) {
       return { buffer, fileName };
     }
 
+    report(6, 'Guardando documento en el proceso');
     const timestamp = Date.now();
     const storagePath = `${organizationId}/${legalProcessId}/${timestamp}-${fileName}`;
 

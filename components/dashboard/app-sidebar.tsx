@@ -48,6 +48,7 @@ const SETTINGS_SUB = [
   { titleKey: 'google_docs', url: '/settings/google-templates', icon: Globe     },
   { titleKey: 'banks',           url: '/settings/banks',        icon: Building2 },
   { titleKey: 'document_types', url: '/settings/documents',    icon: IdCard    },
+  { titleKey: 'test_doc_gen', url: '/test-doc-gen', icon: FileText },
 ];
 
 export const userItems: NavItem[] = [
@@ -206,11 +207,16 @@ export function AppSidebar() {
   const isSuperAdmin = profile?.system_role === 'SUPERADMIN';
   const isImpersonating = isSuperAdmin && !!profile?.current_organization_id;
   const isOrgAdmin = profile?.org_role === 'ORG_ADMIN';
-  const items = isSuperAdmin && !isImpersonating
+  const canTestDocGen = isSuperAdmin || isOrgAdmin;
+  const settingsSub = canTestDocGen
+    ? SETTINGS_SUB
+    : SETTINGS_SUB.filter((s) => s.titleKey !== 'test_doc_gen');
+  const items = (isSuperAdmin && !isImpersonating
     ? adminItems
     : isOrgAdmin
       ? adminUserItems
-      : userItems;
+      : userItems
+  ).map((item) => (item.sub ? { ...item, sub: settingsSub } : item));
 
   return (
     <Sidebar variant="inset">

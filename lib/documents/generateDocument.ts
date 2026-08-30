@@ -272,11 +272,22 @@ export interface GenerateDocumentInput {
   data: Record<string, string>;
   /**
    * When provided, the generated PDF is uploaded to Supabase Storage and
-   * a record is inserted into `generated_documents`.
+   * a record is inserted into `generated_documents` — unless `dryRun` is set.
+   * Also used (regardless of `dryRun`) to fetch case context for AI_ variable
+   * resolution.
    */
   legalProcessId?: string;
   /** Required for the storage path. Derived from the process when omitted. */
   organizationId?: string;
+  /**
+   * When true, skips the storage upload + `generated_documents` insert even
+   * if `legalProcessId` is provided. AI_ variable resolution still runs using
+   * `legalProcessId` for case context. Used by test/dev tooling that needs
+   * real case data without attaching the output to the process.
+   */
+  dryRun?: boolean;
+  /** Optional callback invoked before each pipeline step — lets callers report step n/total progress. */
+  onProgress?: (info: { step: number; total: number; label: string }) => void;
   /**
    * Lawyer-edited TipTap JSON from a preview record.
    * When provided, skips substituting vars into the template content and uses
@@ -377,12 +388,16 @@ async function loadHeaderFooterHtml(
 export async function generateDocument(
   input: GenerateDocumentInput,
 ): Promise<GenerateDocumentResult> {
-  const { templateId, data, legalProcessId, organizationId, editedTiptapContent } = input;
+  const { templateId, data, legalProcessId, organizationId, editedTiptapContent, dryRun, onProgress } = input;
+  const willPersist = !!legalProcessId && !dryRun;
+  const totalSteps = willPersist ? 6 : 5;
+  const report = (step: number, label: string) => onProgress?.({ step, total: totalSteps, label });
   const supabase = await createClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
 
   // ── 1. Load template from legal_templates ────────────────────────────────
+  report(1, 'Cargando plantilla');
   const { data: template, error: tplErr } = await db
     .from('legal_templates')
     .select('id, name, content, organization_id, header_id, footer_id, font_family')
@@ -400,6 +415,7 @@ export async function generateDocument(
   // ── 2a. Resolve AI variables (keys prefixed with AI_) ────────────────────
   // Scan the template for AI_ variable keys, call Claude with the full process
   // context, and merge the generated text into `data` before substitution.
+  report(2, 'Resolviendo variables de IA');
   if (legalProcessId) {
     const sourceContent = editedTiptapContent ?? template.content;
     const aiKeys = extractAiVariableKeys(sourceContent);
@@ -423,6 +439,7 @@ export async function generateDocument(
   // Header/footer nodes are separated from the body so they can be passed to
   // Puppeteer as per-page templates. Falls back to legacy header_id/footer_id
   // when no inline section nodes are found.
+  report(3, 'Generando HTML');
   const { bodyJson, headerHtml: inlineHeaderHtml, footerHtml: inlineFooterHtml } = extractDocumentSections(tiptapContent);
 
   let bodyHtml: string;
@@ -440,6 +457,7 @@ export async function generateDocument(
   // ── 5. Resolve header/footer and wrap in page layout ─────────────────────
   // Header/footer are NOT embedded in the body HTML — they are passed as
   // Puppeteer headerTemplate / footerTemplate to appear on every page.
+  report(4, 'Cargando cabecera y pie de página');
   let puppeteerHeaderTemplate: string | undefined;
   let puppeteerFooterTemplate: string | undefined;
 
@@ -460,6 +478,7 @@ export async function generateDocument(
   });
 
   // ── 6. Generate PDF ───────────────────────────────────────────────────────
+  report(5, 'Generando PDF');
   const buffer = await htmlToPdf(fullHtml, {
     headerTemplate: puppeteerHeaderTemplate,
     footerTemplate: puppeteerFooterTemplate,
@@ -477,8 +496,9 @@ export async function generateDocument(
 
   const result: GenerateDocumentResult = { buffer, fileName };
 
-  // ── 6. Persist to storage + DB (only when a process is linked) ────────────
-  if (legalProcessId) {
+  // ── 6. Persist to storage + DB (only when a process is linked and not a dry run) ─
+  if (willPersist) {
+    report(6, 'Guardando documento en el proceso');
     const orgId = organizationId ?? template.organization_id;
     // Storage keys must be ASCII-only — normalise accents and strip special chars
     const safeFileName = `${toSlug(template.name)}${toSlug(clientSlug)}.pdf`;

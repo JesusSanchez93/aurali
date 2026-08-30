@@ -96,11 +96,44 @@ export async function copyTemplate(
 // ─── Step 2: Replace variables ────────────────────────────────────────────────
 
 /**
+ * Extracts `**bold**` spans from a variable value. `replaceAllText` (used by
+ * `replaceVariables()` below) can only insert plain text — formatting has to
+ * be applied afterwards as a separate range-scoped `updateTextStyle` request.
+ * Returns the text with the `**` markers stripped, plus the offset ranges
+ * (within that stripped text) that should be rendered bold.
+ */
+function parseBoldMarkdown(text: string): { plainText: string; boldRanges: { start: number; end: number }[] } {
+  const boldRanges: { start: number; end: number }[] = [];
+  let plainText = '';
+  let lastIndex = 0;
+  const re = /\*\*(.+?)\*\*/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    plainText += text.slice(lastIndex, match.index);
+    const start = plainText.length;
+    plainText += match[1];
+    boldRanges.push({ start, end: plainText.length });
+    lastIndex = re.lastIndex;
+  }
+  plainText += text.slice(lastIndex);
+  return { plainText, boldRanges };
+}
+
+/**
  * Replaces all `{VARIABLE}` placeholders in the document (body, headers,
  * footers) using a single batchUpdate request.
  *
  * Variables ending in `_IMG` are excluded — they are handled separately by
  * `insertImageVariables()` which inlines the image at the placeholder position.
+ *
+ * Values containing `**bold**` markers (e.g. Claude-generated clauses, see
+ * lib/anthropic/resolveAiVariables.ts) get the markers stripped before
+ * substitution, then — in a second pass — the doc is re-read once to locate
+ * each inserted value and precise `updateTextStyle` requests are issued for
+ * the bold ranges. `replaceAllText` itself cannot carry per-range formatting,
+ * so this mirrors the marker+index-lookup approach `insertImageVariables()`
+ * uses for images. Values without `**` skip this entirely (no extra API
+ * calls) — same cost as before.
  */
 export async function replaceVariables(
   documentId: string,
@@ -110,15 +143,26 @@ export async function replaceVariables(
   const entries = Object.entries(variables).filter(([key]) => !key.endsWith('_IMG'));
   if (entries.length === 0) return;
 
-  const requests = entries.map(([key, value]) => ({
-    replaceAllText: {
-      containsText: {
-        text: `{${key}}`,
-        matchCase: true,
+  const formatted = new Map<string, { plainText: string; boldRanges: { start: number; end: number }[] }>();
+  const requests = entries.map(([key, value]) => {
+    let replaceText = value;
+    if (value.includes('**')) {
+      const parsed = parseBoldMarkdown(value);
+      if (parsed.boldRanges.length > 0) {
+        formatted.set(key, parsed);
+        replaceText = parsed.plainText;
+      }
+    }
+    return {
+      replaceAllText: {
+        containsText: {
+          text: `{${key}}`,
+          matchCase: true,
+        },
+        replaceText,
       },
-      replaceText: value,
-    },
-  }));
+    };
+  });
 
   const res = await fetch(
     `${DOCS_API}/documents/${encodeURIComponent(documentId)}:batchUpdate`,
@@ -133,6 +177,49 @@ export async function replaceVariables(
   );
 
   if (!res.ok) await throwApiError(res, 'reemplazar variables');
+  if (formatted.size === 0) return;
+
+  // ── Second pass: locate each formatted value and apply bold ranges ───────
+  // Limitation: only searches doc.body.content (not headers/footers), and
+  // assumes the inserted text is reasonably unique in the doc — same
+  // trade-off insertImageVariables() already makes for image markers.
+  const docRes = await fetch(`${DOCS_API}/documents/${encodeURIComponent(documentId)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!docRes.ok) await throwApiError(docRes, 'leer documento para aplicar formato de texto');
+  const doc = await docRes.json() as GoogleDocJson;
+
+  const styleRequests: unknown[] = [];
+  for (const [key, { plainText, boldRanges }] of formatted) {
+    const startIndex = searchElements(doc.body?.content ?? [], plainText);
+    if (startIndex === null) {
+      console.warn(`[replaceVariables] Formatted value for ${key} not found after replacement, skipping bold`);
+      continue;
+    }
+    for (const range of boldRanges) {
+      styleRequests.push({
+        updateTextStyle: {
+          range: { startIndex: startIndex + range.start, endIndex: startIndex + range.end },
+          textStyle: { bold: true },
+          fields: 'bold',
+        },
+      });
+    }
+  }
+  if (styleRequests.length === 0) return;
+
+  const styleRes = await fetch(
+    `${DOCS_API}/documents/${encodeURIComponent(documentId)}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ requests: styleRequests }),
+    },
+  );
+  if (!styleRes.ok) await throwApiError(styleRes, 'aplicar formato de texto');
 }
 
 // ─── Step 2b: Insert image variables ─────────────────────────────────────────

@@ -38,11 +38,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  const { googleDocTemplateId, data, organizationId, legalProcessId } = body as {
+  const { googleDocTemplateId, data, organizationId, legalProcessId, dryRun } = body as {
     googleDocTemplateId?: unknown;
     data?: unknown;
     organizationId?: unknown;
     legalProcessId?: unknown;
+    dryRun?: unknown;
   };
 
   // userId siempre viene de la sesión autenticada (no del body)
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
       organizationId,
       userId,
       legalProcessId: typeof legalProcessId === 'string' ? legalProcessId : undefined,
+      dryRun: dryRun === true,
     });
 
     // Mode B — persist: retornar JSON con URL

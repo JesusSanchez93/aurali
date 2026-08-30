@@ -56,7 +56,8 @@
       "document_types": "Tipos de Documento",
       "ai_variables": "Variables IA",
       "formats": "Plantillas de Documentos",
-      "google_docs": "Google Docs"
+      "google_docs": "Google Docs",
+      "test_doc_gen": "Prueba de Documentos"
     },
     "upload": {
       "click_to_upload": "Haz clic para subir un documento",

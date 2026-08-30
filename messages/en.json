@@ -56,7 +56,8 @@
       "document_types": "Document Types",
       "ai_variables": "AI Variables",
       "formats": "Document Templates",
-      "google_docs": "Google Docs"
+      "google_docs": "Google Docs",
+      "test_doc_gen": "Document Test"
     },
     "upload": {
       "click_to_upload": "Click to upload a document",

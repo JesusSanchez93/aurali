@@ -46,11 +46,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  const { templateId, data, legalProcessId, organizationId } = body as {
+  const { templateId, data, legalProcessId, organizationId, dryRun } = body as {
     templateId?:     unknown;
     data?:           unknown;
     legalProcessId?: unknown;
     organizationId?: unknown;
+    dryRun?:         unknown;
   };
 
   if (!templateId || typeof templateId !== 'string') {
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
       data: data as Record<string, string>,
       legalProcessId: typeof legalProcessId === 'string' ? legalProcessId : undefined,
       organizationId: typeof organizationId === 'string' ? organizationId : undefined,
+      dryRun: dryRun === true,
     });
 
     // Mode B — persist: return JSON with URL

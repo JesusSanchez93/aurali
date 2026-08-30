@@ -151,6 +151,22 @@ export async function resolveAiVariables(
       lines.push(`\nFactores adicionales: ${flags.join(', ')}.`);
     }
   }
+
+  // The curated summary above only surfaces a handful of hand-picked fields —
+  // any prompt referencing a variable outside that subset (product type,
+  // amounts, dates, other GROUP.VARIABLE keys) had nothing to draw on and
+  // Claude would leave it unresolved. Attaching the full templateData map as
+  // JSON gives it every {GROUP.VARIABLE} value available to the document,
+  // not just the ones summarised in prose.
+  const nonEmptyTemplateData = Object.fromEntries(
+    Object.entries(templateData).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+  );
+  lines.push(
+    '\n=== DATOS COMPLETOS DEL CASO (JSON) ===',
+    'Usa estos valores como fuente exacta para cualquier dato que necesites (nombres, montos, fechas, tipos de producto, etc). No inventes valores que no estén aquí.',
+    JSON.stringify(nonEmptyTemplateData, null, 2),
+  );
+
   const contextText = lines.join('\n');
 
   // Build document blocks for attached PDFs
@@ -199,17 +215,30 @@ export async function resolveAiVariables(
         { type: 'text', text: `\n=== INSTRUCCIÓN ===\n${resolvedPrompt}${examplesText}` },
       ];
 
+      console.log('[resolveAiVariables] Solicitando a Claude', {
+        legalProcessId,
+        key: aiVar.key,
+        contextText,
+        resolvedPrompt,
+        examples,
+        attachedDocuments: docBlocks.length,
+      });
+
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 2048,
         system:
           'Eres un asistente legal colombiano especializado en redacción de documentos jurídicos. ' +
           'Redacta el fragmento solicitado para un documento legal oficial basándote en el contexto del caso proporcionado. ' +
-          'Si la instrucción requiere montos o valores, extráelos y calcúlalos únicamente a partir del relato de los hechos '  +
-          'incluido en el contexto (nunca inventes cifras); si necesitas expresar un total, hazlo tanto en cifras como en letras. ' +
+          'El contexto incluye un bloque "DATOS COMPLETOS DEL CASO (JSON)" con todos los valores exactos del caso ' +
+          '(nombres, montos, fechas, tipos de producto, etc.) y un relato del fraude en palabras del cliente — usa el JSON ' +
+          'como fuente de datos puntuales y el relato para entender la narrativa de los hechos; nunca inventes cifras ni ' +
+          'datos que no estén en ninguno de los dos. Si necesitas expresar un total, hazlo tanto en cifras como en letras. ' +
           'Nunca dejes en tu respuesta un placeholder sin resolver, con cualquier sintaxis (por ejemplo `{ALGO}` o `{{algo}}`) — ' +
           'si un dato puntual no está disponible en el contexto, redacta la frase sin ese dato en vez de dejar un token literal. ' +
-          'Responde SOLO con el texto del fragmento, sin explicaciones, sin introducción, sin comillas, sin formato markdown.',
+          'Puedes usar **texto** (doble asterisco) únicamente para resaltar en negrita datos puntuales importantes ' +
+          '(montos, fechas, nombres clave) cuando sea apropiado — no uses ningún otro formato markdown (encabezados, listas, cursiva, etc). ' +
+          'Responde SOLO con el texto del fragmento, sin explicaciones, sin introducción, sin comillas.',
         messages: [{ role: 'user', content: userContent }],
       });
 
