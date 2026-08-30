@@ -1135,19 +1135,14 @@ function LandingFooter({ t }: { t: Translator }) {
     <footer className="border-t border-black/5 bg-white/70 px-4 py-10 sm:px-6 lg:px-8 dark:border-white/10 dark:bg-white/5">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 text-sm text-[var(--landing-muted)] md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#1E1B4B] text-sm font-bold text-white">A</span>
-            <div>
-              <p className="text-lg font-bold tracking-tight text-[var(--landing-primary)] dark:text-white">Aurali</p>
-              <p className="mt-1">{t('footer.tagline')}</p>
-            </div>
-          </div>
+          <Logo size={32} className="text-[var(--landing-primary)] dark:text-white" />
+          <p className="mt-2">{t('footer.tagline')}</p>
         </div>
 
         <div className="flex flex-col gap-3 md:items-end">
           <div className="flex flex-wrap gap-5">
-            <Link href="/privacy-policy" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.privacy')}</Link>
-            <Link href="/terms-of-service" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.terms')}</Link>
+            <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.privacy')}</Link>
+            <Link href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.terms')}</Link>
             <a href="mailto:hola@aurali.app" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.contact')}</a>
           </div>
           <p>{t('footer.copy')}</p>
