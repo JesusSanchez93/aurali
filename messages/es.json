@@ -926,5 +926,113 @@
       "save_error": "Error al guardar",
       "name_label": "Nombre"
     }
+  },
+  "privacyPolicy": {
+    "title": "Política de Privacidad",
+    "lastUpdated": "Última actualización: 30 de agosto de 2026",
+    "disclaimer": "Este documento es una plantilla base y debe ser revisado por un abogado especializado en protección de datos antes de considerarse vinculante. No constituye asesoría legal.",
+    "intro": "Aurali (\"la Plataforma\", \"nosotros\") es un software de automatización de procesos legales usado por firmas de abogados en Colombia y sus clientes. Esta política explica qué datos personales recopilamos, con qué finalidad los tratamos, con quién los compartimos y cómo puedes ejercer tus derechos, en cumplimiento de la Ley 1581 de 2012 y el Decreto 1377 de 2013 (régimen de protección de datos personales en Colombia).",
+    "sections": [
+      {
+        "heading": "1. Responsable del tratamiento",
+        "body": "Los datos son tratados por la organización (firma de abogados) que gestiona tu proceso legal a través de Aurali, quien actúa como responsable del tratamiento, y por Aurali, quien actúa como encargado del tratamiento en su calidad de proveedor de la plataforma. Puedes contactarnos en hola@aurali.app para cualquier consulta relacionada con tus datos."
+      },
+      {
+        "heading": "2. Datos que recopilamos",
+        "body": "Datos de identificación y contacto (nombre, tipo y número de documento, email, teléfono, dirección); datos del caso legal, incluyendo información financiera y bancaria relacionada con el reclamo (entidad bancaria, productos afectados, relato de los hechos); documentos adjuntos (comprobantes, extractos, denuncias) y firma digital cuando aplica; y datos técnicos de uso de la plataforma (registros de auditoría, dirección IP, fecha y hora de las acciones realizadas)."
+      },
+      {
+        "heading": "3. Finalidad del tratamiento",
+        "body": "Usamos tus datos para gestionar tu proceso legal de principio a fin, generar y enviar los documentos correspondientes, comunicarnos contigo sobre el estado del caso, cumplir obligaciones legales y contractuales, y mejorar la seguridad y el funcionamiento de la plataforma."
+      },
+      {
+        "heading": "4. Autorización",
+        "body": "Al diligenciar el formulario de tu caso o utilizar la plataforma, otorgas autorización previa, expresa e informada para el tratamiento de tus datos personales conforme a esta política. Puedes revocar esta autorización en cualquier momento, salvo que exista un deber legal o contractual que impida su eliminación inmediata."
+      },
+      {
+        "heading": "5. Encargados y terceros",
+        "body": "Para operar la plataforma usamos proveedores de infraestructura y servicios que actúan como encargados del tratamiento: Supabase (base de datos y almacenamiento de documentos), Vercel (hospedaje de la aplicación), Google (generación de documentos a partir de plantillas de Google Docs, cuando la organización conecta su propia cuenta de Google) y Anthropic (redacción asistida por inteligencia artificial de fragmentos de texto legal, a partir de la información del caso). No vendemos tus datos personales a terceros."
+      },
+      {
+        "heading": "6. Uso de datos de Google",
+        "body": "El acceso y uso por parte de Aurali de la información recibida a través de las APIs de Google se adhiere a la Google API Services User Data Policy, incluidos los requisitos de Uso Limitado (Limited Use). Aurali solo accede a los documentos de Google Docs seleccionados explícitamente por la organización como plantillas, únicamente para generar copias temporales, sustituir variables del caso y exportarlas a PDF; las copias temporales se eliminan automáticamente al finalizar el proceso. No usamos estos datos para publicidad ni los compartimos con terceros ajenos a la generación del documento."
+      },
+      {
+        "heading": "7. Transferencia internacional",
+        "body": "Algunos de nuestros proveedores (Supabase, Vercel, Google, Anthropic) procesan información en servidores ubicados fuera de Colombia. Estas transferencias se realizan bajo los estándares de seguridad exigidos por la normativa aplicable, y los proveedores están sujetos a obligaciones contractuales de confidencialidad y protección de datos."
+      },
+      {
+        "heading": "8. Derechos del titular",
+        "body": "Como titular de tus datos, tienes derecho a conocer, actualizar, rectificar y suprimir tu información, así como a revocar la autorización otorgada, en los términos de la Ley 1581 de 2012. Para ejercer estos derechos, escríbenos a hola@aurali.app indicando tu solicitud; responderemos dentro de los plazos establecidos por la ley."
+      },
+      {
+        "heading": "9. Seguridad de la información",
+        "body": "Aplicamos controles de acceso por organización (los datos de un caso solo son visibles para los miembros autorizados de la firma que lo gestiona), cifrado en tránsito y en reposo, y políticas de seguridad a nivel de base de datos (Row Level Security). Ningún sistema es 100% infalible, pero trabajamos activamente para proteger tu información contra accesos no autorizados."
+      },
+      {
+        "heading": "10. Conservación de los datos",
+        "body": "Conservamos tus datos mientras dure la relación con la organización que gestiona tu caso y durante los plazos adicionales exigidos por obligaciones legales, contables o de defensa ante autoridades. Una vez cumplidos estos plazos, los datos son eliminados o anonimizados de forma segura."
+      },
+      {
+        "heading": "11. Cambios a esta política",
+        "body": "Podemos actualizar esta política para reflejar cambios en la plataforma o en la normativa aplicable. Publicaremos cualquier cambio relevante en esta misma página junto con la fecha de última actualización."
+      }
+    ]
+  },
+  "termsOfService": {
+    "title": "Términos y Condiciones de Uso",
+    "lastUpdated": "Última actualización: 30 de agosto de 2026",
+    "disclaimer": "Este documento es una plantilla base y debe ser revisado por un abogado antes de considerarse vinculante. No constituye asesoría legal.",
+    "intro": "Estos términos regulan el uso de Aurali (\"la Plataforma\"), un software de automatización de procesos legales. Al acceder o utilizar la Plataforma, aceptas estos términos en su totalidad. Si no estás de acuerdo, no debes utilizar el servicio.",
+    "sections": [
+      {
+        "heading": "1. Descripción del servicio",
+        "body": "Aurali es una herramienta que permite a firmas de abogados automatizar la gestión de procesos legales: captura de información de casos, comunicación con clientes, generación de documentos legales y seguimiento del flujo de trabajo interno."
+      },
+      {
+        "heading": "2. Cuentas de usuario",
+        "body": "El acceso a la plataforma como abogado o miembro de una organización requiere una cuenta autenticada. Eres responsable de mantener la confidencialidad de tus credenciales y de todas las actividades realizadas desde tu cuenta. Los clientes acceden a formularios específicos mediante enlaces temporales enviados por la organización que gestiona su caso, sin necesidad de crear una cuenta."
+      },
+      {
+        "heading": "3. Uso permitido",
+        "body": "Debes usar la plataforma únicamente para fines lícitos relacionados con la gestión de procesos legales. Está prohibido usarla para introducir información falsa, intentar acceder a datos de otras organizaciones, interferir con el funcionamiento del servicio, o realizar cualquier actividad que infrinja la ley."
+      },
+      {
+        "heading": "4. Documentos generados y asistencia de inteligencia artificial",
+        "body": "La plataforma permite generar documentos legales a partir de plantillas y, en algunos casos, redactar fragmentos de texto con asistencia de inteligencia artificial a partir de la información del caso. Estos documentos son un punto de partida: es responsabilidad exclusiva del abogado a cargo revisar, validar y aprobar cada documento antes de utilizarlo o enviarlo, ya que la Plataforma no sustituye el criterio ni la asesoría legal profesional."
+      },
+      {
+        "heading": "5. Integraciones con terceros",
+        "body": "La plataforma puede integrarse con servicios de terceros, como Google Docs/Drive, para generar documentos a partir de plantillas conectadas por la organización. El uso de estas integraciones está sujeto adicionalmente a los términos de servicio del proveedor correspondiente y, en el caso de Google, a la Google API Services User Data Policy."
+      },
+      {
+        "heading": "6. Propiedad intelectual",
+        "body": "El software, la marca Aurali y su diseño son propiedad de sus titulares y están protegidos por las leyes de propiedad intelectual aplicables. Los datos e información de los casos gestionados en la plataforma pertenecen a la organización y a sus clientes, no a Aurali."
+      },
+      {
+        "heading": "7. Disponibilidad del servicio",
+        "body": "Nos esforzamos por mantener la plataforma disponible de forma continua, pero no garantizamos un funcionamiento ininterrumpido o libre de errores. Podemos realizar mantenimientos, actualizaciones o cambios en las funcionalidades en cualquier momento."
+      },
+      {
+        "heading": "8. Limitación de responsabilidad",
+        "body": "Aurali no será responsable por decisiones legales tomadas con base en los documentos generados por la plataforma, ni por daños indirectos derivados del uso del servicio. La responsabilidad profesional sobre el proceso legal recae en la firma de abogados a cargo del caso."
+      },
+      {
+        "heading": "9. Terminación",
+        "body": "Podemos suspender o cancelar el acceso a la plataforma en caso de incumplimiento de estos términos o de uso indebido del servicio. Las organizaciones pueden solicitar la eliminación de su cuenta y de sus datos en cualquier momento, sujeto a las obligaciones legales de conservación aplicables."
+      },
+      {
+        "heading": "10. Ley aplicable",
+        "body": "Estos términos se rigen por las leyes de la República de Colombia. Cualquier controversia relacionada con el uso de la plataforma se resolverá ante los jueces competentes de Colombia."
+      },
+      {
+        "heading": "11. Cambios a estos términos",
+        "body": "Podemos actualizar estos términos para reflejar cambios en el servicio o en la normativa aplicable. El uso continuado de la plataforma después de una actualización implica la aceptación de los nuevos términos."
+      },
+      {
+        "heading": "12. Contacto",
+        "body": "Si tienes preguntas sobre estos términos, escríbenos a hola@aurali.app."
+      }
+    ]
   }
 }

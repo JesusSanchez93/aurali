@@ -1146,8 +1146,8 @@ function LandingFooter({ t }: { t: Translator }) {
 
         <div className="flex flex-col gap-3 md:items-end">
           <div className="flex flex-wrap gap-5">
-            <a href="#" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.privacy')}</a>
-            <a href="#" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.terms')}</a>
+            <Link href="/privacy-policy" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.privacy')}</Link>
+            <Link href="/terms-of-service" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.terms')}</Link>
             <a href="mailto:hola@aurali.app" className="transition-colors hover:text-[var(--landing-primary)] dark:hover:text-white">{t('footer.links.contact')}</a>
           </div>
           <p>{t('footer.copy')}</p>

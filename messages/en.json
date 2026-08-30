@@ -926,5 +926,113 @@
       "save_error": "Error saving",
       "name_label": "Name"
     }
+  },
+  "privacyPolicy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: August 30, 2026",
+    "disclaimer": "This document is a base template and must be reviewed by a data-protection lawyer before it can be considered binding. It does not constitute legal advice.",
+    "intro": "Aurali (\"the Platform\", \"we\") is legal-process automation software used by law firms in Colombia and their clients. This policy explains what personal data we collect, why we process it, who we share it with, and how you can exercise your rights, in accordance with Colombian Law 1581 of 2012 and Decree 1377 of 2013 (Colombia's personal data protection regime).",
+    "sections": [
+      {
+        "heading": "1. Data controller",
+        "body": "Your data is processed by the organization (law firm) managing your legal case through Aurali, which acts as the data controller, and by Aurali, which acts as the data processor in its role as the platform provider. You can reach us at hola@aurali.app for any inquiry about your data."
+      },
+      {
+        "heading": "2. Data we collect",
+        "body": "Identification and contact data (name, ID type and number, email, phone, address); case data, including financial and banking information related to the claim (bank, affected products, account of events); attached documents (receipts, statements, complaints) and digital signature where applicable; and technical usage data (audit logs, IP address, timestamps of actions taken)."
+      },
+      {
+        "heading": "3. Purpose of processing",
+        "body": "We use your data to manage your legal case end to end, generate and send the corresponding documents, communicate with you about the status of your case, comply with legal and contractual obligations, and improve the security and functioning of the platform."
+      },
+      {
+        "heading": "4. Authorization",
+        "body": "By filling out your case form or using the platform, you grant prior, express and informed authorization for the processing of your personal data under this policy. You may revoke this authorization at any time, unless a legal or contractual duty prevents its immediate deletion."
+      },
+      {
+        "heading": "5. Processors and third parties",
+        "body": "To operate the platform we use infrastructure and service providers that act as data processors: Supabase (database and document storage), Vercel (application hosting), Google (document generation from Google Docs templates, when the organization connects its own Google account) and Anthropic (AI-assisted drafting of legal text fragments, based on case information). We do not sell your personal data to third parties."
+      },
+      {
+        "heading": "6. Use of Google user data",
+        "body": "Aurali's use and transfer to any other app of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements. Aurali only accesses Google Docs explicitly selected by the organization as templates, solely to create temporary copies, substitute case variables and export them to PDF; temporary copies are automatically deleted once the process completes. We do not use this data for advertising nor share it with third parties unrelated to document generation."
+      },
+      {
+        "heading": "7. International data transfer",
+        "body": "Some of our providers (Supabase, Vercel, Google, Anthropic) process information on servers located outside Colombia. These transfers are carried out under the security standards required by applicable regulations, and providers are bound by contractual confidentiality and data-protection obligations."
+      },
+      {
+        "heading": "8. Your rights",
+        "body": "As a data subject, you have the right to know, update, rectify and delete your information, and to revoke the authorization granted, under Law 1581 of 2012. To exercise these rights, write to hola@aurali.app stating your request; we will respond within the timeframes established by law."
+      },
+      {
+        "heading": "9. Security of information",
+        "body": "We apply organization-scoped access controls (case data is only visible to authorized members of the firm handling it), encryption in transit and at rest, and database-level security policies (Row Level Security). No system is 100% infallible, but we work actively to protect your information from unauthorized access."
+      },
+      {
+        "heading": "10. Data retention",
+        "body": "We retain your data for as long as your relationship with the organization managing your case lasts, plus any additional period required by legal, accounting or defense-related obligations. Once these periods elapse, data is securely deleted or anonymized."
+      },
+      {
+        "heading": "11. Changes to this policy",
+        "body": "We may update this policy to reflect changes to the platform or to applicable regulations. Any relevant change will be published on this same page along with the last-updated date."
+      }
+    ]
+  },
+  "termsOfService": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: August 30, 2026",
+    "disclaimer": "This document is a base template and must be reviewed by a lawyer before it can be considered binding. It does not constitute legal advice.",
+    "intro": "These terms govern the use of Aurali (\"the Platform\"), legal-process automation software. By accessing or using the Platform, you accept these terms in full. If you do not agree, you must not use the service.",
+    "sections": [
+      {
+        "heading": "1. Service description",
+        "body": "Aurali is a tool that lets law firms automate the management of legal cases: capturing case information, communicating with clients, generating legal documents, and tracking internal workflow."
+      },
+      {
+        "heading": "2. User accounts",
+        "body": "Access to the platform as a lawyer or organization member requires an authenticated account. You are responsible for keeping your credentials confidential and for all activity carried out from your account. Clients access specific forms via temporary links sent by the organization managing their case, without needing to create an account."
+      },
+      {
+        "heading": "3. Permitted use",
+        "body": "You must use the platform only for lawful purposes related to managing legal cases. It is prohibited to enter false information, attempt to access other organizations' data, interfere with the service's operation, or engage in any activity that violates the law."
+      },
+      {
+        "heading": "4. Generated documents and AI assistance",
+        "body": "The platform allows generating legal documents from templates and, in some cases, drafting text fragments with AI assistance based on case information. These documents are a starting point: it is the sole responsibility of the attorney in charge to review, validate and approve each document before using or sending it, as the Platform does not replace professional legal judgment or advice."
+      },
+      {
+        "heading": "5. Third-party integrations",
+        "body": "The platform may integrate with third-party services, such as Google Docs/Drive, to generate documents from templates connected by the organization. Use of these integrations is additionally subject to the relevant provider's terms of service and, in Google's case, to the Google API Services User Data Policy."
+      },
+      {
+        "heading": "6. Intellectual property",
+        "body": "The software, the Aurali brand and its design are the property of their respective owners and are protected by applicable intellectual property laws. Case data and information managed on the platform belong to the organization and its clients, not to Aurali."
+      },
+      {
+        "heading": "7. Service availability",
+        "body": "We strive to keep the platform continuously available, but we do not guarantee uninterrupted or error-free operation. We may perform maintenance, updates, or feature changes at any time."
+      },
+      {
+        "heading": "8. Limitation of liability",
+        "body": "Aurali is not liable for legal decisions made based on documents generated by the platform, nor for indirect damages arising from use of the service. Professional responsibility for the legal case rests with the law firm handling it."
+      },
+      {
+        "heading": "9. Termination",
+        "body": "We may suspend or cancel access to the platform in case of breach of these terms or misuse of the service. Organizations may request deletion of their account and data at any time, subject to applicable legal retention obligations."
+      },
+      {
+        "heading": "10. Governing law",
+        "body": "These terms are governed by the laws of the Republic of Colombia. Any dispute related to the use of the platform will be resolved before the competent courts of Colombia."
+      },
+      {
+        "heading": "11. Changes to these terms",
+        "body": "We may update these terms to reflect changes to the service or to applicable regulations. Continued use of the platform after an update constitutes acceptance of the new terms."
+      },
+      {
+        "heading": "12. Contact",
+        "body": "If you have questions about these terms, write to us at hola@aurali.app."
+      }
+    ]
   }
 }
