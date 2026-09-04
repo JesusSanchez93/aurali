@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
-import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,14 +12,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { FileText, Pencil, Eye, ExternalLink } from 'lucide-react';
-import { toast } from '@/lib/toast';
-import Tiptap, { type TiptapHandle } from '@/components/common/tip-tap';
-import VariablesPanel from '@/app/[locale]/(dashboard)/settings/document-templates/_components/variables-panel';
+import { FileText, Pencil, Eye } from 'lucide-react';
+import { OnlyOfficeEditor } from '@/components/common/onlyoffice-editor';
 import {
   getDocumentPreviews,
   getFinalDocuments,
-  updateDocumentPreviewContent,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
 
 interface Props {
@@ -33,53 +29,16 @@ interface Props {
 type PreviewDoc = {
   id: string;
   document_name: string | null;
-  html_content: string | null;
-  tiptap_content: unknown;
-  google_doc_temp_id?: string | null;
+  docx_storage_path?: string | null;
   file_url?: string | null;
   created_at: string;
 };
 
-/**
- * Injects preview-mode CSS overrides into a full HTML document string.
- * - Removes the `width: 21cm` print constraint so the iframe doesn't overflow.
- * - Adds document padding (simulates page margins in the browser view).
- * - Switches to sans-serif + 14 px base to match the TipTap editor appearance.
- */
-function withPreviewStyles(html: string): string {
-  const style = `<style>
-    html, body {
-      width: 100% !important;
-      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-                   'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-      font-size: 14px !important;
-      line-height: 1.75 !important;
-    }
-    .document { padding: 48px 64px !important; }
-    .document h1 { font-size: 1.875rem !important; letter-spacing: 0 !important; text-transform: none !important; }
-    .document h2 { font-size: 1.5rem   !important; letter-spacing: 0 !important; text-transform: none !important; }
-    .document h3 { font-size: 1.25rem  !important; }
-    .document h4 { font-size: 1.125rem !important; }
-    .document p  { font-size: 14px !important; line-height: 1.75 !important; }
-    .document p:empty,
-    .document p:has(> br:only-child) { min-height: 1.75em !important; margin-bottom: 0 !important; }
-  </style>`;
-  return html.includes('</head>')
-    ? html.replace('</head>', `${style}</head>`)
-    : style + html;
-}
-
 export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false }: Props) {
   const t = useTranslations('process.document_previews');
-  const [previews, setPreviews]       = useState<PreviewDoc[]>([]);
-  const [loading, setLoading]         = useState(true);
-  // edit state (only used when readOnly=false)
-  const [editingDoc, setEditingDoc]   = useState<PreviewDoc | null>(null);
-  const [editContent, setEditContent] = useState<unknown>(null);
-  const [saving, setSaving]           = useState(false);
-  const tiptapRef                     = useRef<TiptapHandle>(null);
-  // view state (preview modal — used in both modes)
-  const [viewingDoc, setViewingDoc]   = useState<PreviewDoc | null>(null);
+  const [previews, setPreviews]     = useState<PreviewDoc[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [editingDoc, setEditingDoc] = useState<PreviewDoc | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -92,34 +51,9 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
 
   useEffect(() => { load(); }, [load, refreshKey]);
 
-  const openEdit = (doc: PreviewDoc) => {
-    setEditingDoc(doc);
-    setEditContent(doc.tiptap_content);
-  };
-
-  const handleSave = async () => {
-    if (!editingDoc) return;
-    setSaving(true);
-    try {
-      // Deep-clone via JSON round-trip to break ProseMirror's shared attrs object
-      // references — Next.js RSC deduplicates by identity, which otherwise collapses
-      // distinct node attrs (e.g. variable chips) into stale references.
-      // Same pattern as template-form.tsx onSubmit.
-      const rawContent = tiptapRef.current?.getContent() ?? editContent;
-      const content = JSON.parse(JSON.stringify(rawContent));
-      // HTML is regenerated server-side so header/footer from the template are preserved.
-      await updateDocumentPreviewContent(editingDoc.id, content);
-      load();
-      setEditingDoc(null);
-      toast.success(t('save_success'));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : t('save_error_fallback');
-      console.error('[DocumentPreviews] handleSave:', err);
-      toast.error(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Re-fetch after the edit dialog closes so any ONLYOFFICE-persisted change
+  // (e.g. document_name shown elsewhere) stays fresh.
+  const closeEdit = () => { setEditingDoc(null); load(); };
 
   // ── Loading / empty — hide section until documents are confirmed ────────────
   if (loading || previews.length === 0) return null;
@@ -163,39 +97,19 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="shrink-0 text-[11px] text-muted-foreground">{createdAt}</span>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    {readOnly && (
-                      doc.html_content ? (
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setViewingDoc(doc)}>
+                    {readOnly && doc.file_url && (
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" asChild>
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                           <Eye className="mr-1 h-3 w-3" />
                           {t('btn_view')}
-                        </Button>
-                      ) : doc.file_url ? (
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" asChild>
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                            <Eye className="mr-1 h-3 w-3" />
-                            {t('btn_view')}
-                          </a>
-                        </Button>
-                      ) : null
+                        </a>
+                      </Button>
                     )}
-                    {!readOnly && (
-                      doc.google_doc_temp_id ? (
-                        <Button size="sm" variant="outline" className="h-7 text-xs" asChild>
-                          <a
-                            href={`https://docs.google.com/document/d/${doc.google_doc_temp_id}/edit`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink className="mr-1 h-3 w-3" />
-                            {t('btn_open_google_docs')}
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openEdit(doc)}>
-                          <Pencil className="mr-1 h-3 w-3" />
-                          {t('btn_edit')}
-                        </Button>
-                      )
+                    {!readOnly && doc.docx_storage_path && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingDoc(doc)}>
+                        <Pencil className="mr-1 h-3 w-3" />
+                        {t('btn_edit')}
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -205,64 +119,11 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
         </div>
       </div>
 
-      {/* ── View dialog (both modes) ───────────────────────────────────────── */}
-      <Dialog
-        open={!!viewingDoc}
-        onOpenChange={(open) => { if (!open) setViewingDoc(null); }}
-      >
-        <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-0 p-0">
-          <DialogHeader className="shrink-0 border-b px-6 py-4">
-            <DialogTitle className="text-base">
-              {viewingDoc?.document_name ?? t('document_fallback')}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div
-            className="min-h-0 flex-1 overflow-y-auto py-8 px-4 bg-[#f3f4f6] [background-image:radial-gradient(circle,_#d1d5db_1px,_transparent_1px)] [background-size:20px_20px] dark:bg-[#1a1a1f] dark:[background-image:radial-gradient(circle,_#3f3f46_1px,_transparent_1px)]"
-          >
-            {viewingDoc?.html_content && (
-              <div className="overflow-x-auto">
-              <div className="mx-auto w-[794px] min-w-[794px] bg-white shadow-2xl">
-                <iframe
-                  srcDoc={withPreviewStyles(viewingDoc.html_content)}
-                  title={viewingDoc.document_name ?? t('document_fallback')}
-                  sandbox="allow-same-origin"
-                  scrolling="no"
-                  className="block w-full border-none"
-                  style={{ height: '2400px' }}
-                />
-              </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="shrink-0 border-t px-6 py-4">
-            {!readOnly && viewingDoc && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const doc = viewingDoc;
-                  setViewingDoc(null);
-                  openEdit(doc);
-                }}
-              >
-                <Pencil className="mr-1.5 h-3 w-3" />
-                {t('btn_edit_document')}
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={() => setViewingDoc(null)}>
-              {t('btn_close')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Edit dialog ────────────────────────────────────────────────────── */}
+      {/* ── Edit dialog — embedded ONLYOFFICE editor ──────────────────────── */}
       {!readOnly && (
         <Dialog
           open={!!editingDoc}
-          onOpenChange={(open) => { if (!open) setEditingDoc(null); }}
+          onOpenChange={(open) => { if (!open) closeEdit(); }}
         >
           <DialogContent className="flex h-[92vh] max-w-6xl flex-col gap-0 p-0">
             <DialogHeader className="shrink-0 border-b px-6 py-4">
@@ -272,49 +133,20 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
                 </DialogTitle>
                 <Badge variant="secondary" className="text-xs">{t('badge_draft')}</Badge>
               </div>
-              {editingDoc && (
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {new Date(editingDoc.created_at).toLocaleDateString('es', {
-                    day: '2-digit', month: 'long', year: 'numeric',
-                  })}
-                </p>
-              )}
             </DialogHeader>
 
-            {/* ── Body: variables panel + editor ─────────────────────────── */}
-            <div className="flex min-h-0 flex-1 overflow-hidden gap-4 p-4">
-              {/* Left: TipTap editor */}
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                {editingDoc && (
-                  <Tiptap
-                    ref={tiptapRef}
-                    value={editContent}
-                    onChange={setEditContent}
-                    menuBarStickyTop="0px"
-                  />
-                )}
-              </div>
-
-              {/* Right: variables panel */}
-              <div className="w-[260px] shrink-0 overflow-y-auto rounded-lg border">
-                <VariablesPanel
-                  onInsert={(variable) => tiptapRef.current?.insertVariable(variable)}
+            <div className="min-h-0 flex-1">
+              {editingDoc && (
+                <OnlyOfficeEditor
+                  configUrl={`/api/onlyoffice/documents/${editingDoc.id}/config`}
+                  className="h-full w-full"
                 />
-              </div>
+              )}
             </div>
 
             <DialogFooter className="shrink-0 border-t px-6 py-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingDoc(null)}
-                disabled={saving}
-              >
-                {t('btn_cancel')}
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving && <Spinner className="mr-2 h-4 w-4" />}
-                {saving ? t('btn_saving') : t('btn_save')}
+              <Button variant="outline" size="sm" onClick={closeEdit}>
+                {t('btn_close')}
               </Button>
             </DialogFooter>
           </DialogContent>

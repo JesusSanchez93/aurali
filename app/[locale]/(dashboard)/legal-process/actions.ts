@@ -7,25 +7,12 @@ import { startWorkflow, resumeWorkflow, retryWorkflow, executeDocumentWithTempla
 import { autoAdvanceWorkflow } from '@/lib/workflow/autoAdvance';
 import { buildDocumentTemplateData } from '@/lib/workflow/nodeExecutors';
 import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
-import { substituteVars, wrapWithPageLayout, renderHeaderFooterHtml } from '@/lib/documents/htmlRenderer';
+import { approveGeneratedDocument } from '@/lib/onlyoffice/approveDocument';
 
 type LocalizedString = {
   es?: string;
   en?: string;
 };
-
-function mapGeneratedDocumentsSchemaError(message: string): string {
-  if (
-    message.includes("Could not find the 'google_doc_template_id' column of 'generated_documents' in the schema cache")
-  ) {
-    return (
-      'La base de datos no tiene disponible la columna generated_documents.google_doc_template_id. ' +
-      'Aplica la migracion 20260416000003_generated_documents_google_doc_template.sql y refresca la schema cache de Supabase/PostgREST.'
-    );
-  }
-
-  return message;
-}
 
 function revalidateLegalProcessPaths() {
   revalidatePath('/legal-process');
@@ -940,11 +927,11 @@ export async function getDocumentPreviews(legalProcessId: string) {
 
   const { data } = await (supabase as any)
     .from('generated_documents')
-    .select('id, document_name, html_content, tiptap_content, google_doc_temp_id, created_at')
+    .select('id, document_name, docx_storage_path, created_at')
     .eq('legal_process_id', legalProcessId)
     .eq('is_preview', true)
     .order('created_at', { ascending: true }) as {
-      data: { id: string; document_name: string | null; html_content: string | null; tiptap_content: unknown; google_doc_temp_id: string | null; created_at: string }[] | null;
+      data: { id: string; document_name: string | null; docx_storage_path: string | null; created_at: string }[] | null;
     };
 
   return data ?? [];
@@ -997,54 +984,23 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
     throw new Error('El flujo no está esperando aprobación de documentos');
   }
 
-  // ── 3. Generate final PDFs (using lawyer-edited preview content when available) ──
-  const { buildDocumentTemplateData } = await import('@/lib/workflow/nodeExecutors');
-  const { generateDocument } = await import('@/lib/documents/generateDocument');
-  const { generateFromGoogleDoc } = await import('@/lib/google/generateFromDoc');
-  const { templateData, organizationId } = await buildDocumentTemplateData(legalProcessId, supabase);
-
-  // Fetch preview records — these contain the selected template IDs AND any edits
+  // ── 3. Convert each preview's current .docx (possibly lawyer-edited via the
+  //      embedded ONLYOFFICE editor) to a final PDF ────────────────────────
   const { data: previewDocs, error: previewDocsError } = await db
     .from('generated_documents')
-    .select('template_id, google_doc_template_id, tiptap_content, google_doc_temp_id')
+    .select('id')
     .eq('legal_process_id', legalProcessId)
-    .eq('is_preview', true) as {
-      data: { template_id: string | null; google_doc_template_id: string | null; tiptap_content: unknown; google_doc_temp_id: string | null }[] | null;
-      error: { message: string } | null;
-    };
+    .eq('is_preview', true) as { data: { id: string }[] | null; error: { message: string } | null };
 
   if (previewDocsError) {
-    throw new Error(mapGeneratedDocumentsSchemaError(previewDocsError.message));
+    throw new Error(previewDocsError.message);
   }
 
   for (const preview of previewDocs ?? []) {
-    if (preview.google_doc_template_id) {
-      await generateFromGoogleDoc({
-        googleDocTemplateId: preview.google_doc_template_id,
-        data:                templateData,
-        organizationId:      organizationId ?? '',
-        legalProcessId,
-        // Reutilizar el doc temporal ya sustituido (incluyendo edits del usuario en Google Docs)
-        existingTempDocId:   preview.google_doc_temp_id ?? undefined,
-      });
-    } else if (preview.template_id) {
-      await generateDocument({
-        templateId:          preview.template_id,
-        data:                templateData,
-        legalProcessId,
-        organizationId:      organizationId ?? undefined,
-        editedTiptapContent: preview.tiptap_content,
-      });
-    }
+    await approveGeneratedDocument(preview.id, supabase);
   }
 
-  // ── 4. Remove preview records ─────────────────────────────────────────────
-  await db.from('generated_documents')
-    .delete()
-    .eq('legal_process_id', legalProcessId)
-    .eq('is_preview', true);
-
-  // ── 5. Resume workflow ────────────────────────────────────────────────────
+  // ── 4. Resume workflow ─────────────────────────────────────────────────────
   await resumeWorkflow(run.id, {
     approved_by: user.id,
     approved_at: new Date().toISOString(),
@@ -1069,11 +1025,11 @@ export async function getFinalDocuments(legalProcessId: string) {
 
   const { data } = await (supabase as any)
     .from('generated_documents')
-    .select('id, document_name, html_content, tiptap_content, file_url, created_at')
+    .select('id, document_name, file_url, created_at')
     .eq('legal_process_id', legalProcessId)
     .eq('is_preview', false)
     .order('created_at', { ascending: true }) as {
-      data: { id: string; document_name: string | null; html_content: string | null; tiptap_content: unknown; file_url: string | null; created_at: string }[] | null;
+      data: { id: string; document_name: string | null; file_url: string | null; created_at: string }[] | null;
     };
 
   return data ?? [];
@@ -1161,104 +1117,6 @@ export async function getProcessAuditLogs(legalProcessId: string): Promise<Audit
   }));
 }
 
-export async function updateDocumentPreviewContent(
-  documentId: string,
-  tiptapContent: unknown,
-): Promise<void> {
-  const supabase = await createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Unauthorized');
-
-  if (!tiptapContent) throw new Error('Contenido vacío');
-
-  const { data: doc, error: docErr } = await db
-    .from('generated_documents')
-    .select('document_name, legal_process_id, template_id')
-    .eq('id', documentId)
-    .single() as { data: { document_name: string | null; legal_process_id: string | null; template_id: string | null } | null; error: { message: string } | null };
-
-  if (docErr) throw new Error(`Documento no encontrado: ${docErr.message}`);
-
-  // ── Regenerate HTML server-side so header/footer are preserved ────────────
-  let headerHtml = '';
-  let footerHtml = '';
-
-  if (doc?.template_id) {
-    const { data: tpl } = await db
-      .from('legal_templates')
-      .select('header_id, footer_id')
-      .eq('id', doc.template_id)
-      .single() as { data: { header_id: string | null; footer_id: string | null } | null };
-
-    type SideRow = { content: { image?: { url: string; alignment: string } | null; text?: unknown } | null };
-    const renderSide = (raw: unknown, position: 'header' | 'footer') => {
-      const c = raw as SideRow['content'];
-      if (!c) return '';
-      let textHtml = '';
-      if (c.text) {
-        try { textHtml = tiptapJsonToBodyHtml(c.text); } catch { /* skip */ }
-      }
-      return renderHeaderFooterHtml(c, position, textHtml);
-    };
-
-    if (tpl?.header_id) {
-      const { data: hRow } = await db
-        .from('document_headers')
-        .select('content')
-        .eq('id', tpl.header_id)
-        .single() as { data: SideRow | null };
-      if (hRow?.content) headerHtml = renderSide(hRow.content, 'header');
-    }
-    if (tpl?.footer_id) {
-      const { data: fRow } = await db
-        .from('document_footers')
-        .select('content')
-        .eq('id', tpl.footer_id)
-        .single() as { data: SideRow | null };
-      if (fRow?.content) footerHtml = renderSide(fRow.content, 'footer');
-    }
-  }
-
-  // Substitute process variables and wrap with layout
-  const variableData = doc?.legal_process_id
-    ? (await buildDocumentTemplateData(doc.legal_process_id, supabase)).templateData
-    : {};
-  const bodyHtml = tiptapJsonToBodyHtml(tiptapContent);
-  const substitutedBody = substituteVars(bodyHtml, variableData);
-  const htmlContent = wrapWithPageLayout(
-    substitutedBody,
-    doc?.document_name ?? 'Documento Legal',
-    { headerHtml, footerHtml },
-  );
-
-  const { error: updateErr } = await db
-    .from('generated_documents')
-    .update({ tiptap_content: tiptapContent, html_content: htmlContent })
-    .eq('id', documentId) as { error: { message: string } | null };
-
-  if (updateErr) {
-    console.error('[updateDocumentPreviewContent] update falló:', updateErr.message);
-    throw new Error(`Error al guardar: ${updateErr.message}`);
-  }
-
-  if (doc?.legal_process_id) {
-    void (supabase as any).from('audit_logs').insert({
-      user_id: user.id,
-      action: 'document_preview_updated',
-      entity: 'legal_process',
-      entity_id: doc.legal_process_id,
-      metadata: { document_id: documentId, document_name: doc.document_name },
-    });
-  }
-}
-
-/**
- * Returns the full variable data map for a legal process (client, lawyer, bank,
- * org-rep, etc.) so the client can substitute variables before saving the HTML
- * preview without running TipTap on the server.
- */
 // ─── Fees & Payments ──────────────────────────────────────────────────────────
 
 export async function setProcessFee(

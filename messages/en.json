@@ -55,9 +55,7 @@
       "banks": "Banks",
       "document_types": "Document Types",
       "ai_variables": "AI Variables",
-      "formats": "Document Templates",
-      "google_docs": "Google Docs",
-      "test_doc_gen": "Document Test"
+      "formats": "Document Templates"
     },
     "upload": {
       "click_to_upload": "Click to upload a document",
@@ -135,7 +133,7 @@
         },
         "templates": {
           "title": "Create your document templates",
-          "description": "Templates are the base documents (powers of attorney, contracts, letters) that the workflow generates automatically for each process. You can use variables like {CLIENT.FIRST_NAME} that are replaced with the client's real data.",
+          "description": "Templates are the base documents (powers of attorney, contracts, letters) that the workflow generates automatically for each process. You can use variables like '{CLIENT.FIRST_NAME}' that are replaced with the client's real data.",
           "tip": "Go to Settings → Document templates to create your first template."
         },
         "email_nodes": {
@@ -411,8 +409,6 @@
       "card_footer_label": "Preview",
       "btn_view": "View",
       "btn_edit": "Edit",
-      "btn_open_google_docs": "Open in Google Docs",
-      "btn_edit_document": "Edit this document",
       "btn_close": "Close",
       "btn_cancel": "Cancel",
       "btn_save": "Save changes",
@@ -564,29 +560,20 @@
     "field_name": "Template name",
     "field_name_placeholder": "e.g. Bank letter, Power of attorney...",
     "field_content": "Content",
+    "field_docx": "Document (.docx)",
+    "field_docx_hint": "Upload a Word file (.docx). You'll be able to edit it with the embedded editor and type variables like '{GROUP.VARIABLE}' directly in the text.",
+    "upload_and_create": "Upload and create template",
+    "loading_editor": "Loading editor...",
+    "replace_docx": "Replace .docx file",
     "empty": "No templates created yet. Create the first one using the button above.",
-    "col_name": "Name",
-    "col_version": "Version",
-    "col_created_at": "Created",
     "col_actions": "Actions",
+    "rename_hint": "Double-click to rename",
+    "open_editor": "Open editor",
     "create_success": "Template created successfully.",
     "update_success": "Template updated successfully.",
     "delete_success": "Template deleted.",
     "delete_title": "Delete template",
-    "delete_description": "Are you sure you want to delete this template? This action cannot be undone.",
-    "variables": {
-      "title": "Dynamic variables",
-      "description": "Click to insert into the editor or type them manually.",
-      "manual_hint": "You can also type them directly in the editor using the format '{GROUP.VARIABLE}'.",
-      "groups": {
-        "client": "Client Information",
-        "process": "Process Information",
-        "banking": "Banking Information",
-        "lawyer": "Lawyer Information",
-        "org_rep": "Firm Legal Representative",
-        "ai": "AI Variables"
-      }
-    }
+    "delete_description": "Are you sure you want to delete this template? This action cannot be undone."
   },
   "landing": {
     "nav": {

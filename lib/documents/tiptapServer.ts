@@ -13,7 +13,6 @@ import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
-import { wrapWithPageLayout, type PageLayoutOptions } from './htmlRenderer';
 import {
   getImageBoxStyle,
   getImageOuterStyle,
@@ -166,20 +165,6 @@ const TIPTAP_EXTENSIONS = [
   TableCell,
   TableHeader,
 ];
-
-/**
- * Converts TipTap JSON content to a full HTML document.
- * Safe to call from Server Actions — no Puppeteer or PDF deps.
- */
-export function tiptapJsonToHtml(
-  content: unknown,
-  templateName: string,
-  options: PageLayoutOptions = {},
-): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const bodyHtml = generateHTML(content as any, TIPTAP_EXTENSIONS as any);
-  return wrapWithPageLayout(bodyHtml, templateName, options);
-}
 
 /**
  * Converts TipTap JSON to raw body HTML without the page wrapper.

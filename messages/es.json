@@ -55,9 +55,7 @@
       "banks": "Bancos",
       "document_types": "Tipos de Documento",
       "ai_variables": "Variables IA",
-      "formats": "Plantillas de Documentos",
-      "google_docs": "Google Docs",
-      "test_doc_gen": "Prueba de Documentos"
+      "formats": "Plantillas de Documentos"
     },
     "upload": {
       "click_to_upload": "Haz clic para subir un documento",
@@ -135,7 +133,7 @@
         },
         "templates": {
           "title": "Crea tus plantillas de documentos",
-          "description": "Las plantillas son los documentos base (poderes, contratos, cartas) que el flujo genera automáticamente para cada proceso. Puedes usar variables como {{client.first_name}} que se reemplazan con los datos reales del cliente.",
+          "description": "Las plantillas son los documentos base (poderes, contratos, cartas) que el flujo genera automáticamente para cada proceso. Puedes usar variables como '{CLIENT.FIRST_NAME}' que se reemplazan con los datos reales del cliente.",
           "tip": "Ve a Configuración → Plantillas de documentos para crear tu primera plantilla."
         },
         "email_nodes": {
@@ -411,8 +409,6 @@
       "card_footer_label": "Vista previa",
       "btn_view": "Ver",
       "btn_edit": "Editar",
-      "btn_open_google_docs": "Abrir en Google Docs",
-      "btn_edit_document": "Editar este documento",
       "btn_close": "Cerrar",
       "btn_cancel": "Cancelar",
       "btn_save": "Guardar cambios",
@@ -564,29 +560,20 @@
     "field_name": "Nombre de la plantilla",
     "field_name_placeholder": "Ej: Carta al banco, Poder notarial...",
     "field_content": "Contenido",
+    "field_docx": "Documento (.docx)",
+    "field_docx_hint": "Sube un archivo Word (.docx). Podrás editarlo con el editor integrado y escribir variables como '{GRUPO.VARIABLE}' directamente en el texto.",
+    "upload_and_create": "Subir y crear plantilla",
+    "loading_editor": "Cargando editor...",
+    "replace_docx": "Reemplazar archivo .docx",
     "empty": "No hay plantillas creadas. Crea la primera usando el botón de arriba.",
-    "col_name": "Nombre",
-    "col_version": "Versión",
-    "col_created_at": "Creado",
     "col_actions": "Acciones",
+    "rename_hint": "Doble clic para renombrar",
+    "open_editor": "Abrir editor",
     "create_success": "Plantilla creada exitosamente.",
     "update_success": "Plantilla actualizada exitosamente.",
     "delete_success": "Plantilla eliminada.",
     "delete_title": "Eliminar plantilla",
-    "delete_description": "¿Estás seguro de que deseas eliminar esta plantilla? Esta acción no se puede deshacer.",
-    "variables": {
-      "title": "Variables dinámicas",
-      "description": "Haz clic para insertar en el editor o escríbelas manualmente.",
-      "manual_hint": "También puedes escribirlas directamente en el editor con el formato '{GRUPO.VARIABLE}'.",
-      "groups": {
-        "client": "Información del Cliente",
-        "process": "Información del Proceso",
-        "banking": "Información Bancaria",
-        "lawyer": "Información del Abogado",
-        "org_rep": "Representante Legal del Bufete",
-        "ai": "Variables IA"
-      }
-    }
+    "delete_description": "¿Estás seguro de que deseas eliminar esta plantilla? Esta acción no se puede deshacer."
   },
   "landing": {
     "nav": {

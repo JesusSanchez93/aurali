@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { FileText, Trash2 } from 'lucide-react';
+import { FileText, Trash2, UploadCloud } from 'lucide-react';
 import { useRef } from 'react';
 import { useTranslations } from 'next-intl';
 
@@ -112,10 +112,11 @@ export function FileUpload({
                     <button
                         type="button"
                         onClick={() => inputRef.current?.click()}
-                        className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 py-6 text-gray-500 transition hover:border-gray-400 hover:text-gray-600 bg-white dark:bg-black"
+                        className="group flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 py-8 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 hover:text-foreground"
                     >
+                        <UploadCloud className="h-6 w-6 text-muted-foreground/70 transition-colors group-hover:text-primary" />
                         <span className="text-sm font-medium">{t('click_to_upload')}</span>
-                        <span className="text-xs text-muted-foreground mt-1">
+                        <span className="text-xs text-muted-foreground">
                             {accept.replace(/\./g, '').toUpperCase()} {multiple ? t('can_upload_more', { count: remainingCount, pluralShort: remainingCount === 1 ? '' : 's' }) : ''}
                         </span>
                     </button>

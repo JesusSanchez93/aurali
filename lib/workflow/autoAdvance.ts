@@ -21,8 +21,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { resumeWorkflow } from './workflowRunner';
-import { buildDocumentTemplateData } from './nodeExecutors';
-import { generateDocument } from '@/lib/documents/generateDocument';
+import { approveGeneratedDocument } from '@/lib/onlyoffice/approveDocument';
 import type { LegalProcessStatus } from './types';
 
 // ─── Configuration ─────────────────────────────────────────────────────────────
@@ -133,47 +132,37 @@ export async function autoAdvanceWorkflow(
     return { advanced: true };
   }
 
-  // generate_document in preview mode: generate actual PDFs now
+  // generate_document in preview mode: approve the lawyer-edited .docx previews now
   if (node.type === 'generate_document') {
-    const cfg = node.config as { preview?: boolean; template_ids?: string[]; template_id?: string };
+    const cfg = node.config as { preview?: boolean };
     if (!cfg.preview) return { advanced: false, reason: 'no_blocking_node' };
 
-    const ids = cfg.template_ids && cfg.template_ids.length > 0
-      ? cfg.template_ids
-      : cfg.template_id ? [cfg.template_id] : [];
-
-    if (ids.length === 0) {
-      // No pre-configured templates — runtime selection required via WorkflowActionButton
-      return { advanced: false, reason: 'no_blocking_node' };
-    }
-
     try {
-      const { templateData, organizationId } = await buildDocumentTemplateData(legalProcessId, supabase);
+      const { data: previewDocs, error: previewErr } = await db
+        .from('generated_documents')
+        .select('id, document_name, template_id')
+        .eq('legal_process_id', legalProcessId)
+        .eq('is_preview', true) as {
+          data: { id: string; document_name: string | null; template_id: string | null }[] | null;
+          error: { message: string } | null;
+        };
+
+      if (previewErr) throw new Error(previewErr.message);
+      if (!previewDocs || previewDocs.length === 0) return { advanced: false, reason: 'no_blocking_node' };
 
       type GenDoc = { document_id: string; document_name: string; file_url: string; storage_path: string; template_id: string };
       const documents: GenDoc[] = [];
 
-      for (const tid of ids) {
-        const result = await generateDocument({
-          templateId:     tid,
-          data:           templateData,
-          legalProcessId,
-          organizationId: organizationId ?? undefined,
-        });
+      for (const preview of previewDocs) {
+        const { fileUrl, storagePath } = await approveGeneratedDocument(preview.id, supabase);
         documents.push({
-          document_id:   result.documentId   ?? '',
-          document_name: result.fileName     ?? '',
-          file_url:      result.fileUrl      ?? '',
-          storage_path:  result.storagePath  ?? '',
-          template_id:   tid,
+          document_id:   preview.id,
+          document_name: preview.document_name ?? '',
+          file_url:      fileUrl,
+          storage_path:  storagePath,
+          template_id:   preview.template_id ?? '',
         });
       }
-
-      // Remove preview records — final PDFs are now stored
-      await db.from('generated_documents')
-        .delete()
-        .eq('legal_process_id', legalProcessId)
-        .eq('is_preview', true);
 
       const first = documents[0];
       await resumeWorkflow(run.id, {
@@ -184,7 +173,7 @@ export async function autoAdvanceWorkflow(
         storage_path:  first?.storage_path  ?? '',
       });
     } catch (err) {
-      console.error('[autoAdvance] Error generating PDFs from preview:', err);
+      console.error('[autoAdvance] Error approving document previews:', err);
     }
     return { advanced: true };
   }

@@ -4,6 +4,29 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin();
 
+const onlyofficeUrl = process.env.NEXT_PUBLIC_ONLYOFFICE_URL ?? '';
+
+// Static UI for the "Variables" ONLYOFFICE plugin — loaded in a nested iframe
+// *inside* the Document Server's own editor iframe, so (unlike the rest of
+// the app) it must allow being framed by that origin. Browsers combine
+// multiple Content-Security-Policy headers restrictively (AND, never
+// override), so this path needs its own complete CSP, not an addition to the
+// blanket one below — the blanket rule's source pattern excludes it.
+const onlyofficePluginHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      // 'unsafe-eval' required: ONLYOFFICE's own plugins.js connector evals internally
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://onlyoffice.github.io`,
+      "style-src 'self' 'unsafe-inline'",
+      "connect-src 'self'",
+      `frame-ancestors 'self' ${onlyofficeUrl}`,
+    ].join('; '),
+  },
+];
+
 const securityHeaders = [
   // A05 — Clickjacking (X-Frame-Options redundant with CSP frame-ancestors, but kept for older browsers)
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -20,15 +43,18 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      // https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js connects the "Variables" plugin panel
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${onlyofficeUrl} https://onlyoffice.github.io`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https:",
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
+      // ONLYOFFICE Document Server renders its editor UI inside an iframe
+      `frame-src 'self' ${onlyofficeUrl}`,
       // Supabase realtime + storage + auth, Sentry tunneled via /monitoring
       // Local Supabase (dev only) speaks plain http/ws on 127.0.0.1:54321
-      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com ${process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:54321 ws://127.0.0.1:54321' : ''} ${process.env.NEXT_PUBLIC_APP_URL ?? ''}`,
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com ${onlyofficeUrl} ${process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:54321 ws://127.0.0.1:54321' : ''} ${process.env.NEXT_PUBLIC_APP_URL ?? ''}`,
       "frame-ancestors 'none'",
     ].join('; '),
   },
@@ -44,8 +70,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        // Excludes /onlyoffice-plugin — it gets its own CSP below, since a
+        // second CSP header would only ever narrow (never override) this one.
+        source: '/((?!onlyoffice-plugin/).*)',
         headers: securityHeaders,
+      },
+      {
+        source: '/onlyoffice-plugin/:path*',
+        headers: onlyofficePluginHeaders,
       },
     ];
   },

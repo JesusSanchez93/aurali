@@ -19,5 +19,7 @@ export const config = {
   // - API routes
   // - Static files (_next/static, _next/image, etc.)
   // - Favicon and other assets
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|apple-touch-icon.png|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.webp|.*\\.gif|.*\\.ico).*)']
+  // - The ONLYOFFICE "Variables" plugin bundle (served with no session — it's
+  //   loaded by the Document Server, not a browser with a Supabase cookie)
+  matcher: ['/((?!api|onlyoffice-plugin|_next/static|_next/image|favicon.ico|apple-touch-icon.png|.*\\.svg|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.webp|.*\\.gif|.*\\.ico).*)']
 };

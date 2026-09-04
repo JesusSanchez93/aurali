@@ -535,7 +535,10 @@ export type Database = {
       generated_documents: {
         Row: {
           created_at: string
+          document_key: string | null
           document_name: string | null
+          docx_storage_path: string | null
+          edited_by_lawyer: boolean
           file_url: string | null
           google_doc_temp_id: string | null
           google_doc_template_id: string | null
@@ -549,7 +552,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          document_key?: string | null
           document_name?: string | null
+          docx_storage_path?: string | null
+          edited_by_lawyer?: boolean
           file_url?: string | null
           google_doc_temp_id?: string | null
           google_doc_template_id?: string | null
@@ -563,7 +569,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          document_key?: string | null
           document_name?: string | null
+          docx_storage_path?: string | null
+          edited_by_lawyer?: boolean
           file_url?: string | null
           google_doc_temp_id?: string | null
           google_doc_template_id?: string | null
@@ -1108,6 +1117,8 @@ export type Database = {
           content: Json | null
           created_at: string
           created_by: string | null
+          docx_document_key: string | null
+          docx_storage_path: string | null
           font_family: string
           footer_content: Json | null
           footer_id: string | null
@@ -1126,6 +1137,8 @@ export type Database = {
           content?: Json | null
           created_at?: string
           created_by?: string | null
+          docx_document_key?: string | null
+          docx_storage_path?: string | null
           font_family?: string
           footer_content?: Json | null
           footer_id?: string | null
@@ -1144,6 +1157,8 @@ export type Database = {
           content?: Json | null
           created_at?: string
           created_by?: string | null
+          docx_document_key?: string | null
+          docx_storage_path?: string | null
           font_family?: string
           footer_content?: Json | null
           footer_id?: string | null

@@ -1,7 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { randomUUID } from 'crypto';
 import { getOrgAndUser } from '@/lib/server/get-org-user';
+
+const DOCX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 export async function getTemplates() {
     const { supabase, organizationId } = await getOrgAndUser();
@@ -31,55 +34,71 @@ export async function getTemplate(id: string) {
 }
 
 
-type TemplateInput = {
-    name: string;
-    content: unknown;
-    font_family?: string;
-    header_left?: string;
-    header_right?: string;
-    footer_left?: string;
-    footer_right?: string;
-};
-
-export async function createTemplate(input: TemplateInput) {
+/**
+ * Creates a new template row and uploads its source .docx in one step —
+ * ONLYOFFICE editing requires a real file to already exist in Storage before
+ * the embedded editor can open it.
+ */
+export async function createTemplateWithDocx(name: string, file: File): Promise<{ id: string }> {
     const { supabase, organizationId } = await getOrgAndUser();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+    const { data: created, error: insertErr } = await supabase
         .from('legal_templates')
-        .insert({
-            name: input.name,
-            content: input.content,
-            organization_id: organizationId,
-            font_family: input.font_family ?? 'Inter',
-            header_left: input.header_left ?? '',
-            header_right: input.header_right ?? '',
-            footer_left: input.footer_left ?? '',
-            footer_right: input.footer_right ?? '',
-        })
+        .insert({ name, organization_id: organizationId, docx_document_key: randomUUID() })
         .select('id')
         .single();
 
-    if (error) throw new Error(error.message);
+    if (insertErr || !created) throw new Error(insertErr?.message ?? 'No se pudo crear la plantilla');
+
+    const storagePath = `${organizationId}/templates/${created.id}.docx`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    const { error: uploadErr } = await supabase.storage
+        .from('documents')
+        .upload(storagePath, buffer, { contentType: DOCX_CONTENT_TYPE, upsert: true });
+
+    if (uploadErr) throw new Error(uploadErr.message);
+
+    const { error: updateErr } = await supabase
+        .from('legal_templates')
+        .update({ docx_storage_path: storagePath })
+        .eq('id', created.id);
+
+    if (updateErr) throw new Error(updateErr.message);
+
     revalidatePath('/', 'layout');
-    return data;
+    return { id: created.id };
 }
 
-export async function updateTemplate(id: string, input: TemplateInput) {
+/** Uploads/replaces a template's source .docx outside the embedded editor (e.g. first upload for an existing row). */
+export async function uploadTemplateDocx(templateId: string, file: File): Promise<void> {
     const { supabase, organizationId } = await getOrgAndUser();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const storagePath = `${organizationId}/templates/${templateId}.docx`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    const { error: uploadErr } = await supabase.storage
+        .from('documents')
+        .upload(storagePath, buffer, { contentType: DOCX_CONTENT_TYPE, upsert: true });
+
+    if (uploadErr) throw new Error(uploadErr.message);
+
+    const { error: updateErr } = await supabase
         .from('legal_templates')
-        .update({
-            name: input.name,
-            content: input.content,
-            font_family: input.font_family ?? 'Inter',
-            header_left: input.header_left ?? '',
-            header_right: input.header_right ?? '',
-            footer_left: input.footer_left ?? '',
-            footer_right: input.footer_right ?? '',
-        })
+        .update({ docx_storage_path: storagePath, docx_document_key: randomUUID() })
+        .eq('id', templateId)
+        .eq('organization_id', organizationId);
+
+    if (updateErr) throw new Error(updateErr.message);
+    revalidatePath('/', 'layout');
+}
+
+export async function renameTemplate(id: string, name: string): Promise<void> {
+    const { supabase, organizationId } = await getOrgAndUser();
+
+    const { error } = await supabase
+        .from('legal_templates')
+        .update({ name })
         .eq('id', id)
         .eq('organization_id', organizationId);
 

@@ -1,22 +1,16 @@
 /**
  * POST /api/documents/generate
  *
- * Generates a PDF from a document template and returns it in two modes:
- *
- *   Mode A — stream (default):
- *     Returns the PDF binary directly as application/pdf.
- *     Use this for on-demand preview / download without persisting.
- *
- *   Mode B — persist (when legalProcessId is provided):
- *     Generates the PDF, uploads to Supabase Storage, records in
- *     generated_documents, and returns JSON with the signed URL.
+ * Generates a document from a legal_templates .docx template via ONLYOFFICE
+ * and persists it to Supabase Storage + `generated_documents`.
  *
  * Request body:
  *   {
- *     templateId:     string                   // UUID of document_templates row
+ *     templateId:     string                   // UUID of legal_templates row
  *     data:           Record<string, string>   // Variable values
- *     legalProcessId?: string                  // Triggers Mode B
- *     organizationId?: string                  // Optional for storage path
+ *     legalProcessId: string                   // Required — everything is tied to a process
+ *     organizationId?: string
+ *     mode?:          'preview' | 'final'       // Defaults to 'final'
  *   }
  *
  * Auth: authenticated users only.
@@ -24,13 +18,12 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { generateDocument } from '@/lib/documents/generateDocument';
+import { generateDocument } from '@/lib/documents/generateOnlyOfficeDocument';
 import { createLogger } from '@/lib/utils/logger';
 
 const logger = createLogger('API:DOCUMENTS_GENERATE');
 
 export async function POST(request: NextRequest) {
-  // ── Auth ────────────────────────────────────────────────────────────────
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -38,7 +31,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
 
-  // ── Parse body ───────────────────────────────────────────────────────────
   let body: unknown;
   try {
     body = await request.json();
@@ -46,59 +38,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  const { templateId, data, legalProcessId, organizationId, dryRun } = body as {
-    templateId?:     unknown;
-    data?:           unknown;
+  const { templateId, data, legalProcessId, organizationId, mode } = body as {
+    templateId?: unknown;
+    data?: unknown;
     legalProcessId?: unknown;
     organizationId?: unknown;
-    dryRun?:         unknown;
+    mode?: unknown;
   };
 
   if (!templateId || typeof templateId !== 'string') {
     return NextResponse.json({ error: 'templateId es requerido' }, { status: 400 });
   }
-
+  if (!legalProcessId || typeof legalProcessId !== 'string') {
+    return NextResponse.json({ error: 'legalProcessId es requerido' }, { status: 400 });
+  }
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     return NextResponse.json({ error: 'data debe ser un objeto de variables' }, { status: 400 });
   }
 
-  // ── Generate ─────────────────────────────────────────────────────────────
-  logger.info('Generate document request', {
-    templateId,
-    legalProcessId: typeof legalProcessId === 'string' ? legalProcessId : undefined,
-    mode: typeof legalProcessId === 'string' ? 'persist' : 'stream',
-  });
+  const resolvedMode = mode === 'preview' ? 'preview' : 'final';
+
+  logger.info('Generate document request', { templateId, legalProcessId, mode: resolvedMode });
 
   try {
     const result = await generateDocument({
       templateId,
       data: data as Record<string, string>,
-      legalProcessId: typeof legalProcessId === 'string' ? legalProcessId : undefined,
+      legalProcessId,
       organizationId: typeof organizationId === 'string' ? organizationId : undefined,
-      dryRun: dryRun === true,
+      mode: resolvedMode,
     });
 
-    // Mode B — persist: return JSON with URL
-    if (result.fileUrl) {
-      logger.info('Document generated (persist mode)', { documentId: result.documentId, fileName: result.fileName });
-      return NextResponse.json({
-        ok:          true,
-        fileUrl:     result.fileUrl,
-        documentId:  result.documentId,
-        storagePath: result.storagePath,
-        fileName:    result.fileName,
-      });
-    }
-
-    // Mode A — stream: return PDF binary
-    logger.info('Document generated (stream mode)', { fileName: result.fileName, size: result.buffer.length });
-    return new NextResponse(result.buffer as unknown as BodyInit, {
-      status: 200,
-      headers: {
-        'Content-Type':        'application/pdf',
-        'Content-Disposition': `inline; filename="${encodeURIComponent(result.fileName)}"`,
-        'Content-Length':      String(result.buffer.length),
-      },
+    logger.info('Document generated', { documentId: result.documentId, mode: resolvedMode });
+    return NextResponse.json({
+      ok: true,
+      documentId: result.documentId,
+      documentName: result.documentName,
+      fileUrl: result.fileUrl,
+      storagePath: result.storagePath,
+      docxStoragePath: result.docxStoragePath,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error al generar el documento';

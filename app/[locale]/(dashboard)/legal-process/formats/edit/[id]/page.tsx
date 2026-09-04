@@ -6,5 +6,5 @@ interface Props {
 
 export default async function FormatsEditRedirectPage({ params }: Props) {
   const { id } = await params;
-  redirect(`/settings/document-templates/edit/${id}`);
+  redirect(`/document-templates/edit/${id}`);
 }
