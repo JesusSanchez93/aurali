@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1080">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1080px;
+        overflow: hidden;
+        background: #1e1b4b;
+      }
+      body {
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+
+      :root {
+        --ink: #1e1b4b;
+        --accent: #7c3aed;
+        --amber: #f59e0b;
+        --white: #ffffff;
+        --offwhite: #f8fafc;
+        --green: #22c55e;
+        --highlight: #f4f4f5;
+      }
+
+      /* ---------- root canvas ---------- */
+      #aurali-hero {
+        position: relative;
+        width: 1080px;
+        height: 1080px;
+        overflow: hidden;
+        border-radius: 28px;
+        background: var(--white);
+        perspective: 1100px;
+      }
+
+      .bg-panel {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .bg-panel::before,
+      .bg-panel::after {
+        content: "";
+        position: absolute;
+        width: 900px;
+        height: 900px;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      .bg-panel::before {
+        top: -320px;
+        right: -320px;
+        background: radial-gradient(circle, rgba(124, 58, 237, 0.06) 0%, rgba(124, 58, 237, 0) 70%);
+      }
+      .bg-panel::after {
+        bottom: -320px;
+        left: -320px;
+        background: radial-gradient(circle, rgba(30, 27, 75, 0.04) 0%, rgba(30, 27, 75, 0) 70%);
+      }
+
+      /* ---------- app container (the star) ---------- */
+      .app-container {
+        position: absolute;
+        left: 60px;
+        top: 288px;
+        width: 960px;
+        height: 505px;
+        border-radius: 20px;
+        overflow: hidden;
+        background: var(--white);
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 30px 80px rgba(30, 27, 75, 0.18);
+        transform-origin: center center;
+        will-change: transform, opacity;
+        z-index: 5;
+      }
+
+      /* ---------- sidebar (persistent, always visible) ---------- */
+      .sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 194px;
+        height: 505px;
+        overflow: hidden;
+        z-index: 2;
+      }
+      .sidebar-crop {
+        position: absolute;
+        inset: 0;
+        width: 194px;
+        height: 505px;
+        background-repeat: no-repeat;
+      }
+      #sidebar-v1 {
+        background-image: url('assets/aurali-dashboard-1.png');
+        background-size: 960px 534.24px;
+        background-position: 0px -29.39px;
+        opacity: 1;
+      }
+      #sidebar-v2 {
+        background-image: url('assets/aurali-proceso-legal-1.png');
+        background-size: 960px 536.86px;
+        background-position: 0px -30.69px;
+        opacity: 0;
+      }
+      .sidebar-pill {
+        position: absolute;
+        left: 8px;
+        width: 178px;
+        top: 39.18px;
+        height: 20.9px;
+        border-radius: 8px;
+        background: var(--highlight);
+        opacity: 0;
+        z-index: 3;
+        pointer-events: none;
+      }
+
+      /* ---------- content viewport (right pane) ---------- */
+      .content-viewport {
+        position: absolute;
+        left: 194px;
+        top: 0;
+        width: 766px;
+        height: 505px;
+        overflow: hidden;
+        z-index: 2;
+      }
+
+      /* View 1 — Analíticas, continuous scroll */
+      #content-view1 {
+        position: absolute;
+        inset: 0;
+        opacity: 1;
+      }
+      .scroll-track {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 766px;
+        height: 945px;
+        transform: translateY(0px);
+        will-change: transform;
+      }
+      .scroll-page {
+        position: absolute;
+        left: 0;
+        width: 766px;
+        background-repeat: no-repeat;
+      }
+      #scroll-page-1 {
+        top: 0px;
+        height: 504.77px;
+        background-image: url('assets/aurali-dashboard-1.png');
+        background-size: 960px 534.24px;
+        background-position: -193.98px -29.39px;
+      }
+      #scroll-page-2 {
+        top: 504.77px;
+        height: 439.56px;
+        background-image: url('assets/aurali-dashboard-2.png');
+        background-size: 960px 536.2px;
+        background-position: -193.98px -96.65px;
+      }
+
+      /* View 1 — stat/valor cards stagger reveal overlays (sit exactly over the
+         identical cards already drawn in #scroll-page-1; fade+slide in before scroll starts).
+         A plain white mask sits between #scroll-page-1 and the overlay so the background
+         card is hidden until its overlay twin fades in — otherwise the y-slide would show
+         a transient duplicate of the (already fully-drawn) background card underneath. */
+      .cv1-stagger-piece {
+        position: absolute;
+        background-image: url('assets/aurali-dashboard-1.png');
+        background-size: 960px 534.24px;
+        background-repeat: no-repeat;
+        opacity: 0;
+      }
+      .cv1-stagger-mask {
+        position: absolute;
+        background: var(--white);
+        opacity: 1;
+      }
+      .cv1-pos-stat-1 { left: 15.35px; top: 83.59px; width: 236.73px; height: 101.55px; }
+      .cv1-pos-stat-2 { left: 261.88px; top: 83.59px; width: 236.41px; height: 101.55px; }
+      .cv1-pos-stat-3 { left: 508.08px; top: 83.59px; width: 236.73px; height: 101.55px; }
+      .cv1-pos-val-1 { left: 15.35px; top: 244.24px; width: 175.02px; height: 96.33px; }
+      .cv1-pos-val-2 { left: 200.16px; top: 244.24px; width: 175.02px; height: 96.33px; }
+      .cv1-pos-val-3 { left: 384.98px; top: 244.24px; width: 175.02px; height: 96.33px; }
+      .cv1-pos-val-4 { left: 569.80px; top: 244.24px; width: 175.02px; height: 96.33px; }
+
+      #cv1-stat-1 { background-position: -209.31px -83.59px; }
+      #cv1-stat-2 { background-position: -455.84px -83.59px; }
+      #cv1-stat-3 { background-position: -702.04px -83.59px; }
+      #cv1-val-1 { background-position: -209.31px -244.24px; }
+      #cv1-val-2 { background-position: -394.12px -244.24px; }
+      #cv1-val-3 { background-position: -578.94px -244.24px; }
+      #cv1-val-4 { background-position: -763.76px -244.24px; }
+
+      /* View 2 — Procesos legales, static frame with reveal cascade */
+      #content-view2 {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        background: var(--white);
+      }
+      .cv2-header {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 766px;
+        height: 38.53px;
+        background-image: url('assets/aurali-proceso-legal-1.png');
+        background-size: 960px 536.86px;
+        background-position: -193.98px -30.69px;
+        background-repeat: no-repeat;
+      }
+      .cv2-piece {
+        position: absolute;
+        left: 0;
+        width: 766px;
+        background-image: url('assets/aurali-proceso-legal-1.png');
+        background-size: 960px 536.86px;
+        background-repeat: no-repeat;
+        opacity: 0;
+      }
+      #cv2-search {
+        top: 38.53px;
+        height: 29.39px;
+        background-position: -193.98px -69.22px;
+      }
+      #cv2-card-1 {
+        top: 92.09px;
+        height: 82.61px;
+        background-position: -193.98px -122.78px;
+      }
+      #cv2-card-2 {
+        top: 186.78px;
+        height: 82.61px;
+        background-position: -193.98px -217.47px;
+      }
+      #cv2-card-3 {
+        top: 281.47px;
+        height: 82.61px;
+        background-position: -193.98px -312.16px;
+      }
+      #cv2-card-4 {
+        top: 376.25px;
+        height: 82.61px;
+        background-position: -193.98px -406.94px;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-fyq8" id="aurali-hero" data-composition-id="aurali-hero-motion" data-start="0" data-duration="9" data-fps="30" data-width="1080" data-height="1080">
+      <div data-hf-id="hf-ux1y" class="bg-panel clip" id="bg-panel" data-start="0"></div>
+
+      <div data-hf-id="hf-app0" class="app-container clip" id="app-container" data-start="0">
+        <div data-hf-id="hf-side0" class="sidebar" id="sidebar">
+          <div style="clip-path: inset(0px)" data-hf-id="hf-side1" class="sidebar-crop" id="sidebar-v1"></div>
+          <div data-hf-id="hf-side2" class="sidebar-crop" id="sidebar-v2"></div>
+          <div data-hf-id="hf-pill0" class="sidebar-pill" id="sidebar-pill"></div>
+        </div>
+
+        <div data-hf-id="hf-cvp0" class="content-viewport" id="content-viewport">
+          <div data-hf-id="hf-cv1" id="content-view1">
+            <div data-hf-id="hf-track" class="scroll-track" id="scroll-track" data-layout-allow-overflow="true">
+              <div data-hf-id="hf-page1" class="scroll-page" id="scroll-page-1" data-layout-allow-overflow="true"></div>
+              <div data-hf-id="hf-cv1m1" class="cv1-stagger-mask cv1-pos-stat-1"></div>
+              <div data-hf-id="hf-cv1m2" class="cv1-stagger-mask cv1-pos-stat-2"></div>
+              <div data-hf-id="hf-cv1m3" class="cv1-stagger-mask cv1-pos-stat-3"></div>
+              <div data-hf-id="hf-cv1m4" class="cv1-stagger-mask cv1-pos-val-1"></div>
+              <div data-hf-id="hf-cv1m5" class="cv1-stagger-mask cv1-pos-val-2"></div>
+              <div data-hf-id="hf-cv1m6" class="cv1-stagger-mask cv1-pos-val-3"></div>
+              <div data-hf-id="hf-cv1m7" class="cv1-stagger-mask cv1-pos-val-4"></div>
+              <div data-hf-id="hf-cv1s1" class="cv1-stagger-piece cv1-pos-stat-1" id="cv1-stat-1"></div>
+              <div data-hf-id="hf-cv1s2" class="cv1-stagger-piece cv1-pos-stat-2" id="cv1-stat-2"></div>
+              <div data-hf-id="hf-cv1s3" class="cv1-stagger-piece cv1-pos-stat-3" id="cv1-stat-3"></div>
+              <div data-hf-id="hf-cv1v1" class="cv1-stagger-piece cv1-pos-val-1" id="cv1-val-1"></div>
+              <div data-hf-id="hf-cv1v2" class="cv1-stagger-piece cv1-pos-val-2" id="cv1-val-2"></div>
+              <div data-hf-id="hf-cv1v3" class="cv1-stagger-piece cv1-pos-val-3" id="cv1-val-3"></div>
+              <div data-hf-id="hf-cv1v4" class="cv1-stagger-piece cv1-pos-val-4" id="cv1-val-4"></div>
+              <div data-hf-id="hf-page2" class="scroll-page" id="scroll-page-2" data-layout-allow-overflow="true"></div>
+            </div>
+          </div>
+
+          <div data-hf-id="hf-cv2" id="content-view2">
+            <div data-hf-id="hf-cv2h" class="cv2-header" id="cv2-header"></div>
+            <div data-hf-id="hf-cv2s" class="cv2-piece" id="cv2-search"></div>
+            <div data-hf-id="hf-cv2c1" class="cv2-piece" id="cv2-card-1"></div>
+            <div data-hf-id="hf-cv2c2" class="cv2-piece" id="cv2-card-2"></div>
+            <div data-hf-id="hf-cv2c3" class="cv2-piece" id="cv2-card-3"></div>
+            <div data-hf-id="hf-cv2c4" class="cv2-piece" id="cv2-card-4"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- vignette -->
+      <div data-hf-id="hf-ncw3" id="hf-vignette" style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 90;
+        "></div>
+
+      <!-- grain -->
+      <div data-hf-id="hf-t19g" id="grain-overlay" style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 100;
+        ">
+        <div data-hf-id="hf-0qtj" class="grain-texture"></div>
+      </div>
+    </div>
+
+    <style>
+      #hf-vignette {
+        background: radial-gradient(
+          var(--vignette-shape, ellipse) at center,
+          transparent var(--vignette-size, 55%),
+          var(--vignette-color, rgba(0, 0, 0, 0.12)) var(--vignette-edge, 100%)
+        );
+      }
+
+      @keyframes hf-grain-noise {
+        0%, 100% { transform: translate(0, 0); }
+        10% { transform: translate(-5%, -5%); }
+        20% { transform: translate(-10%, 5%); }
+        30% { transform: translate(5%, -10%); }
+        40% { transform: translate(-5%, 15%); }
+        50% { transform: translate(-10%, 5%); }
+        60% { transform: translate(15%, 0); }
+        70% { transform: translate(0, 10%); }
+        80% { transform: translate(-15%, 0); }
+        90% { transform: translate(10%, 5%); }
+      }
+      #grain-overlay .grain-texture {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        opacity: 0.05;
+        animation: hf-grain-noise 0.5s steps(1) infinite;
+      }
+    </style>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      gsap.set("#scroll-page-2", { x: 0, y: -6 });
+      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -29 });
+      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -12 });
+      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -25 });
+      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -25 });
+      gsap.set("[data-hf-id=\"hf-cv1m2\"]", { x: 0, y: -29 });
+      gsap.set("[data-hf-id=\"hf-cv1m3\"]", { x: 0, y: -29 });
+      gsap.set("[data-hf-id=\"hf-cv1m4\"]", { x: 0, y: -29 });
+      gsap.set("[data-hf-id=\"hf-cv1m5\"]", { x: 0, y: -11 });
+      gsap.set("[data-hf-id=\"hf-cv1m5\"]", { x: 0, y: -20 });
+      gsap.set("[data-hf-id=\"hf-cv1m5\"]", { x: 0, y: -29 });
+      gsap.set("[data-hf-id=\"hf-cv1m6\"]", { x: 0, y: -29 });
+      gsap.set("[data-hf-id=\"hf-cv1m7\"]", { x: 0, y: -29 });
+      const tl = gsap.timeline({ paused: true });
+
+      tl.set("#scroll-page-1", { x: 0, y: 0, data: "hf-hold" }, 0);
+
+      // ============ container entrance: opacity 0->1 + diagonal 3D tilt settling flat ============
+      tl.fromTo(
+        "#app-container",
+        { autoAlpha: 0, rotateX: 13, rotateY: -17, scale: 0.93 },
+        { autoAlpha: 1, rotateX: 0, rotateY: 0, scale: 1, duration: 0.55, ease: "power3.out" },
+        0
+      );
+
+      // ============ Analíticas stagger reveal, then continuous scroll ============
+      // pre-scroll hold extended 0.55 -> 1.45 to fit the 7-card stagger cascade;
+      // scroll tween duration compressed (4.3 -> 3.85) so it still ends at 5.3, same as before.
+      function cardIn(id, start) {
+        tl.fromTo(
+          "#" + id,
+          { autoAlpha: 0, y: 24 },
+          { autoAlpha: 1, y: 0, duration: 0.25, ease: "power3.out" },
+          start
+        );
+      }
+      cardIn("cv1-stat-1", 0.6);
+      cardIn("cv1-stat-2", 0.7);
+      cardIn("cv1-stat-3", 0.8);
+      cardIn("cv1-val-1", 0.9);
+      cardIn("cv1-val-2", 1.0);
+      cardIn("cv1-val-3", 1.1);
+      cardIn("cv1-val-4", 1.2);
+
+      tl.fromTo(
+        "#scroll-track",
+        { y: 0 },
+        { y: -440, duration: 3.85, ease: "power1.inOut" },
+        1.45
+      );
+      // post-scroll hold: 5.3 -> 5.6 (implicit)
+
+      // ============ tab transition: 5.6 -> 6.0 ============
+      // content crossfade (view1 -> view2) with a slight scale punch on the incoming view
+      tl.to("#content-view1", { autoAlpha: 0, duration: 0.4, ease: "power1.inOut" }, 5.6);
+      tl.fromTo(
+        "#content-view2",
+        { autoAlpha: 0, scale: 1.0 },
+        { autoAlpha: 1, duration: 0.4, ease: "power1.inOut" },
+        5.6
+      );
+      tl.fromTo(
+        "#content-view2",
+        { scale: 1.0 },
+        { scale: 1.02, duration: 0.2, ease: "sine.out" },
+        5.6
+      );
+      tl.to("#content-view2", { scale: 1.0, duration: 0.2, ease: "sine.in" }, 5.8);
+
+      // sidebar crop crossfade, synced with content crossfade
+      tl.to("#sidebar-v1", { autoAlpha: 0, duration: 0.4, ease: "power1.inOut" }, 5.6);
+      tl.fromTo("#sidebar-v2", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4, ease: "power1.inOut" }, 5.6);
+
+      // sidebar highlight pill: slides from "Analíticas" row to "Procesos legales" row
+      tl.fromTo("#sidebar-pill", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.1, ease: "power1.out" }, 5.6);
+      tl.fromTo(
+        "#sidebar-pill",
+        { y: 0 },
+        { y: 20.9, duration: 0.4, ease: "power2.inOut" },
+        5.6
+      );
+      tl.to("#sidebar-pill", { autoAlpha: 0, duration: 0.1, ease: "power1.in" }, 5.9);
+
+      // ============ Procesos legales reveal cascade ============
+      tl.fromTo("#cv2-search", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.15, ease: "power1.out" }, 6.0);
+
+      cardIn("cv2-card-1", 6.15);
+      cardIn("cv2-card-2", 6.33);
+      cardIn("cv2-card-3", 6.51);
+      cardIn("cv2-card-4", 6.69);
+
+      // "Finalizado" pill emphasis glow across the four cards
+      tl.to(
+        ["#cv2-card-1", "#cv2-card-2", "#cv2-card-3", "#cv2-card-4"],
+        {
+          boxShadow: "0 0 28px 4px rgba(124,58,237,0.55)",
+          duration: 0.3,
+          yoyo: true,
+          repeat: 1,
+          ease: "sine.inOut",
+        },
+        8.0
+      );
+
+      tl.to("#scroll-page-1", { motionPath: { path: [{x: 0, y: 0}, {x: 243, y: 164}] }, duration: 1.5, ease: "power1.inOut" }, 9);
+
+      // hold, 8.6 -> 9.0 (implicit, no further motion)
+
+      tl.seek(0);
+      window.__timelines["aurali-hero-motion"] = tl;
+    </script>
+  </body>
+</html>

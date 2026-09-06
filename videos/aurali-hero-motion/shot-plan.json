@@ -1,0 +1,145 @@
+{
+  "category": "webpage",
+  "duration_s": 9.0,
+  "fps": 30,
+  "canvas": { "w": 1080, "h": 1080, "aspect": "1:1" },
+  "style": "Premium SaaS product shot of the REAL Aurali app, sidebar and all — no cropped-out chrome this time. The whole app window pops into frame with a subtle 3D tilt, then the camera auto-scrolls down the real 'Analíticas' page (two consecutive scroll captures stitched into one continuous page), then the app switches tabs on its own to 'Procesos legales', with the sidebar's active-item highlight sliding to match — exactly like a real user's screen, but unattended. No cursor, no click, no narration. Calm, confident, high-end fintech/legal-tech energy (Linear/Stripe product shots).",
+  "palette": ["#1E1B4B", "#7C3AED", "#F59E0B", "#FFFFFF", "#F8FAFC", "#22C55E"],
+  "font": "Inter",
+  "beats": [0.55, 1.0, 5.3, 5.6, 6.0, 8.0],
+  "export": "mp4",
+  "asset_needs": [],
+  "customize": {
+    "asset_status": "RESOLVED — no sourcing needed. All 3 PNGs in assets/ were overwritten by the user with generic placeholder data (Camila Rojas, Andrés Gómez, Valentina Cruz, Santiago Londoño, @ejemplo.com) and contain zero blur. Treat pixel content as final and legible; no redaction/blur treatment should be applied by the Builder.",
+    "scene_reinterpretation": "IMPORTANT CHANGE FROM PRIOR VERSION: dashboard-1.png and dashboard-2.png are NOT two different screens/scenes. They are the SAME 'Analíticas' page captured at two consecutive scroll positions (dashboard-2 continues exactly where dashboard-1's viewport ended). There are only 2 real screens in this video: 'Analíticas' (scrolled) and 'Procesos legales'. The prior cascading-cards concept is fully replaced by an autonomous continuous scroll + one tab switch.",
+
+    "global_scale_factor": "k = 0.3265 (= container_w 960 / source image width 2940). Every crop below is scaled by this same k so sidebar and content stay in correct real-world proportion to each other.",
+
+    "app_container": {
+      "desc": "The entire app window (sidebar + content, no browser chrome/URL bar) is one hand-authored container that is now the star of the entrance beat.",
+      "geometry": { "w": 960, "h": 534, "x": 60, "y": 273, "radius_px": 20, "canvas": "1080x1080" },
+      "background": "#FFFFFF panel, 1px border #E5E7EB, soft drop shadow (0 30px 80px rgba(30,27,75,0.18)), plus the existing brand glow behind it on the 1080x1080 canvas (#7C3AED ~6% opacity top-right radial, #1E1B4B ~4% opacity bottom-left radial) — background glow is static across the whole 9s, unaffected by the tilt.",
+      "entrance_3d": {
+        "start": 0.0,
+        "end": 0.55,
+        "desc": "Container-level pop-in: opacity 0→1 AND a diagonal 3D tilt that settles flat. Apply perspective on the canvas-level parent (not the container itself) so the tilt reads with real depth.",
+        "keyframes": [
+          { "t": 0.0, "opacity": 0, "rotateX_deg": 7, "rotateY_deg": -9, "scale": 0.96, "perspective_px": 1400 },
+          { "t": 0.55, "opacity": 1, "rotateX_deg": 0, "rotateY_deg": 0, "scale": 1.0 }
+        ],
+        "ease": "power3.out",
+        "note": "rotateX tilts the top edge away/back, rotateY tilts toward one side — combined reads as 'tilted diagonally in space, unfolding flat'. Transform-origin: center. Do not fade the background glow or canvas — only the container tilts/fades."
+      }
+    },
+
+    "sidebar": {
+      "desc": "Persistent left nav, ALWAYS visible for the full 9s (this is the #1 fix vs. the previous cut — the menu must never be cropped or hidden). Static base layer per active view (cropped directly from the source PNGs, which already contain the correct highlighted item baked in), with a hand-authored highlight-pill overlay used only during the tab-switch to animate the slide.",
+      "source_crop_view1": { "asset": "assets/aurali-dashboard-1.png", "region_px": [0, 0, 544, 1636], "note": "full-height sidebar column as it appears in the Analíticas page; 'Analíticas' row already shows the light-gray active background baked into the pixels." },
+      "source_crop_view2": { "asset": "assets/aurali-proceso-legal-1.png", "region_px": [0, 0, 544, 1644], "note": "same sidebar column from the Procesos legales page; 'Procesos legales' row shows the active background baked in. ~8px taller than view1's crop (1644 vs 1636) — negligible, scale to the same 534px container height." },
+      "geometry_scaled": { "x": 60, "y": 273, "w": 178, "h": 534 },
+      "nav_rows_scaled_px": {
+        "note": "row rectangles in CONTAINER-LOCAL coordinates (add x:60,y:273 for canvas-absolute), estimated from visual inspection of the source PNGs at k=0.3265 — Builder should confirm exact pixel bounds against the asset before finalizing the pill keyframes, these are close approximations.",
+        "logo_row": { "y": 13, "h": 26 },
+        "analiticas": { "y": 67, "h": 24 },
+        "procesos_legales": { "y": 94, "h": 24 },
+        "clientes": { "y": 121, "h": 24 },
+        "usuarios": { "y": 148, "h": 24 },
+        "configuracion": { "y": 174, "h": 24 },
+        "profile_footer": { "y": 496, "h": 38, "note": "'Ana Martinez' card pinned to bottom, already generic in source" }
+      },
+      "highlight_slide_mechanism": "During the tab transition (5.6s-6.0s) only: crossfade the two static sidebar crops (view1 → view2, opacity swap) WHILE an additional hand-authored highlight pill (rounded-rect, fill #F1F5F9, matching the baked highlight color) translateY's from the analiticas row (y:67,h:24) to procesos_legales row (y:94,h:24) directly under the crossfading labels, so the motion reads as one continuous slide rather than a hard swap. Pill moves for the full 0.4s window, ease power2.inOut; the underlying crop crossfade is timed to be ~70% opacity-transitioned by the time the pill arrives, so label text never looks doubled.",
+      "active_state_view1": "0.0s (once container is in) through 5.6s — 'Analíticas' highlighted.",
+      "active_state_view2": "6.0s through 9.0s — 'Procesos legales' highlighted."
+    },
+
+    "content_viewport": {
+      "desc": "Right-hand content pane, overflow:hidden, showing a translateY-scrolled real page for View 1 and a static frame for View 2.",
+      "geometry_scaled": { "x": 238, "y": 273, "w": 782, "h": 534 },
+      "view1_scroll_stack": {
+        "desc": "dashboard-1 and dashboard-2 stitched into one virtual tall page by direct vertical concatenation (they are literally consecutive scroll captures of the same route), cropped to content-only (sidebar excluded) at region_px [544, 0, 2396, <full height>] from each source, then scaled by k=0.3265.",
+        "splice_point": {
+          "source_a": "assets/aurali-dashboard-1.png",
+          "source_a_height_px": 1636,
+          "source_b": "assets/aurali-dashboard-2.png",
+          "source_b_height_px": 1642,
+          "concatenation": "source_b's y=0 is placed immediately at source_a's y=1636 (zero-gap, zero-overlap direct splice) — this is the exact px point where dashboard-2 continues dashboard-1's scroll.",
+          "seam_softening": "a ~40px-tall (original scale, ~13px scaled) crossfade blend centered on the seam (original y 1616-1656) to absorb the ~6px height mismatch between the two captures (1636 vs 1642) and any minor scroll-timing misalignment — NOT a hard pixel cut.",
+          "combined_stack_height_scaled": 1070.4,
+          "combined_stack_height_note": "1636*k=534.2 (dashboard-1 slot) + 1642*k=536.1 (dashboard-2 slot) ≈ 1070 scaled px total"
+        },
+        "scroll_animation": {
+          "translateY_from": 0,
+          "translateY_to": -534,
+          "start_s": 1.0,
+          "end_s": 5.3,
+          "duration_s": 4.3,
+          "ease": "power1.inOut",
+          "desc": "Viewport (h=534) starts perfectly bookended on the combined stack's top (showing all of dashboard-1's headline cards + start of the two charts) and ends perfectly bookended on the stack's bottom (showing all of dashboard-2's 6 stat tiles + Volumen mensual bar chart + Distribución por estado donut) — the -534 endpoint is exactly combined_stack_height(1070) - viewport_h(534) = 536, rounded to 534 for the bookend fit. No scrollbar, no cursor — content simply glides upward on its own, reinforcing autopilot."
+        },
+        "pre_scroll_hold": { "start_s": 0.55, "end_s": 1.0, "desc": "0.45s static hold at the very top the instant the container finishes popping in, so the viewer registers 'Analíticas' + the 3 headline stat cards before motion starts." },
+        "post_scroll_hold": { "start_s": 5.3, "end_s": 5.6, "desc": "0.3s static hold at the very bottom (Volumen mensual + Distribución por estado fully visible) before the tab transition begins." }
+      },
+      "tab_transition": {
+        "start_s": 5.6,
+        "end_s": 6.0,
+        "duration_s": 0.4,
+        "motion": "crossfade content_viewport from the dashboard-2 bottom frame to the proceso-legal-1 top frame (opacity swap, no slide/scale on the content layer itself — the sidebar pill-slide described above carries the sense of motion). A very slight 2% scale punch (1.0→1.02→1.0) on the incoming content softens the cut.",
+        "sync": "runs in lockstep with the sidebar highlight_slide_mechanism above (same 5.6-6.0s window)."
+      },
+      "view2_frame": {
+        "asset": "assets/aurali-proceso-legal-1.png",
+        "region_px": [544, 0, 2396, 1644],
+        "note": "content-only crop (sidebar excluded, it's handled by the sidebar layer). Scaled height 1644*k=536.8, ~matches the 534 viewport height almost exactly (0.5% overflow) — no scroll needed for view 2, it's a single static frame with the 4 cards revealed via cascade below.",
+        "reveal_cascade": [
+          { "role": "search_bar_and_button", "label": "Buscador + 'Nuevo proceso legal'", "start_s": 6.0, "motion": "fade_in, 0.15s" },
+          { "role": "process_card", "label": "#0004 · Camila Rojas · Finalizado", "region_px": [0, 208, 2396, 232], "start_s": 6.15, "motion": "slide_bottom+fade_in, 0.25s, stagger_index 0" },
+          { "role": "process_card", "label": "#0003 · Andrés Gómez · Finalizado", "region_px": [0, 470, 2396, 232], "start_s": 6.33, "motion": "slide_bottom+fade_in, 0.25s, stagger_index 1" },
+          { "role": "process_card", "label": "#0002 · Valentina Cruz · Finalizado", "region_px": [0, 734, 2396, 232], "start_s": 6.51, "motion": "slide_bottom+fade_in, 0.25s, stagger_index 2" },
+          { "role": "process_card", "label": "#0001 · Santiago Londoño · Finalizado", "region_px": [0, 999, 2396, 233], "start_s": 6.69, "motion": "slide_bottom+fade_in, 0.25s, stagger_index 3" },
+          { "role": "emphasis", "label": "'Finalizado' pill glow pulse, all 4 cards", "start_s": 8.0, "duration_s": 0.6, "motion": "glow (accent #7C3AED), yoyo x1" }
+        ],
+        "hold": { "start_s": 8.6, "end_s": 9.0, "motion": "static, no new motion — lets the completed panel breathe before loop point" }
+      }
+    },
+
+    "reused_polish_blocks": [
+      { "block": "vignette", "use": "very subtle, constant, keeps focus on the app container over the brand background" },
+      { "block": "grain-overlay", "use": "low intensity (~4-6%) for a premium, non-flat finish" }
+    ],
+    "explicitly_avoided": "cursor-move / click-ripple primitives from the webpage module — a visible cursor or scrollbar would read as manual intervention, contradicting the 'piloto automático' message. Scroll and tab-switch are both fully autonomous (opacity/translateY only), never pointer-driven.",
+    "loop_note": "End frame (view2 static hold, 8.6-9.0s) is a calm, fully-settled state — an editor can loop the mp4 back toward 0.0s with only the 3D pop-in reappearing as a deliberate 'restart' beat, not a jump-cut."
+  },
+  "content": {
+    "url": "localhost:3000/es/analytics, localhost:3000/es/legal-process",
+    "capture": "provided-screenshot",
+    "note": "Three static PNGs explicitly provided by the user (already redacted to generic placeholder data, no blur), not a live `hyperframes capture`. Treated per the webpage module's 'provided screenshot explicitly selected by the user' allowance. dashboard-1 and dashboard-2 are two consecutive scroll captures of the SAME page (Analíticas) and are stitched into one continuous scrollable stack — see customize.content_viewport.view1_scroll_stack for the exact splice. proceso-legal-1 is a separate page (Procesos legales), reached via a tab switch. Unlike the previous version, the sidebar is NOT cropped out — it stays visible for the entire video and its active-item highlight animates between the two pages.",
+    "screens": [
+      {
+        "asset": "assets/aurali-dashboard-1.png",
+        "dims": { "w": 2940, "h": 1636 },
+        "view": "1 (Analíticas) — top of stitched scroll stack"
+      },
+      {
+        "asset": "assets/aurali-dashboard-2.png",
+        "dims": { "w": 2940, "h": 1642 },
+        "view": "1 (Analíticas) — bottom of stitched scroll stack, spliced directly after dashboard-1 at y=1636"
+      },
+      {
+        "asset": "assets/aurali-proceso-legal-1.png",
+        "dims": { "w": 2940, "h": 1644 },
+        "view": "2 (Procesos legales) — reached via tab switch at 5.6-6.0s"
+      }
+    ],
+    "highlights": [
+      { "region": [0, 0, 544, 1636], "label": "sidebar (view 1 state, Analíticas active)" },
+      { "region": [0, 0, 544, 1644], "label": "sidebar (view 2 state, Procesos legales active)" },
+      { "region": [544, 0, 2396, 1636], "label": "Analíticas content — scroll stack top (headline stats, Valor económico, start of charts)" },
+      { "region": [544, 0, 2396, 1642], "label": "Analíticas content — scroll stack bottom (chart tails, 6 process stat tiles, Volumen mensual, Distribución por estado)" },
+      { "region": [544, 208, 2396, 232], "label": "#0004 · Camila Rojas · Finalizado" },
+      { "region": [544, 470, 2396, 232], "label": "#0003 · Andrés Gómez · Finalizado" },
+      { "region": [544, 734, 2396, 232], "label": "#0002 · Valentina Cruz · Finalizado" },
+      { "region": [544, 999, 2396, 233], "label": "#0001 · Santiago Londoño · Finalizado" }
+    ]
+  },
+  "shot_brief": "A calm, confident 9-second loop for the right column of the Aurali hero, rebuilt from client feedback to show the REAL app, sidebar included. The whole app window pops into frame with a subtle diagonal 3D tilt that settles flat, then — with 'Analíticas' highlighted in the always-visible sidebar — the camera glides down the real Analíticas page in one continuous auto-scroll (dashboard-1 into dashboard-2, spliced at the exact point where the second scroll capture continues the first). After ~4.3s of scrolling it settles, then the app switches on its own to 'Procesos legales': the sidebar's highlight pill slides from one item to the other in sync with a content crossfade, and four process cards (Camila Rojas, Andrés Gómez, Valentina Cruz, Santiago Londoño — all generic placeholder data, no blur) cascade into view with a brief glow pulse on their 'Finalizado' pills. No cursor, no click, no narration — the firm's own dashboard, navigating itself. 'Tu despacho, en piloto automático.'"
+}
