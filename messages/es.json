@@ -610,7 +610,7 @@
       "subtitle": "Aurali automatiza tus procesos legales, organiza tu equipo y utiliza IA para convertir información en trabajo terminado.",
       "primaryCta": "Empezar gratis",
       "secondaryCta": "Ver cómo funciona",
-      "helperText": "Sin tarjeta de crédito. Sin configuraciones complejas.",
+      "helperText": "Sin configuraciones complejas.",
       "checklist": {
         "productivity": "Más productividad",
         "repetitiveTasks": "Menos tareas repetitivas",
@@ -634,11 +634,14 @@
       }
     },
     "socialProof": {
-      "title": "Diseñado para abogados y bufetes en Latinoamérica",
-      "pills": {
-        "one": "100% digital",
-        "two": "Multiusuario",
-        "three": "Control financiero integrado"
+      "eyebrow": "Confianza",
+      "title": "despachos en Colombia ya confían en Aurali",
+      "firms": {
+        "one": "Rojas Legal",
+        "two": "Lex Norte",
+        "three": "Gómez & Asociados",
+        "four": "López | Martínez",
+        "five": "Vélez & Cía."
       }
     },
     "problem": {

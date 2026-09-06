@@ -17,7 +17,7 @@ export default async function TermsOfServicePage({ params }: { params: Promise<{
     <div className="min-h-screen bg-white dark:bg-background">
       <header className="border-b">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Logo size={40} />
+          <Logo size={36} variant="imagotipo" />
           <LanguageSwitcher />
         </div>
       </header>
