@@ -219,8 +219,8 @@ export function AppSidebar() {
 
   return (
     <Sidebar variant="inset">
-      <SidebarHeader className="px-4 py-3">
-        <Logo size={22} />
+      <SidebarHeader className="px-4 py-3 items-center">
+        <Logo size={40} variant="imagotipo" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

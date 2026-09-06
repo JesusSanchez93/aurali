@@ -4,14 +4,18 @@ import Sheet from '@/components/common/sheet';
 import { Database } from '@/types/database.types';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { getClientDetail } from '@/app/[locale]/(dashboard)/clients/actions';
+import { getClientDetail, type DocumentTypeOption } from '@/app/[locale]/(dashboard)/clients/actions';
 import { useTranslations } from 'next-intl';
+import { ClientFormSheet } from './client-form-sheet';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 
 interface Props {
     clientId: string | null;
+    documentTypes: DocumentTypeOption[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
@@ -49,12 +53,21 @@ function ImageField({ label, url }: { label: string; url?: string | null }) {
     );
 }
 
-export default function ClientDetailSheet({ clientId, open, onOpenChange }: Props) {
+export default function ClientDetailSheet({ clientId, documentTypes, open, onOpenChange }: Props) {
     const t = useTranslations('clients.detail');
     const commonT = useTranslations('common');
     const processT = useTranslations('process.fields');
     const [loading, setLoading] = useState(false);
     const [client, setClient] = useState<Client | null>(null);
+    const [editOpen, setEditOpen] = useState(false);
+
+    const refetch = (id: string) => {
+        setLoading(true);
+        getClientDetail(id)
+            .then(setClient)
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    };
 
     useEffect(() => {
         if (!open) return;
@@ -64,20 +77,26 @@ export default function ClientDetailSheet({ clientId, open, onOpenChange }: Prop
             }, 200);
             return;
         }
-        setLoading(true);
-        getClientDetail(clientId)
-            .then(setClient)
-            .catch(console.error)
-            .finally(() => setLoading(false));
+        refetch(clientId);
     }, [open, clientId]);
 
     return (
+        <>
         <Sheet
             size='2xl'
             open={open}
             onOpenChange={onOpenChange}
             trigger={<span />}
-            title={t('title')}
+            title={
+                <div className="flex items-center gap-2">
+                    <span>{t('title')}</span>
+                    {client && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditOpen(true)} title={t('edit')}>
+                            <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                    )}
+                </div>
+            }
             description={client?.created_at ? `${t('registered_at')} ${new Date(client.created_at).toLocaleDateString()}` : ''}
             body={
                 loading ? (
@@ -89,7 +108,7 @@ export default function ClientDetailSheet({ clientId, open, onOpenChange }: Prop
                         {commonT('no_data')}
                     </div>
                 ) : (
-                    <div className="mt-4 space-y-6 overflow-y-auto max-h-[calc(100vh-10rem)] pr-2">
+                    <div className="mt-4 space-y-6 overflow-y-auto max-h-[calc(100vh-10rem)] px-4">
                         <div>
                             <h4 className="text-sm font-semibold mb-3">{t('personal_data')}</h4>
                             <div className="grid grid-cols-2 gap-4">
@@ -118,5 +137,15 @@ export default function ClientDetailSheet({ clientId, open, onOpenChange }: Prop
                 )
             }
         />
+        {client && (
+            <ClientFormSheet
+                client={client}
+                documentTypes={documentTypes}
+                open={editOpen}
+                onOpenChange={setEditOpen}
+                onSaved={() => refetch(client.id)}
+            />
+        )}
+        </>
     );
 }

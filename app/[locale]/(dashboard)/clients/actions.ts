@@ -1,6 +1,46 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
+
+async function getOrgContext() {
+    const supabase = await createClient();
+
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (!user || authError) {
+        throw new Error('Unauthorized');
+    }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('current_organization_id')
+        .eq('id', user.id)
+        .single();
+
+    if (!profile?.current_organization_id)
+        throw new Error('Organization not found');
+
+    return { supabase, userId: user.id, orgId: profile.current_organization_id };
+}
+
+export type ClientInput = {
+    first_name: string;
+    last_name: string;
+    email: string | null;
+    phone: string | null;
+    document_slug: string | null;
+    document_number: string | null;
+    address: string | null;
+};
+
+export type DocumentTypeOption = {
+    slug: string;
+    label: string;
+};
 
 export async function getClients(page: number = 1, pageSize: number = 10, search?: string) {
     const supabase = await createClient();
@@ -95,4 +135,71 @@ export async function getClientDetail(id: string) {
     }
 
     return client;
+}
+
+export async function getActiveDocumentTypes(): Promise<DocumentTypeOption[]> {
+    const { supabase, orgId } = await getOrgContext();
+
+    const { data, error } = await supabase
+        .from('documents')
+        .select('slug, name')
+        .eq('organization_id', orgId)
+        .eq('is_active', true)
+        .order('slug', { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    return (data || [])
+        .filter((d): d is typeof d & { slug: string } => !!d.slug)
+        .map((d) => {
+            const name = d.name as { es?: string; en?: string } | null;
+            return { slug: d.slug, label: name?.es || d.slug };
+        });
+}
+
+export async function createClientRecord(input: ClientInput) {
+    const { supabase, orgId, userId } = await getOrgContext();
+
+    const { data, error } = await supabase
+        .from('clients')
+        .insert({
+            organization_id: orgId,
+            created_by: userId,
+            first_name: input.first_name,
+            last_name: input.last_name,
+            email: input.email,
+            phone: input.phone,
+            document_slug: input.document_slug,
+            document_number: input.document_number,
+            address: input.address,
+        })
+        .select('id')
+        .single();
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/', 'layout');
+    return data;
+}
+
+export async function updateClientRecord(id: string, input: ClientInput) {
+    const { supabase, orgId } = await getOrgContext();
+
+    const { error } = await supabase
+        .from('clients')
+        .update({
+            first_name: input.first_name,
+            last_name: input.last_name,
+            email: input.email,
+            phone: input.phone,
+            document_slug: input.document_slug,
+            document_number: input.document_number,
+            address: input.address,
+        })
+        .eq('id', id)
+        .eq('organization_id', orgId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/', 'layout');
 }

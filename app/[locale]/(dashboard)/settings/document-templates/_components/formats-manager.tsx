@@ -25,7 +25,7 @@ export default function FormatsManager({ templates }: Props) {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-xl font-semibold">{t('title')}</h2>
-                    <p className="text-sm text-muted-foreground">{t('description')}</p>
+                    <p className="max-w-[500px] text-sm text-muted-foreground">{t('description')}</p>
                 </div>
                 <Button asChild>
                     <Link href="/settings/document-templates/new">

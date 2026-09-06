@@ -5,15 +5,18 @@ import { useSearchParams } from 'next/navigation';
 import { usePathname, useRouter } from '@/i18n/routing';
 import ClientDetailSheet from './client-detail-sheet';
 import { useTranslations } from 'next-intl';
-import { memo, useCallback } from 'react';
+import { useCallback } from 'react';
+import { IdCard, CalendarDays, ChevronRight } from 'lucide-react';
+import type { DocumentTypeOption } from '@/app/[locale]/(dashboard)/clients/actions';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 
 interface ClientListProps {
     data: Client[] | null;
+    documentTypes: DocumentTypeOption[];
 }
 
-export default function ClientList({ data }: ClientListProps) {
+export default function ClientList({ data, documentTypes }: ClientListProps) {
     const t = useTranslations('clients.list');
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -57,6 +60,7 @@ export default function ClientList({ data }: ClientListProps) {
 
             <ClientDetailSheet
                 clientId={selectedId}
+                documentTypes={documentTypes}
                 open={Boolean(selectedId)}
                 onOpenChange={(open) => {
                     if (!open) handleClose();
@@ -71,39 +75,41 @@ function ClientCard({ client, index, onSelect }: {
     index: number;
     onSelect: (id: string) => void;
 }) {
-    const t = useTranslations('clients.list');
     const commonT = useTranslations('common');
     const name = [client.first_name, client.last_name].filter(Boolean).join(' ') || client.email || commonT('nav.clients'); // Fallback to "Clients" if no name/email? Or just "Unknown"
 
     return (
         <div
             onClick={() => onSelect(client.id)}
-            className={`group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards hover:shadow-md cursor-pointer`}
+            className="group relative flex items-center gap-4 overflow-hidden rounded-xl border bg-card p-5 text-card-foreground shadow transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards hover:shadow-md cursor-pointer"
             style={{ animationDelay: `${index * 100}ms` }}
         >
-            <div className="p-5">
-                <div className="flex items-center space-x-4">
-                    <div>
-                        <h3
-                            className="truncate font-semibold leading-none tracking-tight"
-                            title={name}
-                        >
-                            {name}
-                        </h3>
-                        {client.document_number && (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                {t('document')}: {client.document_number}
-                            </p>
-                        )}
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {t('created')}{' '}
-                            {client.created_at
-                                ? new Date(client.created_at).toLocaleDateString()
-                                : '—'}
-                        </p>
-                    </div>
+            <div className="min-w-0 flex-1">
+                <h3
+                    className="truncate text-lg font-semibold leading-none tracking-tight"
+                    title={name}
+                >
+                    {name}
+                </h3>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    {client.document_number && (
+                        <span className="flex items-center gap-1.5">
+                            <IdCard className="h-3.5 w-3.5 shrink-0" />
+                            {client.document_number}
+                        </span>
+                    )}
+                    <span className="flex items-center gap-1.5">
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                        {client.created_at
+                            ? new Date(client.created_at).toLocaleDateString('es', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                            })
+                            : '—'}
+                    </span>
                 </div>
             </div>
+
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
         </div>
     );
 }

@@ -47,7 +47,8 @@ const securityHeaders = [
       `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${onlyofficeUrl} https://onlyoffice.github.io`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
-      "img-src 'self' data: blob: https:",
+      // Local Supabase Storage (dev only) speaks plain http on 127.0.0.1:54321
+      `img-src 'self' data: blob: https: ${process.env.NODE_ENV === 'development' ? 'http://127.0.0.1:54321' : ''}`,
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
       // ONLYOFFICE Document Server renders its editor UI inside an iframe
@@ -61,6 +62,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   experimental: {
     viewTransition: true,
     serverActions: {

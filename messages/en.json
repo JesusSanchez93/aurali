@@ -11,6 +11,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
+    "edit": "Edit",
     "delete": "Delete",
     "pagination": {
       "showing": "Showing {start} to {end} of {total} processes",
@@ -435,7 +436,19 @@
       "personal_data": "Personal Data",
       "annex_documents": "Annex Documents",
       "front_image": "Front image",
-      "back_image": "Back image"
+      "back_image": "Back image",
+      "edit": "Edit"
+    },
+    "new": "New client",
+    "form": {
+      "new_title": "New client",
+      "edit_title": "Edit client",
+      "field_address": "Address",
+      "field_document_type_placeholder": "Select a type",
+      "create": "Create client",
+      "create_success": "Client created successfully",
+      "update_success": "Client updated successfully",
+      "error": "An error occurred"
     }
   },
   "onboarding": {
@@ -591,12 +604,18 @@
       }
     },
     "hero": {
-      "eyebrow": "AI-powered legal automation platform",
-      "titleLine1": "The intelligence your firm",
-      "titleLine2": "needed to grow",
-      "subtitle": "Aurali automates your legal processes from client intake to document generation so your team can focus on what matters: legal judgment and client relationships.",
-      "primaryCta": "Request free demo",
+      "eyebrow": "Intelligent legal platform",
+      "titleLine1": "Your law firm.",
+      "titleLine2": "On autopilot.",
+      "subtitle": "Aurali automates your legal processes, organizes your team, and uses AI to turn information into finished work.",
+      "primaryCta": "Get started free",
       "secondaryCta": "See how it works",
+      "helperText": "No credit card required. No complex setup.",
+      "checklist": {
+        "productivity": "More productivity",
+        "repetitiveTasks": "Fewer repetitive tasks",
+        "oneWorkspace": "All your processes in one place"
+      },
       "visual": {
         "label": "Operational view",
         "title": "Visual engine for legal workflows",
@@ -774,6 +793,7 @@
       "col_name": "Name",
       "col_key": "Variable",
       "col_description": "Description",
+      "col_actions": "Actions",
       "field_name": "Name",
       "field_name_placeholder": "e.g. Case facts",
       "field_key": "Variable key",

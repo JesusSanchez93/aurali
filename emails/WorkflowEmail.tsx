@@ -27,7 +27,7 @@ const DEFAULT_THEME: EmailTheme = {
   ctaColor: '#7C3AED',
   ctaTextColor: '#ffffff',
   orgName: 'Aurali Legal',
-  logoUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://aurali.app'}/aurali-logo.png`,
+  logoUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://aurali.app'}/aurali-logotipo.png`,
 };
 
 interface WorkflowEmailProps {

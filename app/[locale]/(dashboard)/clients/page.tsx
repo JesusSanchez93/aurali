@@ -6,11 +6,12 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: 'common' });
   return { title: t('nav.clients') };
 }
-import { getClients } from './actions';
+import { getClients, getActiveDocumentTypes } from './actions';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ClientSearch from '@/components/app/clients/client-search';
+import { ClientCreateButton } from '@/components/app/clients/client-create-button';
 
 export default async function ClientsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -21,7 +22,10 @@ export default async function ClientsPage(props: {
   const search = typeof params.search === 'string' ? params.search : undefined;
   const pageSize = 10;
 
-  const { clients, count } = await getClients(page, pageSize, search);
+  const [{ clients, count }, documentTypes] = await Promise.all([
+    getClients(page, pageSize, search),
+    getActiveDocumentTypes(),
+  ]);
   const totalPages = Math.ceil(count / pageSize);
 
   const getPaginationLink = (targetPage: number) => {
@@ -37,9 +41,10 @@ export default async function ClientsPage(props: {
     <div className="space-y-8 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <ClientSearch />
+        <ClientCreateButton documentTypes={documentTypes} />
       </div>
 
-      <ClientList data={clients || []} />
+      <ClientList data={clients || []} documentTypes={documentTypes} />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-2">

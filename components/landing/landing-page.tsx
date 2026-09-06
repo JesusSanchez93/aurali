@@ -25,6 +25,7 @@ import {
   MailCheck,
   FileBadge2,
   Languages,
+  Play,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -199,6 +200,7 @@ export function LandingPage({
         ['--landing-primary' as string]: '#1E1B4B',
         ['--landing-accent' as string]: '#7C3AED',
         ['--landing-highlight' as string]: '#F59E0B',
+        ['--landing-cta' as string]: '#5B4FEB',
       }}
     >
       <LandingNav
@@ -275,7 +277,7 @@ function LandingNav({
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5" aria-label="Aurali home">
-            <Logo size={36} />
+            <Logo size={36} variant="imagotipo" />
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
@@ -355,7 +357,7 @@ function LandingNav({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -18 }}
               transition={entryTransition}
-              className="fixed inset-x-0 top-[76px] z-50 border-t border-black/5 bg-white/95 px-4 pb-6 pt-3 shadow-lg backdrop-blur lg:hidden dark:border-white/10 dark:bg-[#0d0d12]/98"
+              className="fixed inset-x-0 top-[76px] z-50 border-t border-black/5 bg-white/95 px-4 pb-6 pt-3 shadow-lg backdrop-blur lg:hidden dark:border-white/10 dark:bg-[rgba(13,13,18,0.98)]"
               style={{ willChange: 'transform, opacity' }}
             >
               <div className="mx-auto flex max-w-7xl flex-col gap-2">
@@ -374,7 +376,7 @@ function LandingNav({
                 ))}
                 <Button
                   asChild
-                  className="mt-2 rounded-full border-0 bg-[var(--landing-highlight)] text-[#1E1B4B] hover:bg-[#f8ab27]"
+                  className="mt-2 rounded-full border-0 bg-[var(--landing-cta)] text-white hover:bg-[#4d41e0]"
                 >
                   <Link href={accessHref}>{accessLabel}</Link>
                 </Button>
@@ -468,9 +470,10 @@ function HeroSection({ t }: { t: Translator }) {
     { icon: FileBadge2, label: t('hero.visual.steps.review') },
   ];
 
-  const trustStats = [
-    { value: '80%', label: t('benefits.stats.time') },
-    { value: '3x', label: t('benefits.stats.capacity') },
+  const heroChecklist = [
+    t('hero.checklist.productivity'),
+    t('hero.checklist.repetitiveTasks'),
+    t('hero.checklist.oneWorkspace'),
   ];
 
   return (
@@ -498,7 +501,7 @@ function HeroSection({ t }: { t: Translator }) {
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="max-w-2xl space-y-8 lg:pl-1"
+          className="min-w-0 max-w-2xl space-y-8 lg:pl-1"
         >
           <motion.div variants={staggerItem} style={{ willChange: 'transform, opacity' }}>
             <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(124,58,237,0.16)] bg-white/72 px-4 py-2 text-sm font-medium text-[var(--landing-primary)] backdrop-blur dark:border-violet-400/20 dark:bg-white/5 dark:text-white">
@@ -508,9 +511,9 @@ function HeroSection({ t }: { t: Translator }) {
           </motion.div>
 
           <motion.div variants={staggerItem} style={{ willChange: 'transform, opacity' }}>
-            <h1 className="max-w-[13ch] text-5xl font-bold tracking-tight text-[var(--landing-text)] sm:text-6xl lg:text-[5.25rem] lg:leading-[1.02]">
-              {t('hero.titleLine1')}
-              <span className="mt-1 block bg-gradient-to-r from-[var(--landing-primary)] via-[var(--landing-accent)] to-[var(--landing-primary)] bg-clip-text text-transparent dark:from-white dark:via-violet-300 dark:to-white">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--landing-text)] sm:text-4xl lg:text-[3.375rem] lg:leading-[1.05]">
+              <span className="block sm:whitespace-nowrap">{t('hero.titleLine1')}</span>
+              <span className="mt-1 block bg-gradient-to-r from-[var(--landing-primary)] via-[var(--landing-accent)] to-[var(--landing-primary)] bg-clip-text text-transparent dark:from-white dark:via-violet-300 dark:to-white sm:whitespace-nowrap">
                 {t('hero.titleLine2')}
               </span>
             </h1>
@@ -527,13 +530,26 @@ function HeroSection({ t }: { t: Translator }) {
           <motion.div
             variants={staggerItem}
             style={{ willChange: 'transform, opacity' }}
+            className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 sm:flex-nowrap sm:overflow-x-auto"
+          >
+            {heroChecklist.map((label) => (
+              <div key={label} className="flex shrink-0 items-center gap-2 sm:whitespace-nowrap">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+                <span className="text-sm font-medium text-[var(--landing-text)]">{label}</span>
+              </div>
+            ))}
+          </motion.div>
+
+          <motion.div
+            variants={staggerItem}
+            style={{ willChange: 'transform, opacity' }}
             className="flex flex-col gap-3 sm:flex-row"
           >
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }}>
               <Button
                 asChild
                 size="lg"
-                className="w-full rounded-full border-0 bg-[var(--landing-highlight)] px-7 text-[#1E1B4B] shadow-[0_22px_40px_-22px_rgba(245,158,11,0.9)] hover:bg-[#f8ab27] sm:w-auto"
+                className="h-11 w-full rounded-full border-0 bg-[var(--landing-cta)] px-6 text-sm text-white shadow-[0_22px_40px_-22px_rgba(91,79,235,0.65)] hover:bg-[#4d41e0] sm:h-10 sm:w-auto sm:px-8 sm:text-base"
               >
                 <Link href="/auth/login">{t('hero.primaryCta')}</Link>
               </Button>
@@ -545,27 +561,20 @@ function HeroSection({ t }: { t: Translator }) {
               href="#how-it-works"
               onClick={(e) => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
               style={{ willChange: 'transform', cursor: 'pointer' }}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 bg-white/80 px-7 py-3 text-sm font-medium text-[var(--landing-primary)] shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-white"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--landing-cta)]/40 bg-white/80 px-5 py-2.5 text-sm font-medium text-[var(--landing-cta)] shadow-sm backdrop-blur dark:border-white/20 dark:bg-white/10 dark:text-white sm:px-7 sm:py-3"
             >
               {t('hero.secondaryCta')}
-              <ArrowRight className="h-4 w-4" />
+              <Play className="h-4 w-4 fill-current" />
             </motion.a>
           </motion.div>
 
-          <motion.div
+          <motion.p
             variants={staggerItem}
             style={{ willChange: 'transform, opacity' }}
-            className="flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-black/5 pt-6 dark:border-white/10"
+            className="text-sm text-[var(--landing-muted)]"
           >
-            {trustStats.map((stat) => (
-              <div key={stat.label} className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold tracking-tight text-[var(--landing-primary)] dark:text-white">
-                  {stat.value}
-                </span>
-                <span className="text-sm text-[var(--landing-muted)]">{stat.label}</span>
-              </div>
-            ))}
-          </motion.div>
+            {t('hero.helperText')}
+          </motion.p>
         </motion.div>
 
         <motion.div
@@ -1135,7 +1144,7 @@ function LandingFooter({ t }: { t: Translator }) {
     <footer className="border-t border-black/5 bg-white/70 px-4 py-10 sm:px-6 lg:px-8 dark:border-white/10 dark:bg-white/5">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 text-sm text-[var(--landing-muted)] md:flex-row md:items-end md:justify-between">
         <div>
-          <Logo size={32} className="text-[var(--landing-primary)] dark:text-white" />
+          <Logo variant="imagotipo" size={32} />
           <p className="mt-2">{t('footer.tagline')}</p>
         </div>
 
