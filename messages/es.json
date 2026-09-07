@@ -559,7 +559,16 @@
     },
     "fields": {
       "password": "Contraseña",
-      "new_password": "Nueva Contraseña"
+      "new_password": "Nueva Contraseña",
+      "company_name": "Nombre de la empresa",
+      "legal_representative_name": "Nombre del representante legal"
+    },
+    "pendingApproval": {
+      "title": "Tu cuenta está en revisión",
+      "pendingDescription": "Gracias por registrarte en Aurali. Nuestro equipo está revisando tu solicitud y te avisaremos por correo en cuanto tengas acceso.",
+      "rejectedDescription": "Tu solicitud de acceso no fue aprobada. Si crees que esto es un error, contáctanos.",
+      "notifyByEmail": "Te avisaremos por correo",
+      "logout": "Cerrar sesión"
     }
   },
   "formats": {

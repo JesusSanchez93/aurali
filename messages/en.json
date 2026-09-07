@@ -559,7 +559,16 @@
     },
     "fields": {
       "password": "Password",
-      "new_password": "New Password"
+      "new_password": "New Password",
+      "company_name": "Company name",
+      "legal_representative_name": "Legal representative name"
+    },
+    "pendingApproval": {
+      "title": "Your account is under review",
+      "pendingDescription": "Thanks for signing up to Aurali. Our team is reviewing your request and will email you once you have access.",
+      "rejectedDescription": "Your access request wasn't approved. If you think this is a mistake, please contact us.",
+      "notifyByEmail": "We'll notify you by email",
+      "logout": "Log out"
     }
   },
   "formats": {

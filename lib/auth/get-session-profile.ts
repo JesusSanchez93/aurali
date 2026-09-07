@@ -11,6 +11,7 @@ export interface SessionProfile {
   onboarding_status: string | null
   workflow_guide_seen: boolean
   org_role: 'ORG_ADMIN' | 'ORG_USER' | null
+  org_status: 'pending' | 'active' | 'rejected' | null
 }
 
 /**
@@ -34,18 +35,27 @@ export async function getSessionProfile(): Promise<{
 
   if (!data) return { user, profile: null }
 
-  // Fetch org role
+  // Fetch org role + org approval status
   let org_role: 'ORG_ADMIN' | 'ORG_USER' | null = null
+  let org_status: 'pending' | 'active' | 'rejected' | null = null
   if (data.current_organization_id) {
-    const { data: membership } = await supabase
-      .from('organization_members')
-      .select('role')
-      .eq('organization_id', data.current_organization_id)
-      .eq('user_id', user.id)
-      .eq('active', true)
-      .maybeSingle()
+    const [{ data: membership }, { data: org }] = await Promise.all([
+      supabase
+        .from('organization_members')
+        .select('role')
+        .eq('organization_id', data.current_organization_id)
+        .eq('user_id', user.id)
+        .eq('active', true)
+        .maybeSingle(),
+      supabase
+        .from('organizations')
+        .select('status')
+        .eq('id', data.current_organization_id)
+        .maybeSingle(),
+    ])
     org_role = (membership?.role as 'ORG_ADMIN' | 'ORG_USER') ?? null
+    org_status = (org?.status as 'pending' | 'active' | 'rejected') ?? null
   }
 
-  return { user, profile: { ...(data as SessionProfile), org_role } }
+  return { user, profile: { ...(data as SessionProfile), org_role, org_status } }
 }
