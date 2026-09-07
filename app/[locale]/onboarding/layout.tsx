@@ -19,6 +19,10 @@ export default async function OnboardingLayout({
     redirect('/admin/clients');
   }
 
+  if (profile?.org_status && profile.org_status !== 'active') {
+    redirect('/auth/pending-approval');
+  }
+
   if (profile?.onboarding_status === 'completed') {
     redirect('/analytics');
   }

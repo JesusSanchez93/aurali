@@ -18,6 +18,7 @@ import { Link, useRouter } from '@/i18n/routing';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Building2 } from 'lucide-react';
+import { notifyPendingSignupAction } from '@/app/[locale]/auth/actions';
 
 interface Props extends React.ComponentPropsWithoutRef<'div'> {
   invitedEmail?: string;
@@ -38,6 +39,8 @@ export function SignUpForm({
   const [email, setEmail] = useState(invitedEmail ?? '');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [legalRepresentativeName, setLegalRepresentativeName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -62,6 +65,10 @@ export function SignUpForm({
         password,
         options: {
           emailRedirectTo: `${window.location.origin}`,
+          data: isInvitation ? undefined : {
+            company_name: companyName,
+            legal_representative_name: legalRepresentativeName,
+          },
         },
       });
       if (error) throw error;
@@ -71,12 +78,25 @@ export function SignUpForm({
       if (data.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('onboarding_status')
+          .select('onboarding_status, current_organization_id')
           .eq('id', data.user.id)
           .maybeSingle();
 
         if (profile?.onboarding_status === 'completed') {
           nextPath = '/dashboard';
+        }
+
+        if (!isInvitation && profile?.current_organization_id) {
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('status')
+            .eq('id', profile.current_organization_id)
+            .maybeSingle();
+
+          if (org?.status === 'pending') {
+            nextPath = '/auth/pending-approval';
+            await notifyPendingSignupAction(data.user.id);
+          }
         }
       }
 
@@ -111,6 +131,32 @@ export function SignUpForm({
         <CardContent className="pt-6">
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
+              {!isInvitation && (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="company-name" className="text-sm font-medium text-[#1F2937] dark:text-slate-200">{fieldsT('company_name')}</Label>
+                    <Input
+                      id="company-name"
+                      type="text"
+                      required
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="h-12 rounded-2xl border-slate-200 bg-white/90 px-4 shadow-none focus-visible:ring-2 focus-visible:ring-violet-200 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus-visible:ring-violet-800"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="legal-representative-name" className="text-sm font-medium text-[#1F2937] dark:text-slate-200">{fieldsT('legal_representative_name')}</Label>
+                    <Input
+                      id="legal-representative-name"
+                      type="text"
+                      required
+                      value={legalRepresentativeName}
+                      onChange={(e) => setLegalRepresentativeName(e.target.value)}
+                      className="h-12 rounded-2xl border-slate-200 bg-white/90 px-4 shadow-none focus-visible:ring-2 focus-visible:ring-violet-200 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus-visible:ring-violet-800"
+                    />
+                  </div>
+                </>
+              )}
               <div className="grid gap-2">
                 <Label htmlFor="email" className="text-sm font-medium text-[#1F2937] dark:text-slate-200">{commonT('nav.email')}</Label>
                 <Input
@@ -150,7 +196,7 @@ export function SignUpForm({
               {error && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">{error}</p>}
               <Button
                 type="submit"
-                className="h-12 w-full rounded-full border-0 bg-[#F59E0B] text-[#1E1B4B] shadow-[0_16px_30px_-18px_rgba(245,158,11,0.8)] hover:bg-[#f8ab27]"
+                className="h-12 w-full rounded-full border-0 bg-[#7C3AED] text-white shadow-[0_16px_30px_-18px_rgba(124,58,237,0.8)] hover:bg-[#6d28d9]"
                 disabled={isLoading}
               >
                 {isLoading ? commonT('loading') : t('submit')}

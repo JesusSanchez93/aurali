@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { ArrowLeft, Bot, FileText, ShieldCheck, Workflow } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 import { ThemeSwitcher } from '@/components/app/theme-switcher';
+import { Logo } from '@/components/common/logo';
 
 interface AuthShellProps {
   children: ReactNode;
@@ -49,11 +50,8 @@ export async function AuthShell({ children, variant }: AuthShellProps) {
             <section className="order-1 lg:col-start-1 lg:row-start-1">
               <div className="max-w-lg space-y-5 lg:max-w-md">
                 <div>
-                  <Link href="/" className="mb-2 inline-flex items-center gap-3 text-[#1E1B4B] dark:text-white">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#1E1B4B] text-sm font-bold text-white shadow-[0_14px_30px_-18px_rgba(30,27,75,0.75)] dark:bg-white dark:text-[#1E1B4B]">
-                      A
-                    </span>
-                    <p className="text-xl font-bold tracking-tight">Aurali</p>
+                  <Link href="/" className="mb-2 inline-flex items-center">
+                    <Logo variant="imagotipo" size={50} />
                   </Link>
                   <p className="text-xs font-medium uppercase tracking-[0.22em] text-[#6B7280] dark:text-slate-400">
                     {t('brandLine')}

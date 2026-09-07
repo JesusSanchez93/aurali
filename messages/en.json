@@ -49,7 +49,6 @@
         "exit_organization": "Exit organization"
       },
       "workflows": "Workflows",
-      "powers": "Powers",
       "admin_clients": "Clients",
       "admin_audit": "Audit",
       "catalog": "Global Catalog",
@@ -560,7 +559,16 @@
     },
     "fields": {
       "password": "Password",
-      "new_password": "New Password"
+      "new_password": "New Password",
+      "company_name": "Company name",
+      "legal_representative_name": "Legal representative name"
+    },
+    "pendingApproval": {
+      "title": "Your account is under review",
+      "pendingDescription": "Thanks for signing up to Aurali. Our team is reviewing your request and will email you once you have access.",
+      "rejectedDescription": "Your access request wasn't approved. If you think this is a mistake, please contact us.",
+      "notifyByEmail": "We'll notify you by email",
+      "logout": "Log out"
     }
   },
   "formats": {
@@ -610,7 +618,7 @@
       "subtitle": "Aurali automates your legal processes, organizes your team, and uses AI to turn information into finished work.",
       "primaryCta": "Get started free",
       "secondaryCta": "See how it works",
-      "helperText": "No credit card required. No complex setup.",
+      "helperText": "No complex setup.",
       "checklist": {
         "productivity": "More productivity",
         "repetitiveTasks": "Fewer repetitive tasks",
@@ -634,11 +642,14 @@
       }
     },
     "socialProof": {
-      "title": "Designed for lawyers and law firms across Latin America",
-      "pills": {
-        "one": "100% digital",
-        "two": "Multi-user",
-        "three": "Integrated financial control"
+      "eyebrow": "Trust",
+      "title": "law firms in Colombia already trust Aurali",
+      "firms": {
+        "one": "Rojas Legal",
+        "two": "Lex Norte",
+        "three": "Gómez & Asociados",
+        "four": "López | Martínez",
+        "five": "Vélez & Cía."
       }
     },
     "problem": {

@@ -15,8 +15,10 @@ import {
   type ClientOrgRow,
   getClientOrganizations,
   enterOrganizationAction,
+  approveOrganizationAction,
+  rejectOrganizationAction,
 } from '../actions'
-import { Building2, LogIn, Loader2 } from 'lucide-react'
+import { Building2, LogIn, Loader2, Check, X } from 'lucide-react'
 
 interface Props {
   clients: ClientRow[]
@@ -27,6 +29,7 @@ export function ClientsList({ clients }: Props) {
   const [orgs, setOrgs] = useState<ClientOrgRow[]>([])
   const [loadingOrgs, setLoadingOrgs] = useState(false)
   const [enteringOrgId, setEnteringOrgId] = useState<string | null>(null)
+  const [reviewingOrgId, setReviewingOrgId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const openOrgs = async (client: ClientRow) => {
@@ -41,6 +44,24 @@ export function ClientsList({ clients }: Props) {
     setEnteringOrgId(orgId)
     startTransition(async () => {
       await enterOrganizationAction(orgId)
+    })
+  }
+
+  const approveOrg = (orgId: string) => {
+    setReviewingOrgId(orgId)
+    startTransition(async () => {
+      await approveOrganizationAction(orgId)
+      if (selectedClient) setOrgs(await getClientOrganizations(selectedClient.id))
+      setReviewingOrgId(null)
+    })
+  }
+
+  const rejectOrg = (orgId: string) => {
+    setReviewingOrgId(orgId)
+    startTransition(async () => {
+      await rejectOrganizationAction(orgId)
+      if (selectedClient) setOrgs(await getClientOrganizations(selectedClient.id))
+      setReviewingOrgId(null)
     })
   }
 
@@ -123,6 +144,8 @@ export function ClientsList({ clients }: Props) {
                 const org = membership.organizations
                 if (!org) return null
                 const isEntering = enteringOrgId === org.id && isPending
+                const isReviewing = reviewingOrgId === org.id && isPending
+                const isPendingApproval = org.status === 'pending' || org.status === 'rejected'
 
                 return (
                   <div key={org.id} className="flex items-center gap-3 px-4 py-3">
@@ -136,23 +159,51 @@ export function ClientsList({ clients }: Props) {
                       </p>
                     </div>
                     <Badge
-                      variant={org.status === 'active' ? 'default' : 'secondary'}
+                      variant={
+                        org.status === 'active'
+                          ? 'default'
+                          : org.status === 'rejected'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
                       className="shrink-0"
                     >
                       {org.status ?? 'draft'}
                     </Badge>
-                    <Button
-                      size="sm"
-                      onClick={() => enterOrg(org.id)}
-                      disabled={isPending}
-                    >
-                      {isEntering ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <LogIn className="size-4" />
-                      )}
-                      Entrar
-                    </Button>
+                    {isPendingApproval ? (
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => rejectOrg(org.id)}
+                          disabled={isPending}
+                        >
+                          {isReviewing ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+                          Rechazar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => approveOrg(org.id)}
+                          disabled={isPending}
+                        >
+                          {isReviewing ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                          Aprobar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => enterOrg(org.id)}
+                        disabled={isPending}
+                      >
+                        {isEntering ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <LogIn className="size-4" />
+                        )}
+                        Entrar
+                      </Button>
+                    )}
                   </div>
                 )
               })}

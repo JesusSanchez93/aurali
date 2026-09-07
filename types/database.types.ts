@@ -1348,6 +1348,7 @@ export type Database = {
           created_by: string | null
           id: string
           legal_name: string | null
+          legal_representative_name: string | null
           name: string | null
           nit: string | null
           region: string | null
@@ -1361,6 +1362,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           legal_name?: string | null
+          legal_representative_name?: string | null
           name?: string | null
           nit?: string | null
           region?: string | null
@@ -1374,6 +1376,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           legal_name?: string | null
+          legal_representative_name?: string | null
           name?: string | null
           nit?: string | null
           region?: string | null

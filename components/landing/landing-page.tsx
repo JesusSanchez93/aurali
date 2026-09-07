@@ -7,11 +7,8 @@ import {
   Bell,
   Brain,
   FileText,
-  Gavel,
-  Landmark,
   Menu,
   Quote,
-  Scale,
   Sparkles,
   X,
   Zap,
@@ -44,6 +41,9 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/common/logo';
 import { ThemeSwitcher } from '@/components/app/theme-switcher';
 
+// Flip to true once we have real client counts/names to show in SocialProofBar.
+const SHOW_SOCIAL_PROOF = false;
+
 const entryTransition = { duration: 0.5, ease: 'easeOut' as const };
 const sectionViewport = { once: true, margin: '-80px' };
 const itemMotion = {
@@ -68,8 +68,6 @@ const staggerItem = {
     transition: entryTransition,
   },
 };
-
-const legalIcons = [Scale, Gavel, FileText, Landmark];
 
 export function LandingPage({
   isLoggedIn = false,
@@ -216,7 +214,9 @@ export function LandingPage({
 
       <main className="overflow-x-clip">
         <HeroSection t={t} />
-        <SocialProofBar t={t} />
+        {/* Disabled until we have real client data — SocialProofBar shows a firm count + names,
+            which would be fabricated social proof until we have actual customers to reference. */}
+        {SHOW_SOCIAL_PROOF && <SocialProofBar t={t} />}
         <ProblemSection t={t} painPoints={painPoints} />
         <FeaturesSection t={t} features={features} />
         <HowItWorksSection t={t} steps={steps} />
@@ -314,12 +314,12 @@ function LandingNav({
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <LandingLanguageSwitcher />
             <ThemeSwitcher />
+            <LandingLanguageSwitcher />
             <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }}>
               <Button
                 asChild
-                className="rounded-full border-0 bg-[var(--landing-highlight)] px-6 text-[#1E1B4B] shadow-[0_16px_30px_-18px_rgba(245,158,11,0.8)] hover:bg-[#f8ab27]"
+                className="rounded-full border-0 bg-[var(--landing-cta)] px-6 text-white shadow-[0_16px_30px_-18px_rgba(91,79,235,0.65)] hover:bg-[#4d41e0]"
               >
                 <Link href={accessHref}>{accessLabel}</Link>
               </Button>
@@ -533,9 +533,9 @@ function HeroSection({ t }: { t: Translator }) {
             className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 sm:flex-nowrap sm:overflow-x-auto"
           >
             {heroChecklist.map((label) => (
-              <div key={label} className="flex shrink-0 items-center gap-2 sm:whitespace-nowrap">
+              <div key={label} className="flex shrink-0 items-center gap-1 sm:whitespace-nowrap">
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
-                <span className="text-sm font-medium text-[var(--landing-text)]">{label}</span>
+                <span className="text-xs font-medium text-[var(--landing-text)]">{label}</span>
               </div>
             ))}
           </motion.div>
@@ -679,49 +679,42 @@ function HeroSection({ t }: { t: Translator }) {
 }
 
 function SocialProofBar({ t }: { t: Translator }) {
-  const pills = [t('socialProof.pills.one'), t('socialProof.pills.two'), t('socialProof.pills.three')];
+  const firms = [t('socialProof.firms.one'), t('socialProof.firms.two'), t('socialProof.firms.three'), t('socialProof.firms.four'), t('socialProof.firms.five')];
 
   return (
-    <section className="border-y border-black/5 bg-white/70 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-0 lg:flex-row lg:items-center lg:justify-between">
-        <motion.p {...itemMotion} className="text-sm font-medium text-[var(--landing-muted)]">
-          {t('socialProof.title')}
+    <section className="border-y border-black/5 bg-white/70 py-10 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+        <motion.p {...itemMotion} className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--landing-accent)] dark:text-violet-300">
+          {t('socialProof.eyebrow')}
         </motion.p>
-
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={sectionViewport}
-          className="flex flex-wrap items-center gap-4"
-        >
-          {legalIcons.map((Icon, index) => (
-            <motion.div key={index} variants={staggerItem} whileHover={{ rotate: 5, scale: 1.1 }} transition={{ duration: 0.2 }} style={{ willChange: 'transform' }}>
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-[var(--landing-muted)] shadow-sm dark:border-white/10 dark:bg-white/5">
-                <Icon className="h-5 w-5" />
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={sectionViewport}
-          className="flex flex-wrap gap-3"
-        >
-          {pills.map((pill) => (
-            <motion.span
-              key={pill}
-              variants={staggerItem}
-              className="rounded-full border border-[rgba(124,58,237,0.14)] bg-[rgba(124,58,237,0.08)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--landing-primary)] dark:border-violet-400/20 dark:bg-violet-500/20 dark:text-violet-200"
-            >
-              {pill}
-            </motion.span>
-          ))}
-        </motion.div>
+        <motion.p {...itemMotion} className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+          <span className="bg-gradient-to-r from-[var(--landing-primary)] via-[var(--landing-accent)] to-[var(--landing-primary)] bg-clip-text text-transparent dark:from-white dark:via-violet-300 dark:to-white">
+            +<CountUp value={200} />
+          </span>{' '}
+          <span className="text-[var(--landing-text)]">{t('socialProof.title')}</span>
+        </motion.p>
       </div>
+
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
+        className="mx-auto mt-8 flex max-w-4xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-4 sm:px-6"
+      >
+        {firms.map((firm) => (
+          <motion.span
+            key={firm}
+            variants={staggerItem}
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.2 }}
+            style={{ willChange: 'transform' }}
+            className="cursor-default text-base font-bold uppercase tracking-wide text-[var(--landing-muted)] opacity-60 transition-opacity duration-200 hover:text-[var(--landing-primary)] hover:opacity-100 dark:hover:text-white sm:text-lg"
+          >
+            {firm}
+          </motion.span>
+        ))}
+      </motion.div>
     </section>
   );
 }

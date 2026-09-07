@@ -3,6 +3,7 @@ import { AppSidebar } from '@/components/dashboard/app-sidebar';
 import { AppNavBar } from '@/components/dashboard/app-navbar';
 import { SuperAdminBanner } from '@/components/dashboard/superadmin-banner';
 import { CSSProperties, ReactNode } from 'react';
+import { redirect } from 'next/navigation';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import ProfileProvider from '@/components/providers/profile-provider';
 import { WorkflowGuideModal } from '@/components/app/dashboard/workflow-guide-modal';
@@ -17,6 +18,14 @@ export default async function DashboardLayout({ children }: Props) {
   const { profile } = await getSessionProfile();
 
   if (!profile?.id) return <DashboardLoadingState />;
+
+  if (
+    profile.system_role !== 'SUPERADMIN' &&
+    profile.org_status &&
+    profile.org_status !== 'active'
+  ) {
+    redirect('/auth/pending-approval');
+  }
 
   return (
     <div className="flex h-svh flex-col bg-muted">
