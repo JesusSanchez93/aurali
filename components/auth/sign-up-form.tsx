@@ -196,7 +196,7 @@ export function SignUpForm({
               {error && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400">{error}</p>}
               <Button
                 type="submit"
-                className="h-12 w-full rounded-full border-0 bg-[#F59E0B] text-[#1E1B4B] shadow-[0_16px_30px_-18px_rgba(245,158,11,0.8)] hover:bg-[#f8ab27]"
+                className="h-12 w-full rounded-full border-0 bg-[#7C3AED] text-white shadow-[0_16px_30px_-18px_rgba(124,58,237,0.8)] hover:bg-[#6d28d9]"
                 disabled={isLoading}
               >
                 {isLoading ? commonT('loading') : t('submit')}
