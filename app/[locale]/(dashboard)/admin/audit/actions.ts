@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { requireSuperAdmin } from '@/lib/auth/permissions'
+import { requireAuth, requireOrgAdmin, requireSuperAdmin } from '@/lib/auth/permissions'
 
 export type ActorType = 'client' | 'staff' | 'system'
 
@@ -33,14 +33,25 @@ type DB = any
 const MAX_ROWS = 300
 
 /**
- * Cross-organization audit trail — SUPERADMIN only. Reads audit_logs across
- * ALL organizations (RLS already grants superadmins that via is_superadmin()),
- * enriched with organization/staff names for display. Used to trace what a
- * client did on the public form (or a staff/system action) when diagnosing a
- * reported problem — who did what, when, and in which organization/process.
+ * Audit trail. SUPERADMIN sees ALL organizations (RLS grants that via
+ * is_superadmin()) and can filter by any of them. An ORG_ADMIN is scoped to
+ * their own organization — the `organizationId` filter is ignored and forced
+ * to `current_organization_id` instead of trusting the caller. Enriched with
+ * organization/staff names for display. Used to trace what a client did on
+ * the public form (or a staff/system action) when diagnosing a reported
+ * problem — who did what, when, and in which organization/process.
  */
 export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<AuditLogRow[]> {
-  await requireSuperAdmin()
+  const profile = await requireAuth()
+
+  let orgScope: string | undefined
+  if (profile.system_role !== 'SUPERADMIN') {
+    const orgId = profile.current_organization_id
+    if (!orgId) throw new Error('No organization')
+    await requireOrgAdmin(orgId)
+    orgScope = orgId
+  }
+
   const supabase = (await createClient()) as DB
 
   let query = supabase
@@ -49,7 +60,9 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Audit
     .order('created_at', { ascending: false })
     .limit(MAX_ROWS)
 
-  if (filters.organizationId) {
+  if (orgScope) {
+    query = query.eq('organization_id', orgScope)
+  } else if (filters.organizationId) {
     query = query.eq('organization_id', filters.organizationId)
   }
   if (filters.action) {

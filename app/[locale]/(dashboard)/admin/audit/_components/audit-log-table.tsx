@@ -129,17 +129,19 @@ export function AuditLogTable({ initialLogs, organizations }: Props) {
     <div className="flex flex-col gap-4">
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-        <Select value={organizationId} onValueChange={(v) => { setOrganizationId(v); refetch({ organizationId: v }) }}>
-          <SelectTrigger className="w-full sm:w-56">
-            <SelectValue placeholder="Organización" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las organizaciones</SelectItem>
-            {organizations.map((org) => (
-              <SelectItem key={org.id} value={org.id}>{org.name ?? 'Sin nombre'}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {organizations.length > 0 && (
+          <Select value={organizationId} onValueChange={(v) => { setOrganizationId(v); refetch({ organizationId: v }) }}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder="Organización" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las organizaciones</SelectItem>
+              {organizations.map((org) => (
+                <SelectItem key={org.id} value={org.id}>{org.name ?? 'Sin nombre'}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Select value={actorType} onValueChange={(v) => { setActorType(v); refetch({ actorType: v }) }}>
           <SelectTrigger className="w-full sm:w-44">
