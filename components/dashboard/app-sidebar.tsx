@@ -62,7 +62,7 @@ export const adminUserItems: NavItem[] = [
   { titleKey: 'processes',   url: '/legal-process', icon: Scale      },
   { titleKey: 'clients',     url: '/clients',       icon: Users      },
   { titleKey: 'users',       url: '/settings/users',icon: Users      },
-  { titleKey: 'admin_audit', url: '/settings/audit',icon: ShieldAlert},
+  { titleKey: 'admin_audit', url: '/audit',         icon: ShieldAlert},
   { titleKey: 'settings',    url: '/settings',      icon: Settings, sub: SETTINGS_SUB },
 ];
 

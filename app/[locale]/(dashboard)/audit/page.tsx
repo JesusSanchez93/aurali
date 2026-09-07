@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
-import { getAuditLogs } from '../../admin/audit/actions';
-import { AuditLogTable } from '../../admin/audit/_components/audit-log-table';
+import { getAuditLogs } from '../admin/audit/actions';
+import { AuditLogTable } from '../admin/audit/_components/audit-log-table';
 import { ShieldAlert } from 'lucide-react';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
