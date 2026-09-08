@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { render } from '@react-email/render'
 import { resend } from '@/lib/resend'
 import { OrgApprovedEmail } from '@/emails/OrgApprovedEmail'
+import { OrgRejectedEmail } from '@/emails/OrgRejectedEmail'
 
 export type ClientRow = {
   id: string
@@ -155,12 +156,41 @@ export async function rejectOrganizationAction(orgId: string) {
   await requireSuperAdmin()
   const supabase = await createClient()
 
-  const { error } = await supabase
+  const { data: org, error } = await supabase
     .from('organizations')
     .update({ status: 'rejected' })
     .eq('id', orgId)
+    .select('name')
+    .single()
 
   if (error) throw new Error(error.message)
+
+  const { data: admins } = await supabase
+    .from('organization_members')
+    .select('profiles(email)')
+    .eq('organization_id', orgId)
+    .eq('role', 'ORG_ADMIN')
+    .eq('active', true)
+
+  const recipients = (admins ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((m: any) => m.profiles?.email)
+    .filter((email: string | null | undefined): email is string => !!email)
+
+  if (recipients.length > 0) {
+    const html = await render(
+      OrgRejectedEmail({
+        companyName: org?.name ?? 'tu organización',
+      }) as React.ReactElement,
+    )
+
+    await resend.emails.send({
+      from: 'Aurali <noreply@aurali.app>',
+      to: recipients,
+      subject: 'Estado de tu solicitud en Aurali',
+      html,
+    })
+  }
 
   revalidatePath('/admin/clients')
 }
