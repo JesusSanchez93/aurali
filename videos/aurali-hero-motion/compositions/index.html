@@ -117,6 +117,28 @@
         background-position: 0px -30.69px;
         opacity: 0;
       }
+      /* covers a wrong-initial "N" avatar baked into the source screenshots
+         (real user card shows "Ana Martinez" but the captured avatar glyph
+         reads "N", which reads as a stray Next.js badge) */
+      .sidebar-avatar-fix {
+        position: absolute;
+        left: 7px;
+        top: 459px;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--white);
+        font-family: "Inter", sans-serif;
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 4;
+        pointer-events: none;
+      }
+
       .sidebar-pill {
         position: absolute;
         left: 8px;
@@ -194,21 +216,25 @@
         background: var(--white);
         opacity: 1;
       }
-      .cv1-pos-stat-1 { left: 15.35px; top: 83.59px; width: 236.73px; height: 101.55px; }
+      .cv1-pos-stat-1 { left: 15.35px; top: 50.59px; width: 236.73px; height: 101.55px; }
       .cv1-pos-stat-2 { left: 261.88px; top: 83.59px; width: 236.41px; height: 101.55px; }
       .cv1-pos-stat-3 { left: 508.08px; top: 83.59px; width: 236.73px; height: 101.55px; }
       .cv1-pos-val-1 { left: 15.35px; top: 244.24px; width: 175.02px; height: 96.33px; }
       .cv1-pos-val-2 { left: 200.16px; top: 244.24px; width: 175.02px; height: 96.33px; }
       .cv1-pos-val-3 { left: 384.98px; top: 244.24px; width: 175.02px; height: 96.33px; }
       .cv1-pos-val-4 { left: 569.80px; top: 244.24px; width: 175.02px; height: 96.33px; }
+      .cv1-pos-chart-1 { left: 15.35px; top: 355px; width: 443px; height: 150px; }
+      .cv1-pos-chart-2 { left: 460.3px; top: 355px; width: 305px; height: 150px; }
 
-      #cv1-stat-1 { background-position: -209.31px -83.59px; }
-      #cv1-stat-2 { background-position: -455.84px -83.59px; }
-      #cv1-stat-3 { background-position: -702.04px -83.59px; }
-      #cv1-val-1 { background-position: -209.31px -244.24px; }
-      #cv1-val-2 { background-position: -394.12px -244.24px; }
-      #cv1-val-3 { background-position: -578.94px -244.24px; }
-      #cv1-val-4 { background-position: -763.76px -244.24px; }
+      #cv1-stat-1 { background-position: -209.31px -112.98px; }
+      #cv1-stat-2 { background-position: -455.84px -112.98px; }
+      #cv1-stat-3 { background-position: -702.04px -112.98px; }
+      #cv1-val-1 { background-position: -209.31px -273.63px; }
+      #cv1-val-2 { background-position: -394.12px -273.63px; }
+      #cv1-val-3 { background-position: -578.94px -273.63px; }
+      #cv1-val-4 { background-position: -763.76px -273.63px; }
+      #cv1-chart-1 { background-position: -209.33px -384.39px; }
+      #cv1-chart-2 { background-position: -654.28px -384.39px; }
 
       /* View 2 — Procesos legales, static frame with reveal cascade */
       #content-view2 {
@@ -273,19 +299,22 @@
           <div style="clip-path: inset(0px)" data-hf-id="hf-side1" class="sidebar-crop" id="sidebar-v1"></div>
           <div data-hf-id="hf-side2" class="sidebar-crop" id="sidebar-v2"></div>
           <div data-hf-id="hf-pill0" class="sidebar-pill" id="sidebar-pill"></div>
+          <div data-hf-id="hf-avfix" class="sidebar-avatar-fix" id="sidebar-avatar-fix">A</div>
         </div>
 
         <div data-hf-id="hf-cvp0" class="content-viewport" id="content-viewport">
           <div data-hf-id="hf-cv1" id="content-view1">
             <div data-hf-id="hf-track" class="scroll-track" id="scroll-track" data-layout-allow-overflow="true">
               <div data-hf-id="hf-page1" class="scroll-page" id="scroll-page-1" data-layout-allow-overflow="true"></div>
-              <div data-hf-id="hf-cv1m1" class="cv1-stagger-mask cv1-pos-stat-1"></div>
-              <div data-hf-id="hf-cv1m2" class="cv1-stagger-mask cv1-pos-stat-2"></div>
-              <div data-hf-id="hf-cv1m3" class="cv1-stagger-mask cv1-pos-stat-3"></div>
-              <div data-hf-id="hf-cv1m4" class="cv1-stagger-mask cv1-pos-val-1"></div>
-              <div data-hf-id="hf-cv1m5" class="cv1-stagger-mask cv1-pos-val-2"></div>
-              <div data-hf-id="hf-cv1m6" class="cv1-stagger-mask cv1-pos-val-3"></div>
-              <div data-hf-id="hf-cv1m7" class="cv1-stagger-mask cv1-pos-val-4"></div>
+              <div data-hf-id="hf-cv1m1" class="cv1-stagger-mask cv1-pos-stat-1" style="height: 125.55px;"></div>
+              <div data-hf-id="hf-cv1m2" class="cv1-stagger-mask cv1-pos-stat-2" style="height: 125.55px;"></div>
+              <div data-hf-id="hf-cv1m3" class="cv1-stagger-mask cv1-pos-stat-3" style="height: 125.55px;"></div>
+              <div data-hf-id="hf-cv1m4" class="cv1-stagger-mask cv1-pos-val-1" style="height: 110.33px;"></div>
+              <div data-hf-id="hf-cv1m5" class="cv1-stagger-mask cv1-pos-val-2" style="height: 110.33px;"></div>
+              <div data-hf-id="hf-cv1m6" class="cv1-stagger-mask cv1-pos-val-3" style="height: 110.33px;"></div>
+              <div data-hf-id="hf-cv1m7" class="cv1-stagger-mask cv1-pos-val-4" style="height: 110.33px;"></div>
+              <div data-hf-id="hf-cv1m8" class="cv1-stagger-mask cv1-pos-chart-1" style="height: 174px;"></div>
+              <div data-hf-id="hf-cv1m9" class="cv1-stagger-mask cv1-pos-chart-2" style="height: 174px;"></div>
               <div data-hf-id="hf-cv1s1" class="cv1-stagger-piece cv1-pos-stat-1" id="cv1-stat-1"></div>
               <div data-hf-id="hf-cv1s2" class="cv1-stagger-piece cv1-pos-stat-2" id="cv1-stat-2"></div>
               <div data-hf-id="hf-cv1s3" class="cv1-stagger-piece cv1-pos-stat-3" id="cv1-stat-3"></div>
@@ -293,6 +322,8 @@
               <div data-hf-id="hf-cv1v2" class="cv1-stagger-piece cv1-pos-val-2" id="cv1-val-2"></div>
               <div data-hf-id="hf-cv1v3" class="cv1-stagger-piece cv1-pos-val-3" id="cv1-val-3"></div>
               <div data-hf-id="hf-cv1v4" class="cv1-stagger-piece cv1-pos-val-4" id="cv1-val-4"></div>
+              <div data-hf-id="hf-cv1c1" class="cv1-stagger-piece cv1-pos-chart-1" id="cv1-chart-1"></div>
+              <div data-hf-id="hf-cv1c2" class="cv1-stagger-piece cv1-pos-chart-2" id="cv1-chart-2"></div>
               <div data-hf-id="hf-page2" class="scroll-page" id="scroll-page-2" data-layout-allow-overflow="true"></div>
             </div>
           </div>
@@ -369,29 +400,10 @@
     <script>
       window.__timelines = window.__timelines || {};
       gsap.set("#scroll-page-2", { x: 0, y: -6 });
-      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -29 });
-      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -12 });
-      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -25 });
-      gsap.set("[data-hf-id=\"hf-cv1m1\"]", { x: 0, y: -25 });
-      gsap.set("[data-hf-id=\"hf-cv1m2\"]", { x: 0, y: -29 });
-      gsap.set("[data-hf-id=\"hf-cv1m3\"]", { x: 0, y: -29 });
-      gsap.set("[data-hf-id=\"hf-cv1m4\"]", { x: 0, y: -29 });
-      gsap.set("[data-hf-id=\"hf-cv1m5\"]", { x: 0, y: -11 });
-      gsap.set("[data-hf-id=\"hf-cv1m5\"]", { x: 0, y: -20 });
-      gsap.set("[data-hf-id=\"hf-cv1m5\"]", { x: 0, y: -29 });
-      gsap.set("[data-hf-id=\"hf-cv1m6\"]", { x: 0, y: -29 });
-      gsap.set("[data-hf-id=\"hf-cv1m7\"]", { x: 0, y: -29 });
+      gsap.set("#app-container", { x: 17, y: -23 });
       const tl = gsap.timeline({ paused: true });
 
       tl.set("#scroll-page-1", { x: 0, y: 0, data: "hf-hold" }, 0);
-
-      // ============ container entrance: opacity 0->1 + diagonal 3D tilt settling flat ============
-      tl.fromTo(
-        "#app-container",
-        { autoAlpha: 0, rotateX: 13, rotateY: -17, scale: 0.93 },
-        { autoAlpha: 1, rotateX: 0, rotateY: 0, scale: 1, duration: 0.55, ease: "power3.out" },
-        0
-      );
 
       // ============ Analíticas stagger reveal, then continuous scroll ============
       // pre-scroll hold extended 0.55 -> 1.45 to fit the 7-card stagger cascade;
@@ -411,12 +423,14 @@
       cardIn("cv1-val-2", 1.0);
       cardIn("cv1-val-3", 1.1);
       cardIn("cv1-val-4", 1.2);
+      cardIn("cv1-chart-1", 1.3);
+      cardIn("cv1-chart-2", 1.4);
 
       tl.fromTo(
         "#scroll-track",
         { y: 0 },
-        { y: -440, duration: 3.85, ease: "power1.inOut" },
-        1.45
+        { y: -440, duration: 3.55, ease: "power1.inOut" },
+        1.75
       );
       // post-scroll hold: 5.3 -> 5.6 (implicit)
 
@@ -459,20 +473,13 @@
       cardIn("cv2-card-3", 6.51);
       cardIn("cv2-card-4", 6.69);
 
-      // "Finalizado" pill emphasis glow across the four cards
-      tl.to(
-        ["#cv2-card-1", "#cv2-card-2", "#cv2-card-3", "#cv2-card-4"],
-        {
-          boxShadow: "0 0 28px 4px rgba(124,58,237,0.55)",
-          duration: 0.3,
-          yoyo: true,
-          repeat: 1,
-          ease: "sine.inOut",
-        },
-        8.0
-      );
-
       tl.to("#scroll-page-1", { motionPath: { path: [{x: 0, y: 0}, {x: 243, y: 164}] }, duration: 1.5, ease: "power1.inOut" }, 9);
+
+      tl.fromTo("#app-container", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.55, ease: "power3.out" }, 0);
+
+      tl.fromTo("#app-container", { rotateX: 13, rotateY: -17 }, { rotateX: 0, rotateY: 0, duration: 0.55, ease: "power3.out" }, 0);
+
+      tl.fromTo("#app-container", { scale: 0.93 }, { scale: 1, duration: 0.55, ease: "power3.out" }, 0);
 
       // hold, 8.6 -> 9.0 (implicit, no further motion)
 
