@@ -675,6 +675,22 @@ export async function updateInfoAboutEventsAction(
         await resumeWorkflow(process.workflow_run_id, { form_completed_at: new Date().toISOString() });
     }
 
+    // Resolve any pending "form" follow-up reminders now that the client
+    // submitted the form — admin client because this anon session has no
+    // RLS grant on email_follow_ups (same reasoning as logClientAction).
+    // Best-effort: must never fail the client's actual submission.
+    try {
+        const adminSupabase = await createClient({ admin: true });
+        await adminSupabase
+            .from('email_follow_ups')
+            .update({ status: 'received', resolved_at: new Date().toISOString() })
+            .eq('legal_process_id', legalProcessId)
+            .eq('resolution_mode', 'form')
+            .eq('status', 'pending');
+    } catch (err) {
+        console.error('[updateInfoAboutEventsAction] Failed to resolve form follow-ups', err);
+    }
+
     revalidatePath('/(public)/legal-process', 'layout');
 
     await logClientAction({

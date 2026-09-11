@@ -345,10 +345,13 @@ async function createSignatureRequestAndSend(
 /**
  * Fires (non-blocking, same pattern as the audit_logs inserts around it) an
  * email_follow_ups row when the send_email node has "track_follow_up"
- * enabled. resolution_mode tells a future reply-detection/receipt-approval
- * job how this row gets resolved — see the migration header for the full
- * state machine (no scheduler/inbound-email infra exists yet, so 'pending'
- * rows are only surfaced today as a computed "overdue" read, not acted on).
+ * enabled. resolution_mode tells how this row gets resolved:
+ *   'receipt' — signature-actions.ts, once every uploaded document is approved.
+ *   'form'    — updateInfoAboutEventsAction, once the client submits the form.
+ *   'reply'   — no inbound-email detection yet; only resolved by going overdue.
+ * Until resolved, app/api/cron/email-follow-ups/route.ts sends reminders at
+ * 50/75/87.5% of the created_at→deadline_at window and flips the row to
+ * 'overdue' past the deadline.
  */
 function trackFollowUpIfEnabled(
   supabase: SupabaseClient,
@@ -359,7 +362,7 @@ function trackFollowUpIfEnabled(
     trackFollowUp?: boolean;
     followUpValue?: string;
     followUpUnit?: string;
-    resolutionMode: 'reply' | 'receipt';
+    resolutionMode: 'reply' | 'receipt' | 'form';
     requiresReceipt: boolean;
     signatureRequestId?: string;
   },
@@ -575,7 +578,11 @@ async function executeSendEmail(
     trackFollowUp: cfg.track_follow_up,
     followUpValue: cfg.follow_up_value,
     followUpUnit: cfg.follow_up_unit,
-    resolutionMode: 'reply',
+    // 'form' rows are resolved when the client submits the public form
+    // (updateInfoAboutEventsAction resumes the workflow) — see
+    // supabase/migrations/20260911140000_email_follow_ups_form_resolution.sql.
+    // 'reply' has no inbound-email detection yet.
+    resolutionMode: emailCategory === 'form' ? 'form' : 'reply',
     requiresReceipt: false,
   });
 
