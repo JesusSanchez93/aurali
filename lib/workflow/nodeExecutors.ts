@@ -169,7 +169,7 @@ function resolveField(field: string, context: ExecutionContext): unknown {
  *   {PROCESS.ID}, {PROCESS.DATE}, {PROCESS.STATUS}, {PROCESS.FEE_AMOUNT}
  *   {OUTPUT.*} — any key from previousOutput
  */
-function substituteVars(template: string, context: ExecutionContext): string {
+export function substituteVars(template: string, context: ExecutionContext): string {
   if (!template) return template;
 
   const vals: Record<string, string> = {};
@@ -210,7 +210,7 @@ const TIPTAP_EXTENSIONS = [
  * - TipTap JSON object → generateHTML
  * - Plain string       → replace \n with <br> (legacy)
  */
-function resolveBodyHtml(body: unknown): string {
+export function resolveBodyHtml(body: unknown): string {
   if (!body) return '';
   if (typeof body === 'string') return body.replace(/\n/g, '<br>');
   try {

@@ -624,7 +624,7 @@ async function fetchGraph(
   return { nodes: nodes ?? [], edges: edges ?? [] };
 }
 
-async function fetchLegalProcess(
+export async function fetchLegalProcess(
   legalProcessId: string,
   supabase: SupabaseClient,
 ): Promise<LegalProcessRow> {
@@ -648,7 +648,7 @@ async function fetchLegalProcess(
  * for use in variable substitution. Returns an empty object if no client
  * record exists yet (e.g. the form hasn't been submitted).
  */
-async function fetchClientData(
+export async function fetchClientData(
   legalProcessId: string,
   supabase: SupabaseClient,
 ): Promise<Record<string, unknown>> {
