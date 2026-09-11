@@ -19,6 +19,8 @@ import {
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
 import { WorkflowActionButton } from '@/app/[locale]/(dashboard)/legal-process/_components/workflow-action-button';
 import { DocumentPreviews } from '@/app/[locale]/(dashboard)/legal-process/_components/document-previews';
+import { SignatureReview } from '@/app/[locale]/(dashboard)/legal-process/_components/signature-review';
+import { FollowUpStatus } from '@/app/[locale]/(dashboard)/legal-process/_components/follow-up-status';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -453,6 +455,20 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                     legalProcessId={processId}
                                     refreshKey={refreshKey}
                                     readOnly
+                                />
+                            )}
+
+                            {processId && (
+                                <SignatureReview
+                                    legalProcessId={processId}
+                                    refreshKey={refreshKey}
+                                />
+                            )}
+
+                            {processId && (
+                                <FollowUpStatus
+                                    legalProcessId={processId}
+                                    refreshKey={refreshKey}
                                 />
                             )}
                         </div>

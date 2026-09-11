@@ -22,7 +22,7 @@ import Sheet from '@/components/common/sheet';
 import { WorkflowCanvas } from './WorkflowCanvas';
 import { NodeSidebar } from './NodeSidebar';
 import { NodeConfigPanel } from './NodeConfigPanel';
-import { NodeEditDialog } from './NodeEditDialog';
+import { NodeEditDialog, type EmailNodeEditConfig } from './NodeEditDialog';
 import type { WorkflowNode, WorkflowEdge, WorkflowNodeType } from './types';
 import { NODE_TYPES_CONFIG } from './node-config';
 import { saveWorkflow } from '@/app/[locale]/(dashboard)/settings/workflows/[id]/actions';
@@ -47,7 +47,7 @@ interface WorkflowEditorProps {
   onNodeEdit?: (
     templateId: string,
     nodeId: string,
-    config: { subject?: string; body?: unknown },
+    config: EmailNodeEditConfig,
   ) => Promise<void>;
 }
 
@@ -88,7 +88,7 @@ function WorkflowEditorInner({
     async (
       tid: string,
       nodeId: string,
-      config: { subject?: string; body?: unknown },
+      config: EmailNodeEditConfig,
     ) => {
       if (!onNodeEdit) return;
       await onNodeEdit(tid, nodeId, config);

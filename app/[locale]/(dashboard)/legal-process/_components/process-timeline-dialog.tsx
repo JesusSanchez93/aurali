@@ -31,13 +31,17 @@ import {
   Loader2,
   Archive,
   XCircle,
+  SendHorizonal,
 } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import {
   getProcessAuditLogs,
   getProcessWorkflowSteps,
+  resendDraftEmail,
   type AuditLogEntry,
   type WorkflowStepEntry,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
+import { resendDocumentsEmail } from '@/app/[locale]/(dashboard)/legal-process/signature-actions';
 
 interface Props {
   legalProcessId: string;
@@ -223,6 +227,7 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail, className }
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -252,6 +257,42 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail, className }
   }, [legalProcessId, t]);
 
   const handleOpen = () => { setOpen(true); load(); };
+
+  const handleResend = async (entryKey: string, category: 'form' | 'documents') => {
+    setResendingId(entryKey);
+    try {
+      if (category === 'form') {
+        await resendDraftEmail(legalProcessId);
+      } else {
+        await resendDocumentsEmail(legalProcessId);
+      }
+      toast.success(t('resend_success'));
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('resend_error'));
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  function ResendButton({ entryKey, category }: { entryKey: string; category: 'form' | 'documents' }) {
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-6 gap-1 px-2 text-[11px] text-muted-foreground"
+        disabled={resendingId === entryKey}
+        onClick={() => handleResend(entryKey, category)}
+      >
+        {resendingId === entryKey ? (
+          <Spinner className="h-3 w-3" />
+        ) : (
+          <SendHorizonal className="h-3 w-3" />
+        )}
+        {t('resend_button')}
+      </Button>
+    );
+  }
 
   return (
     <>
@@ -313,18 +354,24 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail, className }
                       ? t(specificKey as never, undefined as never)
                       : t(`audit_actions.${entry.data.action}` as never, undefined as never) ?? t('audit_actions.default');
                     const meta  = formatAuditMeta(entry.data, t, tS);
+                    const emailCategory = auditMeta?.email_category;
+                    const resendable = emailCategory === 'form' || emailCategory === 'documents' ? emailCategory : null;
+                    const entryKey = `a-${entry.data.id}`;
                     return (
-                      <li key={`a-${entry.data.id}`} className="mb-5 ml-5 last:mb-0">
+                      <li key={entryKey} className="mb-5 ml-5 last:mb-0">
                         <span className={`absolute -left-[9px] flex h-[18px] w-[18px] items-center justify-center rounded-full text-white ${cfg.dot}`}>
                           {cfg.icon}
                         </span>
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium leading-none">{label}</p>
-                            <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
-                              <User className="mr-0.5 h-2.5 w-2.5" />
-                              {t('badge_audit')}
-                            </Badge>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium leading-none">{label}</p>
+                              <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
+                                <User className="mr-0.5 h-2.5 w-2.5" />
+                                {t('badge_audit')}
+                              </Badge>
+                            </div>
+                            {resendable && <ResendButton entryKey={entryKey} category={resendable} />}
                           </div>
                           {meta && <p className="text-xs leading-snug text-muted-foreground break-words">{meta}</p>}
                           <div className="flex items-center gap-1.5 pt-0.5">
@@ -343,21 +390,29 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail, className }
                   const meta     = formatStepMeta(step, t);
                   const label    = t(`node_types.${step.node_type}` as never, undefined as never) ?? step.node_title;
                   const isFailed = step.status === 'failed';
+                  const stepResendable = step.status === 'completed'
+                    && (step.email_category === 'form' || step.email_category === 'documents')
+                    ? step.email_category
+                    : null;
+                  const entryKey = `w-${step.id}`;
                   return (
-                    <li key={`w-${step.id}`} className="mb-5 ml-5 last:mb-0">
+                    <li key={entryKey} className="mb-5 ml-5 last:mb-0">
                       <span className={`absolute -left-[9px] flex h-[18px] w-[18px] items-center justify-center rounded-full text-white ${sCfg.dot}`}>
                         {sCfg.icon}
                       </span>
                       <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium leading-none">{label}</p>
-                          <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
-                            <Workflow className="mr-0.5 h-2.5 w-2.5" />
-                            {t('badge_workflow')}
-                          </Badge>
-                          {isFailed && (
-                            <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{t('badge_error')}</Badge>
-                          )}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium leading-none">{label}</p>
+                            <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-muted-foreground">
+                              <Workflow className="mr-0.5 h-2.5 w-2.5" />
+                              {t('badge_workflow')}
+                            </Badge>
+                            {isFailed && (
+                              <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{t('badge_error')}</Badge>
+                            )}
+                          </div>
+                          {stepResendable && <ResendButton entryKey={entryKey} category={stepResendable} />}
                         </div>
                         <p className="text-[11px] text-muted-foreground">{step.node_title}</p>
                         {meta && <p className="text-xs leading-snug text-muted-foreground break-words">{meta}</p>}

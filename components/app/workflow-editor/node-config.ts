@@ -1,14 +1,24 @@
 import type { WorkflowNodeType } from './types';
 
+/** A field is visible only when the field `key` currently holds `value` (or, when
+ *  `value` is an array, one of those values) — switch fields compare booleans,
+ *  select/text fields compare their current string value. */
+export interface DependsOnCondition {
+  key: string;
+  value: boolean | string | string[];
+}
+
 export interface ConfigField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'richtext' | 'switch';
+  type: 'text' | 'textarea' | 'select' | 'richtext' | 'switch' | 'number';
   options?: { value: string; label: string }[];
   placeholder?: string;
   required?: boolean;
-  /** Render this field only when another field (switch) has the given boolean value */
-  dependsOn?: { key: string; value: boolean };
+  /** Render this field only when ALL of these conditions hold (AND) */
+  dependsOn?: DependsOnCondition[];
+  /** Render this field side-by-side with the next visible field, instead of stacked */
+  groupWithNext?: boolean;
 }
 
 export interface NodeTypeConfig {
@@ -61,12 +71,46 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
     colorClass:   'bg-blue-500',
     borderClass:  'border-blue-500',
     defaultTitle: 'Enviar Correo',
-    defaultConfig: { to: '', subject: '', body: '', attach_enabled: false },
+    defaultConfig: {
+      to: '', subject: '', body: '', attach_enabled: false,
+      requires_document_receipt: false,
+      track_follow_up: false, follow_up_value: '24', follow_up_unit: 'hours',
+      reminder_count: '1', reminder_subject: '', reminder_body: '',
+    },
     configSchema: [
       { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{PROCESS.EMAIL}', required: true },
       { key: 'subject', label: 'Asunto',  type: 'text',     placeholder: 'Asunto del correo', required: true },
       { key: 'body',    label: 'Cuerpo',  type: 'richtext' },
       { key: 'attach_enabled', label: 'Adjuntar documentos PDF generados', type: 'switch' },
+      {
+        key: 'requires_document_receipt',
+        label: 'Requiere recepción (el cliente debe subir los documentos firmados)',
+        type: 'switch',
+        dependsOn: [{ key: 'attach_enabled', value: true }],
+      },
+      {
+        key: 'track_follow_up',
+        label: 'Activar seguimiento si no hay respuesta',
+        type: 'switch',
+      },
+      {
+        key: 'reminder_subject',
+        label: 'Asunto del recordatorio (base para el abogado)',
+        type: 'text',
+        placeholder: 'Asunto del correo de recordatorio',
+        dependsOn: [{ key: 'track_follow_up', value: true }],
+      },
+      {
+        key: 'reminder_body',
+        label: 'Cuerpo del recordatorio (base para el abogado)',
+        type: 'richtext',
+        dependsOn: [{ key: 'track_follow_up', value: true }],
+      },
+      // Everything else about the follow-up (vencimiento, cantidad de
+      // recordatorios) is intentionally NOT editable here — the admin only
+      // turns the feature on and sets the base reminder text. The lawyer can
+      // still customize that text further, plus the schedule/count, from
+      // /settings/workflows via NodeEditDialog.tsx.
     ],
     hasSourceHandle: true,
     hasTargetHandle: true,

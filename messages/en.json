@@ -55,7 +55,8 @@
       "banks": "Banks",
       "document_types": "Document Types",
       "ai_variables": "AI Variables",
-      "formats": "Document Templates"
+      "formats": "Document Templates",
+      "email_settings": "Email"
     },
     "upload": {
       "click_to_upload": "Click to upload a document",
@@ -348,6 +349,9 @@
       "badge_error": "Error",
       "system_user": "System",
       "unknown_user": "Unknown user",
+      "resend_button": "Resend",
+      "resend_success": "Email sent successfully",
+      "resend_error": "Failed to send email",
       "audit_actions": {
         "process_created": "Process created",
         "workflow_started": "Workflow started",
@@ -417,6 +421,36 @@
       "edit_title_fallback": "Edit document",
       "save_success": "Document updated",
       "save_error_fallback": "Error saving document"
+    },
+    "signature_review": {
+      "title": "Documents signed by the client",
+      "btn_view": "View",
+      "btn_approve": "Approve",
+      "btn_reject": "Reject",
+      "approve_success": "Document approved",
+      "reject_success": "Document rejected",
+      "action_error": "Something went wrong processing the action",
+      "rejection_reason_label": "Rejection reason",
+      "status": {
+        "pending": "Waiting on client",
+        "otp_sent": "Waiting on client",
+        "verified": "Waiting on client",
+        "uploaded": "Needs review",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "reject_dialog": {
+        "title": "Reject signed document",
+        "description": "The client will be notified by email and can upload the document again.",
+        "reason_label": "Reason (optional)",
+        "reason_placeholder": "Describe what the client needs to fix...",
+        "confirm": "Reject"
+      }
+    },
+    "follow_up": {
+      "title": "Email follow-up",
+      "waiting": "Waiting for response",
+      "overdue": "Follow-up overdue"
     }
   },
   "clients": {
@@ -927,7 +961,14 @@
       "email_subject_placeholder": "Email subject",
       "email_body_label": "Email body",
       "email_save_success": "Email updated",
-      "email_save_error": "Error saving"
+      "email_save_error": "Error saving",
+      "follow_up_section_title": "Follow-up",
+      "follow_up_value_label": "Mark follow-up overdue after",
+      "follow_up_unit_label": "Unit",
+      "reminder_count_label": "Number of reminders to send the client",
+      "reminder_subject_label": "Reminder subject",
+      "reminder_subject_placeholder": "Reminder email subject",
+      "reminder_body_label": "Reminder body"
     },
     "header_footer": {
       "align_left": "Align left",

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -11,7 +11,7 @@ import { FormInput } from '@/components/common/form/form-input';
 import { FormTextarea } from '@/components/common/form/form-textarea';
 import { FormSelect } from '@/components/common/form/form-select';
 import Tiptap from '@/components/common/tip-tap';
-import { NODE_TYPES_CONFIG } from './node-config';
+import { NODE_TYPES_CONFIG, type ConfigField } from './node-config';
 import type { WorkflowNode, WorkflowNodeType } from './types';
 
 interface NodeConfigPanelProps {
@@ -72,18 +72,42 @@ export function NodeConfigPanel({ node, onUpdate, onClose }: NodeConfigPanelProp
 
   const cfg = NODE_TYPES_CONFIG[node.data.type as WorkflowNodeType];
 
+  const watchedValues = useWatch({ control });
+
   const isFieldVisible = useCallback(
-    (field: { dependsOn?: { key: string; value: boolean } }): boolean => {
+    (field: Pick<ConfigField, 'dependsOn'>): boolean => {
       if (!field.dependsOn) return true;
-      return boolValues[field.dependsOn.key] === field.dependsOn.value;
+      return field.dependsOn.every(({ key, value }) => {
+        const current = key in boolValues ? boolValues[key] : (watchedValues as Record<string, unknown>)[key];
+        if (Array.isArray(value)) return value.includes(String(current));
+        if (typeof value === 'boolean') return current === value;
+        return String(current) === value;
+      });
     },
-    [boolValues],
+    [boolValues, watchedValues],
   );
 
   const visibleConfigFields = useMemo(
     () => cfg.configSchema.filter((field) => isFieldVisible(field)),
     [cfg.configSchema, isFieldVisible],
   );
+
+  // Pairs a field marked `groupWithNext` with the field right after it so they
+  // render side-by-side (e.g. "Vencer seguimiento después de" + its unit).
+  const fieldRows = useMemo(() => {
+    const rows: ConfigField[][] = [];
+    for (let i = 0; i < visibleConfigFields.length; i++) {
+      const field = visibleConfigFields[i];
+      const next = visibleConfigFields[i + 1];
+      if (field.groupWithNext && next) {
+        rows.push([field, next]);
+        i++;
+      } else {
+        rows.push([field]);
+      }
+    }
+    return rows;
+  }, [visibleConfigFields]);
 
   const handleRichtextChange = useCallback((key: string, v: unknown) => {
     setRichtextValues((prev) => ({ ...prev, [key]: v }));
@@ -92,6 +116,79 @@ export function NodeConfigPanel({ node, onUpdate, onClose }: NodeConfigPanelProp
   const handleSwitchChange = useCallback((key: string, checked: boolean) => {
     setBoolValues((prev) => ({ ...prev, [key]: checked }));
   }, []);
+
+  const renderFieldControl = (field: ConfigField) => {
+    switch (field.type) {
+      case 'text':
+        return (
+          <FormInput
+            control={control}
+            name={field.key}
+            label={field.label}
+            placeholder={field.placeholder}
+            required={field.required}
+          />
+        );
+      case 'number':
+        return (
+          <FormInput
+            control={control}
+            name={field.key}
+            label={field.label}
+            placeholder={field.placeholder}
+            required={field.required}
+            type="number"
+          />
+        );
+      case 'textarea':
+        return (
+          <FormTextarea
+            control={control}
+            name={field.key}
+            label={field.label}
+            placeholder={field.placeholder}
+            required={field.required}
+            rows={10}
+          />
+        );
+      case 'richtext':
+        return (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium">
+              {field.label}
+              {field.required && <span className="ml-1 text-destructive">*</span>}
+            </span>
+            <Tiptap
+              value={richtextValues[field.key]}
+              onChange={(v) => handleRichtextChange(field.key, v)}
+            />
+          </div>
+        );
+      case 'select':
+        return (
+          <FormSelect
+            control={control}
+            name={field.key}
+            label={field.label}
+            required={field.required}
+            options={field.options ?? []}
+          />
+        );
+      case 'switch':
+        return (
+          <div className="flex items-center justify-between rounded-md border px-3 py-2.5">
+            <span className="text-xs font-medium">{field.label}</span>
+            <Switch
+              size="sm"
+              checked={boolValues[field.key] ?? false}
+              onCheckedChange={(checked) => handleSwitchChange(field.key, checked)}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   const onSubmit = (values: FormValues) => {
     const { title, ...configValues } = values;
@@ -140,69 +237,18 @@ export function NodeConfigPanel({ node, onUpdate, onClose }: NodeConfigPanelProp
             </>
           )}
 
-          {cfg.configSchema.map((field) => {
-            if (!isFieldVisible(field)) return null;
-
-            return (
-              <div key={field.key}>
-                {field.type === 'text' && (
-                  <FormInput
-                    control={control}
-                    name={field.key}
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    required={field.required}
-                  />
-                )}
-
-                {field.type === 'textarea' && (
-                  <FormTextarea
-                    control={control}
-                    name={field.key}
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    required={field.required}
-                    rows={10}
-                  />
-                )}
-
-                {field.type === 'richtext' && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium">
-                      {field.label}
-                      {field.required && <span className="ml-1 text-destructive">*</span>}
-                    </span>
-                    <Tiptap
-                      value={richtextValues[field.key]}
-                      onChange={(v) => handleRichtextChange(field.key, v)}
-                    />
-                  </div>
-                )}
-
-                {field.type === 'select' && (
-                  <FormSelect
-                    control={control}
-                    name={field.key}
-                    label={field.label}
-                    required={field.required}
-                    options={field.options ?? []}
-                  />
-                )}
-
-                {field.type === 'switch' && (
-                  <div className="flex items-center justify-between rounded-md border px-3 py-2.5">
-                    <span className="text-xs font-medium">{field.label}</span>
-                    <Switch
-                      size="sm"
-                      checked={boolValues[field.key] ?? false}
-                      onCheckedChange={(checked) => handleSwitchChange(field.key, checked)}
-                    />
-                  </div>
-                )}
-
-              </div>
-            );
-          })}
+          {fieldRows.map((row) => (
+            <div
+              key={row[0].key}
+              className={row.length > 1 ? 'flex items-start gap-3' : undefined}
+            >
+              {row.map((field) => (
+                <div key={field.key} className={row.length > 1 ? 'flex-1' : undefined}>
+                  {renderFieldControl(field)}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
 

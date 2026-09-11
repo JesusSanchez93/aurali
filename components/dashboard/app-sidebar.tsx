@@ -3,7 +3,7 @@
 import {
   Home, Scale, Settings, Users, ShieldCheck, BookOpen,
   Sparkles, Building2, ChevronRight, Workflow, IdCard, FileText,
-  ShieldAlert,
+  ShieldAlert, Mail,
 } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -48,6 +48,7 @@ const SETTINGS_SUB = [
   { titleKey: 'ai_variables',url: '/settings/ai-variables',     icon: Sparkles  },
   { titleKey: 'banks',           url: '/settings/banks',        icon: Building2 },
   { titleKey: 'document_types', url: '/settings/documents',    icon: IdCard    },
+  { titleKey: 'email_settings', url: '/settings/email',        icon: Mail      },
 ];
 
 export const userItems: NavItem[] = [

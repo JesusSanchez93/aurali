@@ -22,20 +22,18 @@
  *   end              — marks workflow as completed
  */
 
-import React from 'react';
+import { randomUUID } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createLogger } from '@/lib/utils/logger';
 
 const logger = createLogger('WORKFLOW_NODE');
-import { render } from '@react-email/render';
-import { resend } from '@/lib/resend';
 import { generateDocument } from '@/lib/documents/generateOnlyOfficeDocument';
 import { generateHTML } from '@tiptap/html';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
-import { WorkflowEmail } from '@/emails/WorkflowEmail';
-import type { EmailTheme } from '@/emails/WorkflowEmail';
+import { buildSignatureInstructionsHtml } from '@/lib/email/signatureRequestEmail';
+import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 import type {
   WorkflowNodeRow,
   WorkflowEdgeRow,
@@ -230,28 +228,33 @@ interface EmailAttachment {
   content: Buffer;
 }
 
+/**
+ * Sends a client/lawyer-facing email through the process's organization's
+ * configured provider (their own SMTP/Google/Microsoft connection — see
+ * lib/email/emailService.ts) instead of Aurali's shared Resend sender, so
+ * recipients see the email address the lawyer actually set up. Falls back to
+ * Aurali's shared sender only when the org hasn't connected one (handled
+ * inside getEmailServiceForOrg), never to a hardcoded Aurali "from" address.
+ */
 async function sendEmail(
+  organizationId: string | null,
   to: string,
   subject: string,
   bodyHtml: string,
   attachments?: EmailAttachment[],
   ctaUrl?: string,
   ctaLabel?: string,
-  theme?: Partial<EmailTheme>,
 ): Promise<void> {
-  const html = await render(
-    React.createElement(WorkflowEmail, { bodyHtml, ctaUrl, ctaLabel, subject, theme }),
-  );
-  const { error } = await resend.emails.send({
-    from: 'Aurali Legal <no-reply@aurali.app>',
-    to,
-    subject,
-    html,
-    attachments,
-  });
-  if (error) {
-    logger.error('Resend email failed', undefined, { subject, errorMessage: error.message });
-    throw new Error(`Error al enviar email a ${to}: ${error.message}`);
+  if (!organizationId) {
+    logger.error('sendEmail: missing organizationId, cannot resolve org email provider', undefined, { subject, to });
+    throw new Error('El proceso legal no tiene organization_id');
+  }
+  try {
+    await sendOrgEmail(organizationId, { to, subject, bodyHtml, ctaUrl, ctaLabel, attachments });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('Org email send failed', undefined, { subject, errorMessage: message });
+    throw new Error(`Error al enviar email a ${to}: ${message}`);
   }
 }
 
@@ -265,6 +268,119 @@ async function fetchAttachment(url: string, filename: string): Promise<EmailAtta
   } catch {
     return null;
   }
+}
+
+// ─── Signature-portal helper (shared by send_email w/ receipt + send_documents) ─
+
+type SignatureDoc = { id: string | null; document_name: string; file_url: string };
+
+function buildSignatureAccessLink(): { accessToken: string; accessTokenExpiresAt: string; signUrl: string } {
+  const accessToken = randomUUID();
+  const accessTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString();
+  const signUrl = `${process.env.NEXT_PUBLIC_APP_URL}/legal-process/sign-documents/validate-token?token=${accessToken}`;
+  return { accessToken, accessTokenExpiresAt, signUrl };
+}
+
+/**
+ * Creates a document_signature_requests row (+ one document_signature_items row
+ * per document) and emails the client the OTP-gated signature-portal link.
+ * Shared by executeSendDocuments and executeSendEmail (when attach_enabled +
+ * requires_document_receipt) — both hand a client documents that must come
+ * back signed through the same upload portal.
+ */
+async function createSignatureRequestAndSend(
+  supabase: SupabaseClient,
+  context: ExecutionContext,
+  params: {
+    to: string;
+    subject: string;
+    introHtml: string;
+    docs: SignatureDoc[];
+    accessToken: string;
+    accessTokenExpiresAt: string;
+    signUrl: string;
+  },
+): Promise<{ requestId: string }> {
+  const db = supabase as SupabaseClient & Record<string, unknown>;
+  const { to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl } = params;
+
+  const { data: request, error: requestErr } = await db
+    .from('document_signature_requests')
+    .insert({
+      organization_id: context.legalProcess.organization_id,
+      legal_process_id: context.legalProcess.id,
+      created_by: context.legalProcess.lawyer_id,
+      client_email: to,
+      access_token: accessToken,
+      access_token_expires_at: accessTokenExpiresAt,
+      email_subject: subject,
+      email_intro_html: introHtml,
+    })
+    .select('id')
+    .single() as { data: { id: string } | null; error: { message: string } | null };
+
+  if (requestErr || !request) {
+    throw new Error(requestErr?.message ?? 'No se pudo crear la solicitud de firma');
+  }
+
+  const { error: itemsErr } = await db.from('document_signature_items').insert(
+    docs.map((doc) => ({
+      request_id: request.id,
+      organization_id: context.legalProcess.organization_id,
+      generated_document_id: doc.id,
+      document_name: doc.document_name,
+      original_file_url: doc.file_url,
+    })),
+  );
+  if (itemsErr) throw new Error(itemsErr.message);
+
+  const bodyHtml = buildSignatureInstructionsHtml(introHtml, docs.map((d) => ({ document_name: d.document_name, file_url: d.file_url })));
+  await sendEmail(context.legalProcess.organization_id, to, subject, bodyHtml, undefined, signUrl, 'Firmar documentos →');
+
+  return { requestId: request.id };
+}
+
+// ─── Follow-up tracking (send_email "seguimiento") ─────────────────────────────
+
+/**
+ * Fires (non-blocking, same pattern as the audit_logs inserts around it) an
+ * email_follow_ups row when the send_email node has "track_follow_up"
+ * enabled. resolution_mode tells a future reply-detection/receipt-approval
+ * job how this row gets resolved — see the migration header for the full
+ * state machine (no scheduler/inbound-email infra exists yet, so 'pending'
+ * rows are only surfaced today as a computed "overdue" read, not acted on).
+ */
+function trackFollowUpIfEnabled(
+  supabase: SupabaseClient,
+  node: WorkflowNodeRow,
+  context: ExecutionContext,
+  params: {
+    to: string;
+    trackFollowUp?: boolean;
+    followUpValue?: string;
+    followUpUnit?: string;
+    resolutionMode: 'reply' | 'receipt';
+    requiresReceipt: boolean;
+    signatureRequestId?: string;
+  },
+): void {
+  if (!params.trackFollowUp) return;
+  const db = supabase as SupabaseClient & Record<string, unknown>;
+  const amount = Number(params.followUpValue) || 24;
+  const unitMs = params.followUpUnit === 'days' ? 1000 * 60 * 60 * 24 : 1000 * 60 * 60;
+  const deadlineAt = new Date(Date.now() + amount * unitMs).toISOString();
+
+  void db.from('email_follow_ups').insert({
+    organization_id: context.legalProcess.organization_id,
+    legal_process_id: context.legalProcess.id,
+    workflow_run_id: context.workflowRun.id,
+    signature_request_id: params.signatureRequestId ?? null,
+    node_id: node.node_id,
+    to_email: params.to,
+    resolution_mode: params.resolutionMode,
+    requires_receipt: params.requiresReceipt,
+    deadline_at: deadlineAt,
+  });
 }
 
 // =============================================================================
@@ -292,13 +408,100 @@ async function executeSendEmail(
     subject?: string;
     body?: unknown;
     attach_enabled?: boolean;
+    requires_document_receipt?: boolean;
+    email_template?: string;
+    track_follow_up?: boolean;
+    follow_up_value?: string;
+    follow_up_unit?: string;
   };
+
+  // Identifies this node's purpose for the dashboard's "sent emails" list
+  // (signature-actions.ts getSentClientEmails) — 'client_form_email' is the
+  // convention set on the capture-form node by createLegalProcessDraft.
+  const emailCategory: 'form' | 'documents' | 'other' =
+    cfg.email_template === 'client_form_email' ? 'form' : cfg.attach_enabled ? 'documents' : 'other';
 
   const to = substituteVars(cfg.to ?? '', context).trim();
   const subject = substituteVars(cfg.subject ?? '(Sin asunto)', context);
 
   if (!to) {
     return { status: 'failed', output: {}, error: 'Campo "to" vacío o sin resolver' };
+  }
+
+  const requiresReceipt = Boolean(cfg.attach_enabled && cfg.requires_document_receipt);
+
+  // ── Attachments require the client to upload signed copies back — reuse the
+  //    same signature-portal flow as send_documents instead of a plain attachment.
+  if (requiresReceipt) {
+    const selectedIds = (context.previousOutput?.selected_document_ids as string[] | undefined) ?? [];
+    if (selectedIds.length === 0) {
+      return { status: 'waiting', output: { waitingFor: 'document_attachment_selection' } };
+    }
+
+    const { data: docsData } = await (supabase as SupabaseClient & Record<string, unknown>)
+      .from('generated_documents')
+      .select('id, file_url, document_name')
+      .eq('legal_process_id', context.legalProcess.id)
+      .eq('is_preview', false)
+      .in('id', selectedIds) as {
+        data: { id: string; file_url: string; document_name: string }[] | null;
+      };
+    const docs: SignatureDoc[] = (docsData ?? []).map((d) => ({ id: d.id, document_name: d.document_name, file_url: d.file_url }));
+
+    if (docs.length === 0) {
+      return { status: 'failed', output: {}, error: 'No se encontraron documentos generados para adjuntar' };
+    }
+
+    const { accessToken, accessTokenExpiresAt, signUrl } = buildSignatureAccessLink();
+    const enrichedContext: typeof context = {
+      ...context,
+      previousOutput: { ...context.previousOutput, sign_url: signUrl, document_count: docs.length },
+    };
+    const fallback = `Tiene ${docs.length} documento(s) legales que requieren su firma.`;
+    const introHtml = substituteVars(resolveBodyHtml(cfg.body ?? fallback), enrichedContext);
+
+    const { requestId } = await createSignatureRequestAndSend(supabase, context, {
+      to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
+    });
+
+    void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
+      organization_id: context.legalProcess.organization_id,
+      user_id: context.legalProcess.lawyer_id,
+      action: 'signature_request_sent',
+      entity: 'legal_process',
+      entity_id: context.legalProcess.id,
+      metadata: {
+        to,
+        subject,
+        document_count: docs.length,
+        email_category: 'documents',
+        signature_request_id: requestId,
+        workflow_run_id: context.workflowRun.id,
+        node_title: node.title,
+      },
+    });
+
+    trackFollowUpIfEnabled(supabase, node, context, {
+      to,
+      trackFollowUp: cfg.track_follow_up,
+      followUpValue: cfg.follow_up_value,
+      followUpUnit: cfg.follow_up_unit,
+      resolutionMode: 'receipt',
+      requiresReceipt: true,
+      signatureRequestId: requestId,
+    });
+
+    return {
+      status: 'completed',
+      output: {
+        sent_to: to,
+        subject,
+        email_category: 'documents',
+        signature_request_id: requestId,
+        document_count: docs.length,
+        sent_at: new Date().toISOString(),
+      },
+    };
   }
 
   // Extract form_url from context — it becomes the CTA button only when the process is still in draft
@@ -349,7 +552,7 @@ async function executeSendEmail(
     }
   }
 
-  await sendEmail(to, subject, bodyHtml, attachments.length ? attachments : undefined, formUrl);
+  await sendEmail(context.legalProcess.organization_id, to, subject, bodyHtml, attachments.length ? attachments : undefined, formUrl);
 
   void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
     organization_id: context.legalProcess.organization_id,
@@ -361,9 +564,19 @@ async function executeSendEmail(
       to,
       subject,
       attachments_count: attachments.length,
+      email_category: emailCategory,
       workflow_run_id: context.workflowRun.id,
       node_title: node.title,
     },
+  });
+
+  trackFollowUpIfEnabled(supabase, node, context, {
+    to,
+    trackFollowUp: cfg.track_follow_up,
+    followUpValue: cfg.follow_up_value,
+    followUpUnit: cfg.follow_up_unit,
+    resolutionMode: 'reply',
+    requiresReceipt: false,
   });
 
   return {
@@ -371,6 +584,7 @@ async function executeSendEmail(
     output: {
       sent_to: to,
       subject,
+      email_category: emailCategory,
       sent_at: new Date().toISOString(),
     },
   };
@@ -436,6 +650,7 @@ async function executeNotifyLawyer(
     if (lawyer?.email) {
       const name = [lawyer.firstname, lawyer.lastname].filter(Boolean).join(' ') || 'Abogado';
       await sendEmail(
+        context.legalProcess.organization_id,
         lawyer.email,
         `Actualización de proceso — ${node.title}`,
         `<p>Hola <strong>${name}</strong>,</p>
@@ -451,6 +666,7 @@ async function executeNotifyLawyer(
   // ── Email to client ────────────────────────────────────────────────────────
   if (notifyClient && context.legalProcess.email) {
     await sendEmail(
+      context.legalProcess.organization_id,
       context.legalProcess.email,
       'Actualización de tu proceso legal',
       `<p>${resolvedMessage.replace(/\n/g, '<br>')}</p>`,
@@ -974,30 +1190,28 @@ async function executeGenerateDocument(
 }
 
 // ─── send_documents ───────────────────────────────────────────────────────────
-// Sends an email to the client with the generated document URL.
-// The URL is taken from the previous node's output (output.file_url).
+// Creates a document_signature_requests row (+ one document_signature_items row
+// per document) and emails the client a link to the OTP-gated signature portal
+// (app/[locale]/(public)/legal-process/sign-documents/[id]) where they upload
+// the signed files back. Documents come from context.previousOutput either as
+// `selected_document_ids` (multi-document fan-out, same convention as send_email's
+// attach_enabled) or, for backwards compatibility with older workflows, a single
+// `file_url` from a preceding generate_document node.
 
 async function executeSendDocuments(
   node: WorkflowNodeRow,
   context: ExecutionContext,
   supabase: SupabaseClient,
 ): Promise<NodeResult> {
+  const db = supabase as SupabaseClient & Record<string, unknown>;
   const cfg = node.config as { to?: string; subject?: string; body?: unknown };
 
   const toRaw = cfg.to ?? '';
   const to = substituteVars(toRaw, context).trim();
-  const subject = substituteVars(cfg.subject ?? 'Sus documentos legales están listos', context);
-
-  // Inject the document URL from the previous generate_document step
-  const documentUrl = String(context.previousOutput.file_url ?? '');
-  const enrichedContext: typeof context = {
-    ...context,
-    previousOutput: { ...context.previousOutput, document_url: documentUrl },
-  };
+  const subject = substituteVars(cfg.subject ?? 'Debe firmar sus documentos legales', context);
 
   logger.info('send_documents node starting', {
     subject,
-    hasDocumentUrl: !!documentUrl,
     previousOutputKeys: Object.keys(context.previousOutput),
     nodeId: node.node_id,
   });
@@ -1012,31 +1226,78 @@ async function executeSendDocuments(
     return { status: 'failed', output: {}, error: err };
   }
 
-  if (!documentUrl) {
-    const err = 'No se encontró file_url en el output del nodo anterior (generate_document debe preceder a send_documents)';
-    logger.error('send_documents: missing document URL from previous node', undefined, {
+  // Resolve the documents to send: either an explicit multi-selection from
+  // the previous node's output, or the single file_url a generate_document
+  // node has always produced (kept for backwards compatibility).
+  const selectedIds = (context.previousOutput?.selected_document_ids as string[] | undefined) ?? [];
+  let docs: SignatureDoc[] = [];
+
+  if (selectedIds.length > 0) {
+    const { data: generatedDocs } = await db
+      .from('generated_documents')
+      .select('id, file_url, document_name')
+      .eq('legal_process_id', context.legalProcess.id)
+      .eq('is_preview', false)
+      .in('id', selectedIds) as {
+        data: { id: string; file_url: string; document_name: string }[] | null;
+      };
+    docs = (generatedDocs ?? []).map((d) => ({ id: d.id, document_name: d.document_name, file_url: d.file_url }));
+  } else {
+    const documentUrl = String(context.previousOutput.file_url ?? '');
+    const documentName = String(context.previousOutput.document_name ?? 'Documento');
+    const documentId = context.previousOutput.document_id ? String(context.previousOutput.document_id) : null;
+    if (documentUrl) docs = [{ id: documentId, document_name: documentName, file_url: documentUrl }];
+  }
+
+  if (docs.length === 0) {
+    const err = 'No hay documentos para enviar a firma (generate_document debe preceder a send_documents)';
+    logger.error('send_documents: no documents resolved from previous node', undefined, {
       nodeId: node.node_id,
       processId: context.legalProcess.id,
     });
     return { status: 'failed', output: {}, error: err };
   }
 
-  const fallback = 'Sus documentos están disponibles en: {output.document_url}';
-  const bodyHtml = substituteVars(resolveBodyHtml(cfg.body ?? fallback), enrichedContext);
-  logger.debug('Sending documents email', { subject, nodeId: node.node_id });
-  await sendEmail(to, subject, bodyHtml);
+  if (!context.legalProcess.organization_id) {
+    return { status: 'failed', output: {}, error: 'El proceso legal no tiene organization_id' };
+  }
 
-  void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
+  // ── Build the intro text (customizable via node config, same as any other
+  //    email node) ahead of creating the request, so the exact subject/intro
+  //    that go out on this first send can be persisted verbatim — the manual
+  //    resend action (signature-actions.ts) reads them back so it reproduces
+  //    this exact email instead of reconstructing generic default text.
+  const { accessToken, accessTokenExpiresAt, signUrl } = buildSignatureAccessLink();
+  const enrichedContext: typeof context = {
+    ...context,
+    previousOutput: { ...context.previousOutput, sign_url: signUrl, document_count: docs.length },
+  };
+  const fallback = `Tiene ${docs.length} documento(s) legales que requieren su firma.`;
+  const introHtml = substituteVars(resolveBodyHtml(cfg.body ?? fallback), enrichedContext);
+
+  logger.debug('Sending signature request email', { subject, nodeId: node.node_id, documentCount: docs.length });
+
+  let requestId: string;
+  try {
+    ({ requestId } = await createSignatureRequestAndSend(supabase, context, {
+      to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
+    }));
+  } catch (err) {
+    return { status: 'failed', output: {}, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  void db.from('audit_logs').insert({
     organization_id: context.legalProcess.organization_id,
     user_id: context.legalProcess.lawyer_id,
-    action: 'email_sent',
+    action: 'signature_request_sent',
     entity: 'legal_process',
     entity_id: context.legalProcess.id,
     metadata: {
       to,
       subject,
-      document_url: documentUrl,
-      type: 'send_documents',
+      document_count: docs.length,
+      email_category: 'documents',
+      signature_request_id: requestId,
       workflow_run_id: context.workflowRun.id,
       node_title: node.title,
     },
@@ -1047,7 +1308,8 @@ async function executeSendDocuments(
     output: {
       sent_to: to,
       subject,
-      document_url: documentUrl,
+      signature_request_id: requestId,
+      document_count: docs.length,
       sent_at: new Date().toISOString(),
     },
   };

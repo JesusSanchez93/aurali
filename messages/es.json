@@ -55,7 +55,8 @@
       "banks": "Bancos",
       "document_types": "Tipos de Documento",
       "ai_variables": "Variables IA",
-      "formats": "Plantillas de Documentos"
+      "formats": "Plantillas de Documentos",
+      "email_settings": "Correo electrónico"
     },
     "upload": {
       "click_to_upload": "Haz clic para subir un documento",
@@ -348,6 +349,9 @@
       "badge_error": "Error",
       "system_user": "Sistema",
       "unknown_user": "Usuario desconocido",
+      "resend_button": "Reenviar",
+      "resend_success": "Email reenviado correctamente",
+      "resend_error": "No se pudo reenviar el email",
       "audit_actions": {
         "process_created": "Proceso creado",
         "workflow_started": "Flujo iniciado",
@@ -417,6 +421,36 @@
       "edit_title_fallback": "Editar documento",
       "save_success": "Documento actualizado",
       "save_error_fallback": "Error al guardar el documento"
+    },
+    "signature_review": {
+      "title": "Documentos firmados por el cliente",
+      "btn_view": "Ver",
+      "btn_approve": "Aprobar",
+      "btn_reject": "Rechazar",
+      "approve_success": "Documento aprobado",
+      "reject_success": "Documento rechazado",
+      "action_error": "Ocurrió un error al procesar la acción",
+      "rejection_reason_label": "Motivo del rechazo",
+      "status": {
+        "pending": "Esperando al cliente",
+        "otp_sent": "Esperando al cliente",
+        "verified": "Esperando al cliente",
+        "uploaded": "Por revisar",
+        "approved": "Aprobado",
+        "rejected": "Rechazado"
+      },
+      "reject_dialog": {
+        "title": "Rechazar documento firmado",
+        "description": "El cliente será notificado por correo y podrá volver a subir el documento.",
+        "reason_label": "Motivo (opcional)",
+        "reason_placeholder": "Describe qué debe corregir el cliente...",
+        "confirm": "Rechazar"
+      }
+    },
+    "follow_up": {
+      "title": "Seguimiento de correos",
+      "waiting": "Esperando respuesta",
+      "overdue": "Seguimiento vencido"
     }
   },
   "clients": {
@@ -927,7 +961,14 @@
       "email_subject_placeholder": "Asunto del correo",
       "email_body_label": "Cuerpo del correo",
       "email_save_success": "Correo actualizado",
-      "email_save_error": "Error al guardar"
+      "email_save_error": "Error al guardar",
+      "follow_up_section_title": "Seguimiento",
+      "follow_up_value_label": "Vencer seguimiento después de",
+      "follow_up_unit_label": "Unidad",
+      "reminder_count_label": "Cantidad de recordatorios a enviar al cliente",
+      "reminder_subject_label": "Asunto del recordatorio",
+      "reminder_subject_placeholder": "Asunto del correo de recordatorio",
+      "reminder_body_label": "Cuerpo del recordatorio"
     },
     "header_footer": {
       "align_left": "Alinear a la izquierda",

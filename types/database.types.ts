@@ -450,6 +450,181 @@ export type Database = {
           },
         ]
       }
+      document_signature_items: {
+        Row: {
+          created_at: string
+          document_name: string
+          generated_document_id: string | null
+          id: string
+          organization_id: string
+          original_file_url: string | null
+          rejection_reason: string | null
+          request_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          signed_file_url: string | null
+          signed_storage_path: string | null
+          status: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_name: string
+          generated_document_id?: string | null
+          id?: string
+          organization_id: string
+          original_file_url?: string | null
+          rejection_reason?: string | null
+          request_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signed_file_url?: string | null
+          signed_storage_path?: string | null
+          status?: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_name?: string
+          generated_document_id?: string | null
+          id?: string
+          organization_id?: string
+          original_file_url?: string | null
+          rejection_reason?: string | null
+          request_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signed_file_url?: string | null
+          signed_storage_path?: string | null
+          status?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signature_items_generated_document_id_fkey"
+            columns: ["generated_document_id"]
+            isOneToOne: false
+            referencedRelation: "generated_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signature_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signature_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "document_signature_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signature_items_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_signature_requests: {
+        Row: {
+          access_token: string
+          access_token_expires_at: string
+          access_token_used: boolean
+          client_email: string
+          created_at: string
+          created_by: string | null
+          email_intro_html: string | null
+          email_subject: string | null
+          id: string
+          legal_process_id: string
+          organization_id: string
+          otp_attempts: number
+          otp_code_hash: string | null
+          otp_expires_at: string | null
+          otp_verified_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          access_token_expires_at: string
+          access_token_used?: boolean
+          client_email: string
+          created_at?: string
+          created_by?: string | null
+          email_intro_html?: string | null
+          email_subject?: string | null
+          id?: string
+          legal_process_id: string
+          organization_id: string
+          otp_attempts?: number
+          otp_code_hash?: string | null
+          otp_expires_at?: string | null
+          otp_verified_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          access_token_expires_at?: string
+          access_token_used?: boolean
+          client_email?: string
+          created_at?: string
+          created_by?: string | null
+          email_intro_html?: string | null
+          email_subject?: string | null
+          id?: string
+          legal_process_id?: string
+          organization_id?: string
+          otp_attempts?: number
+          otp_code_hash?: string | null
+          otp_expires_at?: string | null
+          otp_verified_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signature_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signature_requests_legal_process_id_fkey"
+            columns: ["legal_process_id"]
+            isOneToOne: false
+            referencedRelation: "legal_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signature_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signature_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_templates: {
         Row: {
           created_at: string
@@ -528,6 +703,164 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_connections: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          created_by: string | null
+          display_name: string | null
+          email: string
+          error_message: string | null
+          id: string
+          organization_id: string
+          provider: string
+          refresh_token: string | null
+          smtp_host: string | null
+          smtp_password_encrypted: string | null
+          smtp_port: number | null
+          smtp_security: string | null
+          smtp_username: string | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email: string
+          error_message?: string | null
+          id?: string
+          organization_id: string
+          provider: string
+          refresh_token?: string | null
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_security?: string | null
+          smtp_username?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string | null
+          email?: string
+          error_message?: string | null
+          id?: string
+          organization_id?: string
+          provider?: string
+          refresh_token?: string | null
+          smtp_host?: string | null
+          smtp_password_encrypted?: string | null
+          smtp_port?: number | null
+          smtp_security?: string | null
+          smtp_username?: string | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_connections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_follow_ups: {
+        Row: {
+          created_at: string
+          deadline_at: string
+          id: string
+          legal_process_id: string
+          node_id: string
+          organization_id: string
+          requires_receipt: boolean
+          resolution_mode: string
+          resolved_at: string | null
+          signature_request_id: string | null
+          status: string
+          to_email: string
+          updated_at: string
+          workflow_run_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          deadline_at: string
+          id?: string
+          legal_process_id: string
+          node_id: string
+          organization_id: string
+          requires_receipt?: boolean
+          resolution_mode: string
+          resolved_at?: string | null
+          signature_request_id?: string | null
+          status?: string
+          to_email: string
+          updated_at?: string
+          workflow_run_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          deadline_at?: string
+          id?: string
+          legal_process_id?: string
+          node_id?: string
+          organization_id?: string
+          requires_receipt?: boolean
+          resolution_mode?: string
+          resolved_at?: string | null
+          signature_request_id?: string | null
+          status?: string
+          to_email?: string
+          updated_at?: string
+          workflow_run_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_follow_ups_legal_process_id_fkey"
+            columns: ["legal_process_id"]
+            isOneToOne: false
+            referencedRelation: "legal_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_follow_ups_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_follow_ups_signature_request_id_fkey"
+            columns: ["signature_request_id"]
+            isOneToOne: false
+            referencedRelation: "document_signature_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_follow_ups_workflow_run_id_fkey"
+            columns: ["workflow_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -2051,4 +2384,3 @@ export const Constants = {
     },
   },
 } as const
-

@@ -861,6 +861,23 @@ export interface WorkflowStepEntry {
   created_at: string;
   executed_at: string | null;
   output: Record<string, unknown>;
+  /** Only set for send_email/send_documents nodes — see resolveEmailCategory. */
+  email_category: 'form' | 'documents' | 'other' | null;
+}
+
+/**
+ * Mirrors the categorization executeSendEmail applies when it actually sends
+ * (lib/workflow/nodeExecutors.ts) so the timeline can decide whether a past
+ * send_email/send_documents step is resendable — computed from the node's
+ * current config rather than the step's stored output, so it works for steps
+ * that ran before this field existed too.
+ */
+function resolveEmailCategory(nodeType: string, nodeConfig: Record<string, unknown> | null): 'form' | 'documents' | 'other' | null {
+  if (nodeType === 'send_documents') return 'documents';
+  if (nodeType !== 'send_email') return null;
+  if (nodeConfig?.email_template === 'client_form_email') return 'form';
+  if (nodeConfig?.attach_enabled) return 'documents';
+  return 'other';
 }
 
 /**
@@ -895,12 +912,12 @@ export async function getProcessWorkflowSteps(legalProcessId: string): Promise<W
 
   if (error || !steps || steps.length === 0) return [];
 
-  // Load node metadata (title, type) for all nodes in this template
+  // Load node metadata (title, type, config) for all nodes in this template
   const { data: nodes } = await (supabase as any)
     .from('workflow_nodes')
-    .select('node_id, title, type')
+    .select('node_id, title, type, config')
     .eq('template_id', run.template_id) as {
-      data: { node_id: string; title: string; type: string }[] | null;
+      data: { node_id: string; title: string; type: string; config: Record<string, unknown> | null }[] | null;
     };
 
   const nodeMap = Object.fromEntries((nodes ?? []).map((n) => [n.node_id, n]));
@@ -912,6 +929,7 @@ export async function getProcessWorkflowSteps(legalProcessId: string): Promise<W
       node_id:     step.node_id,
       node_title:  node?.title ?? step.node_id,
       node_type:   node?.type  ?? 'unknown',
+      email_category: resolveEmailCategory(node?.type ?? '', node?.config ?? null),
       status:      step.status,
       created_at:  step.created_at,
       executed_at: step.executed_at,
@@ -1275,42 +1293,21 @@ export async function resendDraftEmail(legalProcessId: string): Promise<void> {
   const toEmail = clientRecord?.email ?? lp.email;
   if (!toEmail) throw new Error('No se encontró un email de destinatario');
 
-  // Fetch org name for email branding
-  const { data: org } = await (supabase as unknown as { from: (t: string) => { select: (s: string) => { eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: { name: string | null } | null }> } } } })
-    .from('organizations')
-    .select('name')
-    .eq('id', lp.organization_id ?? '')
-    .maybeSingle();
-
-  const orgName = org?.name ?? 'Aurali Legal';
   const firstName = clientRecord?.first_name ?? '';
   const greeting = firstName ? `Hola, ${firstName}` : 'Hola';
 
   const bodyHtml = `<p>${greeting},</p><p>Te recordamos que tienes un proceso legal pendiente de iniciar. Por favor ingresa al siguiente enlace para completar tu información y dar inicio a tu proceso.</p>`;
 
-  const { resend } = await import('@/lib/resend');
-  const React = await import('react');
-  const { render } = await import('@react-email/render');
-  const { WorkflowEmail } = await import('@/emails/WorkflowEmail');
+  if (!lp.organization_id) throw new Error('El proceso legal no tiene organization_id');
 
-  const html = await render(
-    React.createElement(WorkflowEmail, {
-      bodyHtml,
-      ctaUrl: formUrl,
-      ctaLabel: 'Completar formulario →',
-      subject: 'Tu proceso legal está listo para iniciarse',
-      theme: { orgName },
-    }),
-  );
-
-  const { error: emailError } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL ?? 'noreply@aurali.app',
+  const { sendOrgEmail } = await import('@/lib/email/sendOrgEmail');
+  await sendOrgEmail(lp.organization_id, {
     to: toEmail,
     subject: 'Tu proceso legal está listo para iniciarse',
-    html,
+    bodyHtml,
+    ctaUrl: formUrl,
+    ctaLabel: 'Completar formulario →',
   });
-
-  if (emailError) throw new Error(`Error al enviar el email: ${(emailError as { message: string }).message}`);
 
   void supabase.from('audit_logs').insert({
     organization_id: lp.organization_id,
@@ -1318,7 +1315,7 @@ export async function resendDraftEmail(legalProcessId: string): Promise<void> {
     action: 'email_resent',
     entity: 'legal_process',
     entity_id: legalProcessId,
-    metadata: { to: toEmail, source: 'manual_resend' },
+    metadata: { to: toEmail, email_category: 'form', source: 'manual_resend' },
   });
 }
 
