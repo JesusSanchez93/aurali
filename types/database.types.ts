@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -696,6 +716,9 @@ export type Database = {
           email: string
           error_message: string | null
           id: string
+          imap_host: string | null
+          imap_port: number | null
+          imap_security: string | null
           organization_id: string
           provider: string
           refresh_token: string | null
@@ -716,6 +739,9 @@ export type Database = {
           email: string
           error_message?: string | null
           id?: string
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_security?: string | null
           organization_id: string
           provider: string
           refresh_token?: string | null
@@ -736,6 +762,9 @@ export type Database = {
           email?: string
           error_message?: string | null
           id?: string
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_security?: string | null
           organization_id?: string
           provider?: string
           refresh_token?: string | null
@@ -767,14 +796,15 @@ export type Database = {
       }
       email_follow_ups: {
         Row: {
+          capture_mode: string
           created_at: string
           deadline_at: string
           id: string
-          last_reminder_sent_at: string | null
           legal_process_id: string
           node_id: string
           organization_id: string
-          reminder_sent_count: number
+          reply_token: string | null
+          requires_attachments: boolean
           requires_receipt: boolean
           resolution_mode: string
           resolved_at: string | null
@@ -785,14 +815,15 @@ export type Database = {
           workflow_run_id: string | null
         }
         Insert: {
+          capture_mode?: string
           created_at?: string
           deadline_at: string
           id?: string
-          last_reminder_sent_at?: string | null
           legal_process_id: string
           node_id: string
           organization_id: string
-          reminder_sent_count?: number
+          reply_token?: string | null
+          requires_attachments?: boolean
           requires_receipt?: boolean
           resolution_mode: string
           resolved_at?: string | null
@@ -803,14 +834,15 @@ export type Database = {
           workflow_run_id?: string | null
         }
         Update: {
+          capture_mode?: string
           created_at?: string
           deadline_at?: string
           id?: string
-          last_reminder_sent_at?: string | null
           legal_process_id?: string
           node_id?: string
           organization_id?: string
-          reminder_sent_count?: number
+          reply_token?: string | null
+          requires_attachments?: boolean
           requires_receipt?: boolean
           resolution_mode?: string
           resolved_at?: string | null
@@ -1224,6 +1256,105 @@ export type Database = {
           },
         ]
       }
+      legal_process_email_attachments: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          email_follow_up_id: string
+          file_url: string | null
+          filename: string
+          id: string
+          legal_process_id: string
+          matched_document_id: string | null
+          notified_at: string | null
+          organization_id: string
+          received_at: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          size_bytes: number | null
+          status: string
+          storage_path: string
+          subject: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          email_follow_up_id: string
+          file_url?: string | null
+          filename: string
+          id?: string
+          legal_process_id: string
+          matched_document_id?: string | null
+          notified_at?: string | null
+          organization_id: string
+          received_at?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          size_bytes?: number | null
+          status?: string
+          storage_path: string
+          subject?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          email_follow_up_id?: string
+          file_url?: string | null
+          filename?: string
+          id?: string
+          legal_process_id?: string
+          matched_document_id?: string | null
+          notified_at?: string | null
+          organization_id?: string
+          received_at?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          size_bytes?: number | null
+          status?: string
+          storage_path?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_process_email_attachments_email_follow_up_id_fkey"
+            columns: ["email_follow_up_id"]
+            isOneToOne: false
+            referencedRelation: "email_follow_ups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_email_attachments_legal_process_id_fkey"
+            columns: ["legal_process_id"]
+            isOneToOne: false
+            referencedRelation: "legal_processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_email_attachments_matched_document_id_fkey"
+            columns: ["matched_document_id"]
+            isOneToOne: false
+            referencedRelation: "generated_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_email_attachments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_email_attachments_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       legal_process_fees: {
         Row: {
           created_at: string
@@ -1271,6 +1402,182 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_process_form_instances: {
+        Row: {
+          code: string
+          created_at: string
+          form_schema_id: string
+          id: string
+          label: string | null
+          legal_process_id: string
+          position: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          form_schema_id: string
+          id?: string
+          label?: string | null
+          legal_process_id: string
+          position?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          form_schema_id?: string
+          id?: string
+          label?: string | null
+          legal_process_id?: string
+          position?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_process_form_instances_form_schema_id_fkey"
+            columns: ["form_schema_id"]
+            isOneToOne: false
+            referencedRelation: "legal_process_form_schemas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_form_instances_legal_process_id_fkey"
+            columns: ["legal_process_id"]
+            isOneToOne: false
+            referencedRelation: "legal_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_process_form_responses: {
+        Row: {
+          created_at: string
+          data: Json
+          form_instance_id: string | null
+          form_schema_id: string | null
+          id: string
+          legal_process_id: string
+          section_key: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          form_instance_id?: string | null
+          form_schema_id?: string | null
+          id?: string
+          legal_process_id: string
+          section_key: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          form_instance_id?: string | null
+          form_schema_id?: string | null
+          id?: string
+          legal_process_id?: string
+          section_key?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_process_form_responses_form_instance_id_fkey"
+            columns: ["form_instance_id"]
+            isOneToOne: false
+            referencedRelation: "legal_process_form_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_form_responses_form_schema_id_fkey"
+            columns: ["form_schema_id"]
+            isOneToOne: false
+            referencedRelation: "legal_process_form_schemas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_form_responses_legal_process_id_fkey"
+            columns: ["legal_process_id"]
+            isOneToOne: false
+            referencedRelation: "legal_processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_process_form_schemas: {
+        Row: {
+          code: string
+          created_at: string
+          domain_sync_key: string | null
+          id: string
+          is_published: boolean
+          name: string
+          organization_id: string | null
+          schema: Json
+          updated_at: string
+          updated_by: string | null
+          version: number
+          workflow_template_id: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          domain_sync_key?: string | null
+          id?: string
+          is_published?: boolean
+          name?: string
+          organization_id?: string | null
+          schema?: Json
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          workflow_template_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          domain_sync_key?: string | null
+          id?: string
+          is_published?: boolean
+          name?: string
+          organization_id?: string | null
+          schema?: Json
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          workflow_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_process_form_schemas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_form_schemas_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_process_form_schemas_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1353,6 +1660,7 @@ export type Database = {
           document_number: string | null
           document_type: string | null
           email: string | null
+          form_schema_id: string | null
           id: string
           lawyer_id: string | null
           organization_id: string | null
@@ -1372,6 +1680,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string | null
           email?: string | null
+          form_schema_id?: string | null
           id?: string
           lawyer_id?: string | null
           organization_id?: string | null
@@ -1391,6 +1700,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string | null
           email?: string | null
+          form_schema_id?: string | null
           id?: string
           lawyer_id?: string | null
           organization_id?: string | null
@@ -1413,6 +1723,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_processes_form_schema_id_fkey"
+            columns: ["form_schema_id"]
+            isOneToOne: false
+            referencedRelation: "legal_process_form_schemas"
             referencedColumns: ["id"]
           },
           {
@@ -2091,6 +2408,7 @@ export type Database = {
           icon_svg: string | null
           id: string
           is_default: boolean
+          is_legacy_form: boolean
           name: string
           organization_id: string | null
           updated_at: string
@@ -2103,6 +2421,7 @@ export type Database = {
           icon_svg?: string | null
           id?: string
           is_default?: boolean
+          is_legacy_form?: boolean
           name: string
           organization_id?: string | null
           updated_at?: string
@@ -2115,6 +2434,7 @@ export type Database = {
           icon_svg?: string | null
           id?: string
           is_default?: boolean
+          is_legacy_form?: boolean
           name?: string
           organization_id?: string | null
           updated_at?: string
@@ -2165,6 +2485,7 @@ export type Database = {
         | "client_form"
         | "notify_lawyer"
         | "send_documents"
+        | "wait_email_reply"
       workflow_run_status:
         | "pending"
         | "running"
@@ -2204,12 +2525,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2233,11 +2554,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2258,11 +2579,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2283,11 +2604,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2300,11 +2621,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2314,6 +2635,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       workflow_node_type: [
@@ -2336,6 +2660,7 @@ export const Constants = {
         "client_form",
         "notify_lawyer",
         "send_documents",
+        "wait_email_reply",
       ],
       workflow_run_status: [
         "pending",
@@ -2367,3 +2692,4 @@ export const Constants = {
     },
   },
 } as const
+
