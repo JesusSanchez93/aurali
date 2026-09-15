@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Link } from '@/i18n/routing'
 import { getGlobalWorkflows } from './actions'
 import { WorkflowCard } from './_components/workflow-card'
+import { ImportWorkflowButton } from './_components/import-workflow-button'
 
 export default async function AdminWorkflowsPage() {
   const workflows = await getGlobalWorkflows()
 
   return (
-    <div className="space-y-6 px-6 py-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-6 py-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Flujos de trabajo</h1>
@@ -16,12 +17,15 @@ export default async function AdminWorkflowsPage() {
             Gestiona los flujos globales disponibles para todas las organizaciones.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/workflows/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo flujo
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <ImportWorkflowButton />
+          <Button asChild>
+            <Link href="/admin/workflows/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Nuevo flujo
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {workflows.length === 0 ? (
@@ -32,8 +36,8 @@ export default async function AdminWorkflowsPage() {
         </div>
       ) : (
         <div className="flex flex-wrap items-stretch gap-4">
-          {workflows.map((wf) => (
-            <WorkflowCard key={wf.id} wf={wf} />
+          {workflows.map((wf, index) => (
+            <WorkflowCard key={wf.id} wf={wf} index={index} />
           ))}
         </div>
       )}

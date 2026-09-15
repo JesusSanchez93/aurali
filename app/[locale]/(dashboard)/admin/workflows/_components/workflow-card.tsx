@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
+import { motion } from 'framer-motion'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,12 +17,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Link } from '@/i18n/routing'
+import { Link, useRouter } from '@/i18n/routing'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Loader2, Pencil, Trash2, Upload, Workflow } from 'lucide-react'
+import { Copy, Download, Loader2, Pencil, Trash2, Upload, Workflow } from 'lucide-react'
 import { toast } from '@/lib/toast'
-import { deleteGlobalWorkflow, updateGlobalWorkflow } from '../actions'
+import { deleteGlobalWorkflow, duplicateGlobalWorkflow, exportWorkflow, updateGlobalWorkflow } from '../actions'
 import { sanitizeSvg } from '@/lib/sanitize-svg'
 
 export type WorkflowItem = {
@@ -29,15 +30,19 @@ export type WorkflowItem = {
   name: string
   description: string | null
   is_default: boolean
+  is_legacy_form: boolean
   icon_svg: string | null
   gradient_color: string | null
   gradient_color_to: string | null
   created_at: string
 }
 
-export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
+export function WorkflowCard({ wf, index = 0 }: { wf: WorkflowItem; index?: number }) {
+  const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [duplicateOpen, setDuplicateOpen] = useState(false)
+  const [duplicateName, setDuplicateName] = useState('')
   const [name, setName] = useState(wf.name)
   const [description, setDescription] = useState(wf.description ?? '')
   const [iconSvg, setIconSvg] = useState(wf.icon_svg ?? '')
@@ -83,9 +88,52 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
     })
   }
 
+  function handleExport() {
+    startTransition(async () => {
+      try {
+        const payload = await exportWorkflow(wf.id)
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `flujo-${wf.id}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        toast.success(`"${wf.name}" exportado`)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Error al exportar el flujo')
+      }
+    })
+  }
+
+  function openDuplicate() {
+    setDuplicateName(`${wf.name} v2`)
+    setDuplicateOpen(true)
+  }
+
+  function handleDuplicate() {
+    const trimmed = duplicateName.trim()
+    if (!trimmed) return
+    startTransition(async () => {
+      try {
+        const { id } = await duplicateGlobalWorkflow(wf.id, trimmed)
+        toast.success('Flujo duplicado')
+        setDuplicateOpen(false)
+        router.push(`/admin/workflows/${id}/builder`)
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Error al duplicar')
+      }
+    })
+  }
+
   return (
     <>
-      <div className="group relative flex w-56 flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: Math.min(index, 10) * 0.05, ease: [0.16, 1, 0.3, 1] }}
+        className="group relative flex w-56 flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
+      >
 
         {/* Top half — icon zone */}
         <div
@@ -136,6 +184,28 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
               type="button"
               variant="ghost"
               size="sm"
+              className="h-7 w-7 rounded-lg bg-background/60 p-0 text-muted-foreground backdrop-blur-sm hover:bg-background hover:text-foreground"
+              onClick={openDuplicate}
+              disabled={isPending}
+              title="Duplicar flujo"
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 rounded-lg bg-background/60 p-0 text-muted-foreground backdrop-blur-sm hover:bg-background hover:text-foreground"
+              onClick={handleExport}
+              disabled={isPending}
+              title="Exportar flujo"
+            >
+              <Download className="h-3 w-3" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               className="h-7 w-7 rounded-lg bg-background/60 p-0 text-muted-foreground backdrop-blur-sm hover:bg-destructive/20 hover:text-destructive"
               onClick={() => setDeleteOpen(true)}
               disabled={isPending}
@@ -172,7 +242,7 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Delete confirmation */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
@@ -326,6 +396,48 @@ export function WorkflowCard({ wf }: { wf: WorkflowItem }) {
               <Button onClick={handleSave} disabled={isPending || !name.trim()}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Guardar cambios
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate dialog */}
+      <Dialog open={duplicateOpen} onOpenChange={setDuplicateOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Duplicar flujo de trabajo</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Se copian los nodos y conexiones de <span className="font-medium text-foreground">{wf.name}</span> a un
+              flujo nuevo e independiente, listo para tener su propio formulario dinámico.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="wf-duplicate-name">
+                Nombre del nuevo flujo <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="wf-duplicate-name"
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                placeholder="Ej. Fraudes Financieros v2"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDuplicateOpen(false)}
+                disabled={isPending}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleDuplicate} disabled={isPending || !duplicateName.trim()}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Duplicar
               </Button>
             </div>
           </div>

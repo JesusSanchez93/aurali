@@ -10,7 +10,7 @@ export default async function CatalogPage() {
   ]);
 
   return (
-    <div className="space-y-6 px-6 py-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-6 py-6">
       <div>
         <h1 className="text-2xl font-semibold">Catálogo global</h1>
         <p className="text-sm text-muted-foreground">
@@ -24,15 +24,13 @@ export default async function CatalogPage() {
           <TabsTrigger value="documents">Tipos de documento</TabsTrigger>
         </TabsList>
 
-        <div className='max-w-[900]'>
-          <TabsContent value="banks" className="mt-6">
-            <CatalogBanksSection initialBanks={banks} documentTypes={documents} />
-          </TabsContent>
+        <TabsContent value="banks" className="mt-6">
+          <CatalogBanksSection initialBanks={banks} documentTypes={documents} />
+        </TabsContent>
 
-          <TabsContent value="documents" className="mt-6">
-            <CatalogDocumentsSection initialDocuments={documents} />
-          </TabsContent>
-        </div>
+        <TabsContent value="documents" className="mt-6">
+          <CatalogDocumentsSection initialDocuments={documents} />
+        </TabsContent>
       </Tabs>
     </div>
   );

@@ -1,22 +1,38 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, EyeOff, Eye, Search, Pencil } from 'lucide-react';
+import { Plus, Trash2, EyeOff, Eye, Search, Pencil, MoreVertical, Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
+import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { addCatalogDocument, updateCatalogDocument, deleteCatalogDocument, toggleCatalogDocument } from '../actions';
 import Sheet from '@/components/common/sheet';
-import { ConfirmDialog } from '@/components/common/confirm-dialog';
 
 type Doc = { id: string; slug: string; name: { es?: string; en?: string }; is_active: boolean };
+
+type Stage = 'idle' | 'actions' | 'confirm';
+
+// Mismo patrón de 3 etapas kebab→acciones→confirmar usado en
+// settings/banks/_components/banks-section.tsx.
+const stageVariants: Variants = {
+  enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0, pointerEvents: 'none' }),
+  center: { x: 0, opacity: 1, pointerEvents: 'auto', transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } },
+  exit: (dir: number) => ({
+    x: dir > 0 ? -24 : 24,
+    opacity: 0,
+    pointerEvents: 'none',
+    transition: { duration: 0.14, ease: 'easeIn' },
+  }),
+};
 
 const schema = z.object({
   slug:   z.string().min(1, 'El código es requerido').trim(),
@@ -31,9 +47,65 @@ export function CatalogDocumentsSection({ initialDocuments }: { initialDocuments
   const [search, setSearch] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Doc | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Doc | null>(null);
   const [isSubmitting, startSubmit] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [stage, setStage] = useState<Stage>('idle');
+  const [direction, setDirection] = useState<1 | -1>(1);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const handler = (e: MouseEvent) => {
+      const row = (e.target as HTMLElement).closest(`[data-catalog-doc-row="${activeId}"]`);
+      if (!row) {
+        setActiveId(null);
+        setStage('idle');
+        setDirection(-1);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [activeId]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (stage === 'confirm') {
+        setStage('actions');
+        setDirection(-1);
+      } else {
+        setActiveId(null);
+        setStage('idle');
+        setDirection(-1);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [activeId, stage]);
+
+  const openActions = (id: string) => {
+    setActiveId(id);
+    setStage('actions');
+    setDirection(1);
+  };
+
+  const goConfirm = () => {
+    setStage('confirm');
+    setDirection(1);
+  };
+
+  const goBackToActions = () => {
+    setStage('actions');
+    setDirection(-1);
+  };
+
+  const closeToIdle = () => {
+    setActiveId(null);
+    setStage('idle');
+    setDirection(-1);
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -47,6 +119,7 @@ export function CatalogDocumentsSection({ initialDocuments }: { initialDocuments
   }
 
   function openEdit(doc: Doc) {
+    closeToIdle();
     setEditTarget(doc);
     form.reset({ slug: doc.slug, nameEs: doc.name.es ?? '', nameEn: doc.name.en ?? '' });
     setSheetOpen(true);
@@ -94,7 +167,11 @@ export function CatalogDocumentsSection({ initialDocuments }: { initialDocuments
     deleteCatalogDocument(id)
       .then(() => setDocuments((prev) => prev.filter((d) => d.id !== id)))
       .catch(() => toast.error('Error al eliminar documento'))
-      .finally(() => setPendingId(null));
+      .finally(() => {
+        setPendingId(null);
+        setActiveId(null);
+        setStage('idle');
+      });
   }
 
   const q = search.trim().toLowerCase();
@@ -189,76 +266,154 @@ export function CatalogDocumentsSection({ initialDocuments }: { initialDocuments
             {search.trim() ? 'No se encontraron tipos de documento.' : 'No hay tipos de documento en el catálogo.'}
           </div>
         ) : (
-          <div className="divide-y">
-            {filtered.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs font-medium">
-                    {doc.slug}
-                  </span>
-                  <span className={doc.is_active ? '' : 'text-muted-foreground line-through'}>
-                    {doc.name.es}
-                  </span>
-                  {doc.name.en && doc.name.en !== doc.name.es && (
-                    <span className="text-xs text-muted-foreground">/ {doc.name.en}</span>
+          <div className="divide-y" role="list">
+            {filtered.map((doc) => {
+              const rowStage: Stage = activeId === doc.id ? stage : 'idle';
+
+              return (
+                <div
+                  key={doc.id}
+                  data-catalog-doc-row={doc.id}
+                  role="listitem"
+                  className={cn(
+                    'flex items-center justify-between px-4 py-3 transition-colors duration-300',
+                    rowStage === 'confirm' && 'bg-gradient-to-r from-destructive/25 via-destructive/10 to-transparent',
                   )}
-                  {!doc.is_active && (
-                    <Badge variant="outline" className="text-xs text-muted-foreground">
-                      Inactivo
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground"
-                    disabled={pendingId === doc.id}
-                    onClick={() => openEdit(doc)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground"
-                    disabled={pendingId === doc.id}
-                    onClick={() => handleToggle(doc)}
-                  >
-                    {pendingId === doc.id ? (
-                      <Spinner className="h-3.5 w-3.5" />
-                    ) : doc.is_active ? (
-                      <EyeOff className="h-3.5 w-3.5" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5" />
+                >
+                  <div
+                    className={cn(
+                      'flex items-center gap-3 transition-all duration-300',
+                      rowStage === 'actions' && '-translate-x-1 opacity-50',
+                      rowStage === 'confirm' && '-translate-x-2',
                     )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    disabled={pendingId === doc.id}
-                    onClick={() => setDeleteTarget(doc)}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                    <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs font-medium">
+                      {doc.slug}
+                    </span>
+                    <span className={cn(doc.is_active ? '' : 'text-muted-foreground line-through', rowStage === 'confirm' && 'text-destructive')}>
+                      {doc.name.es}
+                    </span>
+                    {doc.name.en && doc.name.en !== doc.name.es && (
+                      <span className="text-xs text-muted-foreground">/ {doc.name.en}</span>
+                    )}
+                    {!doc.is_active && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        Inactivo
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="w-28 shrink-0 overflow-hidden">
+                    <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                      {rowStage === 'idle' && (
+                        <motion.div
+                          key="idle"
+                          custom={direction}
+                          variants={stageVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          className="flex justify-end"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            disabled={pendingId === doc.id}
+                            onClick={() => openActions(doc.id)}
+                            title="Acciones"
+                          >
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </Button>
+                        </motion.div>
+                      )}
+
+                      {rowStage === 'actions' && (
+                        <motion.div
+                          key="actions"
+                          custom={direction}
+                          variants={stageVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          className="flex justify-end gap-1"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            onClick={() => openEdit(doc)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            disabled={pendingId === doc.id}
+                            onClick={() => handleToggle(doc)}
+                            title={doc.is_active ? 'Desactivar' : 'Activar'}
+                          >
+                            {pendingId === doc.id ? (
+                              <Spinner className="h-3.5 w-3.5" />
+                            ) : doc.is_active ? (
+                              <EyeOff className="h-3.5 w-3.5" />
+                            ) : (
+                              <Eye className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={goConfirm}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </motion.div>
+                      )}
+
+                      {rowStage === 'confirm' && (
+                        <motion.div
+                          key="confirm"
+                          custom={direction}
+                          variants={stageVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          className="flex justify-end gap-1"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            disabled={pendingId === doc.id}
+                            onClick={() => handleDelete(doc.id)}
+                            title="Confirmar"
+                          >
+                            {pendingId === doc.id ? <Spinner className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            onClick={goBackToActions}
+                            title="Cancelar"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
-
-      <ConfirmDialog
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={() => deleteTarget && handleDelete(deleteTarget.id)}
-        title="Eliminar tipo de documento"
-        description={`¿Estás seguro de que deseas eliminar "${deleteTarget?.name.es}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        cancelLabel="Cancelar"
-        variant="destructive"
-      />
     </div>
   );
 }

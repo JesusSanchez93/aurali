@@ -7,7 +7,7 @@ export default async function AdminClientsPage() {
   const [clients, pendingOrgs] = await Promise.all([getAllClients(), getPendingOrganizations()])
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
       <PendingRequestsList orgs={pendingOrgs} />
 
       <div className="flex items-center gap-3">

@@ -1,21 +1,38 @@
 'use client';
 
-import { useState, useReducer, useTransition } from 'react';
+import { useState, useReducer, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, EyeOff, Eye, Search, Pencil } from 'lucide-react';
+import { Plus, Trash2, EyeOff, Eye, Search, Pencil, MoreVertical, Check, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Form } from '@/components/ui/form';
 import { FormInput } from '@/components/common/form/form-input';
 import { FormSelect } from '@/components/common/form/form-select';
+import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { addCatalogBank, updateCatalogBank, deleteCatalogBank, toggleCatalogBank } from '../actions';
 import Sheet from '@/components/common/sheet';
-import { ConfirmDialog } from '@/components/common/confirm-dialog';
+
+type Stage = 'idle' | 'actions' | 'confirm';
+
+// Mismo patrón de 3 etapas kebab→acciones→confirmar usado en
+// settings/banks/_components/banks-section.tsx — ver ese archivo para la
+// explicación completa de cada detalle (pointerEvents en variants, etc.).
+const stageVariants: Variants = {
+  enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0, pointerEvents: 'none' }),
+  center: { x: 0, opacity: 1, pointerEvents: 'auto', transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } },
+  exit: (dir: number) => ({
+    x: dir > 0 ? -24 : 24,
+    opacity: 0,
+    pointerEvents: 'none',
+    transition: { duration: 0.14, ease: 'easeIn' },
+  }),
+};
 
 type DocType = { id: string; slug: string; name: { es?: string; en?: string } };
 
@@ -43,7 +60,6 @@ type FormValues = z.infer<typeof schema>;
 type UIState = {
   sheetOpen: boolean;
   editTarget: Bank | null;
-  deleteTarget: Bank | null;
   pendingId: string | null;
 };
 
@@ -51,17 +67,15 @@ type UIAction =
   | { type: 'OPEN_ADD' }
   | { type: 'OPEN_EDIT'; bank: Bank }
   | { type: 'CLOSE_SHEET' }
-  | { type: 'SET_DELETE_TARGET'; bank: Bank | null }
   | { type: 'SET_PENDING_ID'; id: string | null };
 
-const uiInitial: UIState = { sheetOpen: false, editTarget: null, deleteTarget: null, pendingId: null };
+const uiInitial: UIState = { sheetOpen: false, editTarget: null, pendingId: null };
 
 function uiReducer(state: UIState, action: UIAction): UIState {
   switch (action.type) {
     case 'OPEN_ADD':          return { ...state, sheetOpen: true, editTarget: null };
     case 'OPEN_EDIT':         return { ...state, sheetOpen: true, editTarget: action.bank };
     case 'CLOSE_SHEET':       return { ...state, sheetOpen: false, editTarget: null };
-    case 'SET_DELETE_TARGET': return { ...state, deleteTarget: action.bank };
     case 'SET_PENDING_ID':    return { ...state, pendingId: action.id };
     default: return state;
   }
@@ -70,8 +84,65 @@ function uiReducer(state: UIState, action: UIAction): UIState {
 export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBanks: Bank[]; documentTypes: DocType[] }) {
   const [banks, setBanks] = useState<Bank[]>(initialBanks);
   const [search, setSearch] = useState('');
-  const [{ sheetOpen, editTarget, deleteTarget, pendingId }, uiDispatch] = useReducer(uiReducer, uiInitial);
+  const [{ sheetOpen, editTarget, pendingId }, uiDispatch] = useReducer(uiReducer, uiInitial);
   const [isSubmitting, startSubmit] = useTransition();
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [stage, setStage] = useState<Stage>('idle');
+  const [direction, setDirection] = useState<1 | -1>(1);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const handler = (e: MouseEvent) => {
+      const row = (e.target as HTMLElement).closest(`[data-catalog-bank-row="${activeId}"]`);
+      if (!row) {
+        setActiveId(null);
+        setStage('idle');
+        setDirection(-1);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [activeId]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (stage === 'confirm') {
+        setStage('actions');
+        setDirection(-1);
+      } else {
+        setActiveId(null);
+        setStage('idle');
+        setDirection(-1);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [activeId, stage]);
+
+  const openActions = (id: string) => {
+    setActiveId(id);
+    setStage('actions');
+    setDirection(1);
+  };
+
+  const goConfirm = () => {
+    setStage('confirm');
+    setDirection(1);
+  };
+
+  const goBackToActions = () => {
+    setStage('actions');
+    setDirection(-1);
+  };
+
+  const closeToIdle = () => {
+    setActiveId(null);
+    setStage('idle');
+    setDirection(-1);
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -84,6 +155,7 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
   }
 
   function openEdit(bank: Bank) {
+    closeToIdle();
     form.reset({
       code: bank.code,
       name: bank.name,
@@ -170,7 +242,11 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
     deleteCatalogBank(id)
       .then(() => setBanks((prev) => prev.filter((b) => b.id !== id)))
       .catch(() => toast.error('Error al eliminar banco'))
-      .finally(() => uiDispatch({ type: 'SET_PENDING_ID', id: null }));
+      .finally(() => {
+        uiDispatch({ type: 'SET_PENDING_ID', id: null });
+        setActiveId(null);
+        setStage('idle');
+      });
   }
 
   const q = search.trim().toLowerCase();
@@ -283,92 +359,170 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
             {search.trim() ? 'No se encontraron bancos.' : 'No hay bancos en el catálogo.'}
           </div>
         ) : (
-          <div className="divide-y">
-            {filtered.map((bank) => (
-              <div key={bank.id} className="flex items-center justify-between px-4 py-3">
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex items-center gap-3">
-                    <span className={bank.is_active ? '' : 'text-muted-foreground line-through'}>
-                      {bank.name}
-                    </span>
-                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                      {bank.code}
-                    </span>
-                    {!bank.is_active && (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">
-                        Inactivo
-                      </Badge>
+          <div className="divide-y" role="list">
+            {filtered.map((bank) => {
+              const rowStage: Stage = activeId === bank.id ? stage : 'idle';
+
+              return (
+                <div
+                  key={bank.id}
+                  data-catalog-bank-row={bank.id}
+                  role="listitem"
+                  className={cn(
+                    'flex items-center justify-between px-4 py-3 transition-colors duration-300',
+                    rowStage === 'confirm' && 'bg-gradient-to-r from-destructive/25 via-destructive/10 to-transparent',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'flex flex-col gap-0.5 transition-all duration-300',
+                      rowStage === 'actions' && '-translate-x-1 opacity-50',
+                      rowStage === 'confirm' && '-translate-x-2',
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={cn(bank.is_active ? '' : 'text-muted-foreground line-through', rowStage === 'confirm' && 'text-destructive')}>
+                        {bank.name}
+                      </span>
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                        {bank.code}
+                      </span>
+                      {!bank.is_active && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Inactivo
+                        </Badge>
+                      )}
+                    </div>
+                    {(bank.document_slug || bank.document_number) && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {bank.document_slug && (
+                          <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{bank.document_slug}</span>
+                        )}
+                        {bank.document_name?.es && (
+                          <span>{bank.document_name?.es}</span>)}
+                        {bank.document_number && (
+                          <span>{bank.document_number}</span>
+                        )}
+                      </div>
+                    )}
+                    {(bank.legal_rep_first_name || bank.legal_rep_last_name) && (
+                      <div className="text-xs text-muted-foreground">
+                        Rep. legal: {[bank.legal_rep_first_name, bank.legal_rep_last_name].filter(Boolean).join(' ')}
+                      </div>
                     )}
                   </div>
-                  {(bank.document_slug || bank.document_number) && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {bank.document_slug && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{bank.document_slug}</span>
+
+                  <div className="w-28 shrink-0 overflow-hidden">
+                    <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                      {rowStage === 'idle' && (
+                        <motion.div
+                          key="idle"
+                          custom={direction}
+                          variants={stageVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          className="flex justify-end"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            disabled={pendingId === bank.id}
+                            onClick={() => openActions(bank.id)}
+                            title="Acciones"
+                          >
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </Button>
+                        </motion.div>
                       )}
-                      {bank.document_name?.es && (
-                        <span>{bank.document_name?.es}</span>)}
-                      {bank.document_number && (
-                        <span>{bank.document_number}</span>
+
+                      {rowStage === 'actions' && (
+                        <motion.div
+                          key="actions"
+                          custom={direction}
+                          variants={stageVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          className="flex justify-end gap-1"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            onClick={() => openEdit(bank)}
+                            title="Editar"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            disabled={pendingId === bank.id}
+                            onClick={() => handleToggle(bank)}
+                            title={bank.is_active ? 'Desactivar' : 'Activar'}
+                          >
+                            {pendingId === bank.id ? (
+                              <Spinner className="h-3.5 w-3.5" />
+                            ) : bank.is_active ? (
+                              <EyeOff className="h-3.5 w-3.5" />
+                            ) : (
+                              <Eye className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={goConfirm}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </motion.div>
                       )}
-                    </div>
-                  )}
-                  {(bank.legal_rep_first_name || bank.legal_rep_last_name) && (
-                    <div className="text-xs text-muted-foreground">
-                      Rep. legal: {[bank.legal_rep_first_name, bank.legal_rep_last_name].filter(Boolean).join(' ')}
-                    </div>
-                  )}
+
+                      {rowStage === 'confirm' && (
+                        <motion.div
+                          key="confirm"
+                          custom={direction}
+                          variants={stageVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          className="flex justify-end gap-1"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            disabled={pendingId === bank.id}
+                            onClick={() => handleDelete(bank.id)}
+                            title="Confirmar"
+                          >
+                            {pendingId === bank.id ? <Spinner className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            onClick={goBackToActions}
+                            title="Cancelar"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground"
-                    disabled={pendingId === bank.id}
-                    onClick={() => openEdit(bank)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground"
-                    disabled={pendingId === bank.id}
-                    onClick={() => handleToggle(bank)}
-                  >
-                    {pendingId === bank.id ? (
-                      <Spinner className="h-3.5 w-3.5" />
-                    ) : bank.is_active ? (
-                      <EyeOff className="h-3.5 w-3.5" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    disabled={pendingId === bank.id}
-                    onClick={() => uiDispatch({ type: 'SET_DELETE_TARGET', bank })}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
-
-      <ConfirmDialog
-        isOpen={!!deleteTarget}
-        onClose={() => uiDispatch({ type: 'SET_DELETE_TARGET', bank: null })}
-        onConfirm={() => deleteTarget && handleDelete(deleteTarget.id)}
-        title="Eliminar banco"
-        description={`¿Estás seguro de que deseas eliminar "${deleteTarget?.name}"? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        cancelLabel="Cancelar"
-        variant="destructive"
-      />
     </div>
   );
 }
