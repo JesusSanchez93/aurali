@@ -49,6 +49,7 @@
         "exit_organization": "Salir de la organización"
       },
       "workflows": "Flujos de Trabajo",
+      "form_builder": "Formularios",
       "admin_clients": "Clientes",
       "admin_audit": "Auditoría",
       "catalog": "Catálogo global",
@@ -239,7 +240,8 @@
       "used_to_operate_stolen_amount": "¿Operaciones por monto hurtado?",
       "lost_card": "¿Perdió su tarjeta?",
       "fraud_incident_summary": "Relato de los hechos",
-      "assigned_to": "Asignado a"
+      "assigned_to": "Asignado a",
+      "workflow_template": "Tipo de proceso"
     },
     "list": {
       "empty_title": "No se encontraron procesos activos.",
@@ -375,6 +377,7 @@
         "client_document_validation_failed": "Validación de documento falló",
         "client_banking_info_submitted": "Cliente envió información bancaria",
         "client_image_deleted": "Cliente eliminó una imagen subida",
+        "client_form_section_submitted": "Cliente envió una sección del formulario",
         "client_process_completed": "Cliente completó el formulario",
         "default": "Evento"
       },
@@ -451,6 +454,33 @@
       "title": "Seguimiento de correos",
       "waiting": "Esperando respuesta",
       "overdue": "Seguimiento vencido"
+    },
+    "email_attachments": {
+      "title": "Documentos recibidos por correo",
+      "btn_view": "Ver",
+      "btn_approve": "Aprobar",
+      "btn_reject": "Rechazar",
+      "approve_success": "Documento aprobado",
+      "reject_success": "Documento rechazado",
+      "action_error": "Ocurrió un error al procesar la acción",
+      "rejection_reason_label": "Motivo del rechazo",
+      "matched_document_label": "Corresponde a:",
+      "matched_document_placeholder": "Seleccionar documento enviado...",
+      "btn_notify": "Notificar cliente ({count})",
+      "notify_success": "Cliente notificado",
+      "notified_label": "Cliente notificado el {date}",
+      "status": {
+        "pending": "Por revisar",
+        "approved": "Aprobado",
+        "rejected": "Rechazado"
+      },
+      "reject_dialog": {
+        "title": "Rechazar documento",
+        "description": "El documento quedará marcado como rechazado. Da seguimiento con el cliente por correo si necesita corregir algo.",
+        "reason_label": "Motivo (opcional)",
+        "reason_placeholder": "Describe qué debe corregir el cliente...",
+        "confirm": "Rechazar"
+      }
     }
   },
   "clients": {
@@ -952,6 +982,11 @@
       "node_title_label": "Título del nodo",
       "node_title_placeholder": "Nombre del nodo",
       "config_section": "Configuración",
+      "previous_node_section": "Correo que se está esperando",
+      "previous_node_missing_warning": "Este nodo debe conectarse directamente después de un nodo \"Enviar Correo\".",
+      "previous_node_to": "Para",
+      "previous_node_subject": "Asunto",
+      "previous_node_body": "Cuerpo",
       "apply_changes": "Aplicar cambios",
       "sidebar_title": "Nodos",
       "sidebar_hint": "Arrastra al canvas",

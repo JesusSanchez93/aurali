@@ -27,6 +27,7 @@ export type WorkflowNodeType =
   | 'manual_action'
   | 'generate_document'
   | 'send_documents'
+  | 'wait_email_reply'
   | 'status_update'
   | 'end';
 
@@ -150,6 +151,11 @@ export interface ExecutionContext {
    * Populated lazily by the runner when a node needs it.
    */
   clientData: Record<string, unknown>;
+  /** Types of the nodes connected directly to this node's output — lets an
+   *  executor know what follows without needing the whole graph (used by
+   *  executeSendEmail to decide whether to mark the email as trackable when
+   *  a wait_email_reply node follows it). */
+  nextNodeTypes?: WorkflowNodeType[];
 }
 
 /** What each node executor returns to the runner */

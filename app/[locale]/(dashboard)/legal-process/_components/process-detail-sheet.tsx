@@ -16,11 +16,17 @@ import {
     archiveLegalProcess,
     declineLegalProcess,
     revertArchivedProcess,
+    approveEmailAttachmentAction,
+    rejectEmailAttachmentAction,
+    setEmailAttachmentMatchAction,
+    notifyRejectedEmailAttachmentsAction,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WorkflowActionButton } from '@/app/[locale]/(dashboard)/legal-process/_components/workflow-action-button';
 import { DocumentPreviews } from '@/app/[locale]/(dashboard)/legal-process/_components/document-previews';
-import { SignatureReview } from '@/app/[locale]/(dashboard)/legal-process/_components/signature-review';
 import { FollowUpStatus } from '@/app/[locale]/(dashboard)/legal-process/_components/follow-up-status';
+import { DynamicResponseViewer } from '@/components/common/dynamic-form/DynamicResponseViewer';
+import type { FormSchema } from '@/lib/forms/types';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,7 +34,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, Archive, CheckCircle2, MoreHorizontal, RotateCcw, ShieldQuestion, X, XCircle } from 'lucide-react';
+import { AlertTriangle, Archive, Check, CheckCircle2, Clock, Eye, MoreHorizontal, Paperclip, RotateCcw, ShieldQuestion, X, XCircle } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { ProcessPaymentsSection } from '@/app/[locale]/(dashboard)/legal-process/_components/process-payments-section';
 import { useTranslations } from 'next-intl';
 import {
@@ -51,6 +58,15 @@ interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
+
+// Misma convención neutral/verde/rojo usada en el resto de pills de estado
+// del detalle del proceso (ver signature-review.tsx, ahora reemplazado por
+// esta sección para el flujo de respuesta por correo).
+const ATTACHMENT_STATUS_STYLE: Record<string, { icon: React.ElementType; className: string }> = {
+    pending: { icon: Clock, className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200' },
+    approved: { icon: Check, className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' },
+    rejected: { icon: X, className: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' },
+};
 
 function Field({ label, value }: { label: string; value?: string | boolean | null }) {
     const t = useTranslations('common');
@@ -99,7 +115,19 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         banking: LegalProcessBank | null;
         fee: ProcessFee;
         payments: ProcessPayment[];
+        formSchema: FormSchema | null;
+        formResponses: Record<string, Record<string, unknown>>;
+        emailAttachments: {
+            id: string; filename: string; file_url: string | null; content_type: string | null; received_at: string;
+            status: string; rejection_reason: string | null; matched_document_id: string | null; notified_at: string | null;
+        }[];
+        sentDocuments: { id: string; document_name: string | null }[];
     } | null>(null);
+
+    const [notifyingRejected, setNotifyingRejected] = useState(false);
+    const [rejectingAttachmentId, setRejectingAttachmentId] = useState<string | null>(null);
+    const [actioningAttachmentId, setActioningAttachmentId] = useState<string | null>(null);
+    const [matchingAttachmentId, setMatchingAttachmentId] = useState<string | null>(null);
 
     const loadData = (id: string) => {
         setLoading(true);
@@ -162,6 +190,62 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
             toast.error(err instanceof Error ? err.message : commonT('error'));
         } finally {
             setActioning(false);
+        }
+    };
+
+    const handleApproveAttachment = async (attachmentId: string) => {
+        if (!processId) return;
+        setActioningAttachmentId(attachmentId);
+        try {
+            await approveEmailAttachmentAction(attachmentId, processId);
+            toast.success(processT('email_attachments.approve_success'));
+            loadData(processId);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : processT('email_attachments.action_error'));
+        } finally {
+            setActioningAttachmentId(null);
+        }
+    };
+
+    const handleRejectAttachment = async (reason: string) => {
+        if (!processId || !rejectingAttachmentId) return;
+        setActioningAttachmentId(rejectingAttachmentId);
+        try {
+            await rejectEmailAttachmentAction(rejectingAttachmentId, processId, reason || undefined);
+            toast.success(processT('email_attachments.reject_success'));
+            loadData(processId);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : processT('email_attachments.action_error'));
+        } finally {
+            setActioningAttachmentId(null);
+            setRejectingAttachmentId(null);
+        }
+    };
+
+    const handleMatchAttachment = async (attachmentId: string, documentId: string | null) => {
+        if (!processId) return;
+        setMatchingAttachmentId(attachmentId);
+        try {
+            await setEmailAttachmentMatchAction(attachmentId, processId, documentId);
+            loadData(processId);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : processT('email_attachments.action_error'));
+        } finally {
+            setMatchingAttachmentId(null);
+        }
+    };
+
+    const handleNotifyRejected = async () => {
+        if (!processId) return;
+        setNotifyingRejected(true);
+        try {
+            await notifyRejectedEmailAttachmentsAction(processId);
+            toast.success(processT('email_attachments.notify_success'));
+            loadData(processId);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : processT('email_attachments.action_error'));
+        } finally {
+            setNotifyingRejected(false);
         }
     };
 
@@ -286,7 +370,13 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
 
                             <Separator />
 
-                            {/* Client Data */}
+                            {/* Dynamic Form Builder responses */}
+                            {process?.form_schema_id && data.formSchema && (
+                                <DynamicResponseViewer schema={data.formSchema} responses={data.formResponses} />
+                            )}
+
+                            {/* Client Data (legacy hardcoded form) */}
+                            {!process?.form_schema_id && (
                             <div>
                                 <h4 className="text-sm font-semibold mb-3">{processT('sections.personal_data')}</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -298,9 +388,10 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                     <Field label={processT('fields.document_number')} value={client?.document_number} />
                                 </div>
                             </div>
+                            )}
 
                             {/* Document Images */}
-                            {(client?.document_front_image || client?.document_back_image) && (
+                            {!process?.form_schema_id && (client?.document_front_image || client?.document_back_image) && (
                                 <>
                                     <Separator />
                                     <div>
@@ -336,7 +427,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                             )}
 
                             {/* AI Document Validation */}
-                            {client?.doc_validation_status && (
+                            {!process?.form_schema_id && client?.doc_validation_status && (
                                 <>
                                     <Separator />
                                     <div>
@@ -399,40 +490,44 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                 </>
                             )}
 
-                            <Separator />
+                            {!process?.form_schema_id && (
+                            <>
+                                <Separator />
 
-                            {/* Banking Data */}
-                            <div>
-                                <h4 className="text-sm font-semibold mb-3">{processT('sections.banking_info')}</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field label={processT('fields.bank_name')} value={banking?.bank_name} />
-                                    <Field label={processT('fields.last_4_digits')} value={banking?.last_4_digits} />
-                                </div>
-                            </div>
-
-                            <Separator />
-
-                            {/* Info about events */}
-                            <div>
-                                <h4 className="text-sm font-semibold mb-3">{processT('sections.facts_info')}</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field label={processT('fields.file_complait')} value={banking?.file_complait} />
-                                    <Field label={processT('fields.no_signal')} value={banking?.no_signal} />
-                                    <Field label={processT('fields.bank_notification')} value={banking?.bank_notification} />
-                                    <Field label={processT('fields.access_website')} value={banking?.access_website} />
-                                    <Field label={processT('fields.access_link')} value={banking?.access_link} />
-                                    <Field label={processT('fields.used_to_operate_stolen_amount')} value={banking?.used_to_operate_stolen_amount} />
-                                    <Field label={processT('fields.lost_card')} value={banking?.lost_card} />
-                                </div>
-                                {banking?.fraud_incident_summary && (
-                                    <div className="mt-4">
-                                        <p className="text-xs font-medium text-muted-foreground mb-1">{processT('fields.fraud_incident_summary')}</p>
-                                        <p className="text-sm whitespace-pre-wrap rounded-md border bg-muted/50 p-3">
-                                            {banking.fraud_incident_summary}
-                                        </p>
+                                {/* Banking Data */}
+                                <div>
+                                    <h4 className="text-sm font-semibold mb-3">{processT('sections.banking_info')}</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <Field label={processT('fields.bank_name')} value={banking?.bank_name} />
+                                        <Field label={processT('fields.last_4_digits')} value={banking?.last_4_digits} />
                                     </div>
-                                )}
-                            </div>
+                                </div>
+
+                                <Separator />
+
+                                {/* Info about events */}
+                                <div>
+                                    <h4 className="text-sm font-semibold mb-3">{processT('sections.facts_info')}</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <Field label={processT('fields.file_complait')} value={banking?.file_complait} />
+                                        <Field label={processT('fields.no_signal')} value={banking?.no_signal} />
+                                        <Field label={processT('fields.bank_notification')} value={banking?.bank_notification} />
+                                        <Field label={processT('fields.access_website')} value={banking?.access_website} />
+                                        <Field label={processT('fields.access_link')} value={banking?.access_link} />
+                                        <Field label={processT('fields.used_to_operate_stolen_amount')} value={banking?.used_to_operate_stolen_amount} />
+                                        <Field label={processT('fields.lost_card')} value={banking?.lost_card} />
+                                    </div>
+                                    {banking?.fraud_incident_summary && (
+                                        <div className="mt-4">
+                                            <p className="text-xs font-medium text-muted-foreground mb-1">{processT('fields.fraud_incident_summary')}</p>
+                                            <p className="text-sm whitespace-pre-wrap rounded-md border bg-muted/50 p-3">
+                                                {banking.fraud_incident_summary}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                            )}
 
                             {processId && (
                                 <ProcessPaymentsSection
@@ -458,12 +553,154 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                 />
                             )}
 
-                            {processId && (
-                                <SignatureReview
-                                    legalProcessId={processId}
-                                    refreshKey={refreshKey}
-                                />
-                            )}
+                            {/* Documentos recibidos por correo (nodo wait_email_reply) — el
+                                abogado los aprueba o rechaza acá; reemplaza al flujo de firma
+                                vía portal manual (SignatureReview, en desuso). */}
+                            {data.emailAttachments.length > 0 && (() => {
+                                const pendingNotify = data.emailAttachments.filter((a) => a.status === 'rejected' && !a.notified_at);
+                                return (
+                                <TooltipProvider delayDuration={200}>
+                                    <Separator />
+                                    <div>
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <h4 className="text-sm font-semibold">{processT('email_attachments.title')}</h4>
+                                            {pendingNotify.length > 0 && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled={notifyingRejected}
+                                                    onClick={handleNotifyRejected}
+                                                >
+                                                    {processT('email_attachments.btn_notify', { count: pendingNotify.length })}
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            {data.emailAttachments.map((att) => {
+                                                const isActioning = actioningAttachmentId === att.id;
+                                                const statusStyle = ATTACHMENT_STATUS_STYLE[att.status] ?? ATTACHMENT_STATUS_STYLE.pending;
+                                                const StatusIcon = statusStyle.icon;
+
+                                                return (
+                                                    <div key={att.id} className="rounded-md border px-3 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                            <span className="min-w-0 flex-1 truncate text-sm" title={att.filename}>{att.filename}</span>
+                                                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusStyle.className}`}>
+                                                                <StatusIcon className="h-2.5 w-2.5" />
+                                                                {processT(`email_attachments.status.${att.status}`)}
+                                                            </span>
+                                                            <span className="shrink-0 text-xs text-muted-foreground">
+                                                                {new Date(att.received_at).toLocaleDateString('es-CO')}
+                                                            </span>
+                                                            <div className="flex shrink-0 items-center gap-1">
+                                                                {att.file_url && (
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
+                                                                                <a href={att.file_url} target="_blank" rel="noreferrer" aria-label={processT('email_attachments.btn_view')}>
+                                                                                    <Eye className="h-3.5 w-3.5" />
+                                                                                </a>
+                                                                            </Button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>{processT('email_attachments.btn_view')}</TooltipContent>
+                                                                    </Tooltip>
+                                                                )}
+                                                                {att.status === 'pending' && (
+                                                                    <>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button
+                                                                                    size="icon"
+                                                                                    variant="ghost"
+                                                                                    className="h-7 w-7 text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-950/40"
+                                                                                    disabled={isActioning}
+                                                                                    onClick={() => handleApproveAttachment(att.id)}
+                                                                                    aria-label={processT('email_attachments.btn_approve')}
+                                                                                >
+                                                                                    <Check className="h-3.5 w-3.5" />
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>{processT('email_attachments.btn_approve')}</TooltipContent>
+                                                                        </Tooltip>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <Button
+                                                                                    size="icon"
+                                                                                    variant="ghost"
+                                                                                    className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                                    disabled={isActioning}
+                                                                                    onClick={() => setRejectingAttachmentId(att.id)}
+                                                                                    aria-label={processT('email_attachments.btn_reject')}
+                                                                                >
+                                                                                    <X className="h-3.5 w-3.5" />
+                                                                                </Button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent>{processT('email_attachments.btn_reject')}</TooltipContent>
+                                                                        </Tooltip>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {data.sentDocuments.length > 0 && (
+                                                            <div className="mt-2 flex items-center gap-2">
+                                                                <span className="shrink-0 text-xs text-muted-foreground">
+                                                                    {processT('email_attachments.matched_document_label')}
+                                                                </span>
+                                                                <Select
+                                                                    value={att.matched_document_id ?? undefined}
+                                                                    disabled={matchingAttachmentId === att.id}
+                                                                    onValueChange={(value) => handleMatchAttachment(att.id, value)}
+                                                                >
+                                                                    <SelectTrigger className="h-7 flex-1 text-xs">
+                                                                        <SelectValue placeholder={processT('email_attachments.matched_document_placeholder')} />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {data.sentDocuments.map((doc) => (
+                                                                            <SelectItem key={doc.id} value={doc.id}>
+                                                                                {doc.document_name ?? doc.id}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        )}
+
+                                                        {att.status === 'rejected' && att.rejection_reason && (
+                                                            <div className="mt-2 flex items-start gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 dark:border-red-800/40 dark:bg-red-950/30">
+                                                                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-red-600 dark:text-red-400" />
+                                                                <p className="text-[11px] leading-snug text-red-700 dark:text-red-300">
+                                                                    <span className="font-medium">{processT('email_attachments.rejection_reason_label')}:</span> {att.rejection_reason}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {att.status === 'rejected' && att.notified_at && (
+                                                            <p className="mt-1.5 text-[11px] text-muted-foreground">
+                                                                {processT('email_attachments.notified_label', { date: new Date(att.notified_at).toLocaleDateString('es-CO') })}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <ActionReasonDialog
+                                        isOpen={!!rejectingAttachmentId}
+                                        onClose={() => setRejectingAttachmentId(null)}
+                                        onConfirm={handleRejectAttachment}
+                                        title={processT('email_attachments.reject_dialog.title')}
+                                        description={processT('email_attachments.reject_dialog.description')}
+                                        reasonLabel={processT('email_attachments.reject_dialog.reason_label')}
+                                        reasonPlaceholder={processT('email_attachments.reject_dialog.reason_placeholder')}
+                                        confirmLabel={processT('email_attachments.reject_dialog.confirm')}
+                                        variant="destructive"
+                                    />
+                                </TooltipProvider>
+                                );
+                            })()}
 
                             {processId && (
                                 <FollowUpStatus

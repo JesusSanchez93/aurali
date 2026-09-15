@@ -80,6 +80,9 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
     configSchema: [
       { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{PROCESS.EMAIL}', required: true },
       { key: 'subject', label: 'Asunto',  type: 'text',     placeholder: 'Asunto del correo', required: true },
+      // {FORM_URL} enlaza al formulario del cliente; {FORM_URL:codigo} referencia
+      // explícitamente un formulario dinámico por su código (ver Formulario del
+      // cliente del flujo) — se escribe directo en el cuerpo, no como campo aparte.
       { key: 'body',    label: 'Cuerpo',  type: 'richtext' },
       { key: 'attach_enabled', label: 'Adjuntar documentos PDF generados', type: 'switch' },
       {
@@ -214,6 +217,35 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
       { key: 'subject', label: 'Asunto',  type: 'text',     placeholder: 'Sus documentos están listos', required: true },
       { key: 'body',    label: 'Cuerpo',  type: 'richtext' },
     ],
+    hasSourceHandle: true,
+    hasTargetHandle: true,
+  },
+
+  // ── wait_email_reply ─────────────────────────────────────────────────────
+  // Sin campos Para/Asunto/Cuerpo propios a propósito: este nodo no envía
+  // correo — debe conectarse directamente después de un nodo "Enviar Correo"
+  // (esa conexión es lo que activa el rastreo de la respuesta, ver
+  // executeSendEmail en lib/workflow/nodeExecutors.ts). Si no está conectado
+  // así, falla en tiempo de ejecución con un mensaje claro. configSchema vacío
+  // a propósito: NodeConfigPanel.tsx detecta este tipo y, en su lugar,
+  // muestra en solo lectura el detalle (Para/Asunto/Cuerpo) del nodo
+  // "Enviar Correo" conectado justo antes — no hay nada propio que editar
+  // acá. defaultConfig se conserva (requires_attachments/track_follow_up/etc.
+  // siguen leyéndose en runtime desde flujos ya guardados), solo dejó de ser
+  // editable desde este panel.
+  wait_email_reply: {
+    label:        'Esperar Respuesta de Correo',
+    description:  'Pausa el flujo hasta que el cliente responda el correo anterior — si trae adjuntos, se descargan y asocian al proceso. Debe conectarse justo después de un nodo "Enviar Correo".',
+    icon:         'MailQuestion',
+    colorClass:   'bg-teal-500',
+    borderClass:  'border-teal-500',
+    defaultTitle: 'Esperar Respuesta de Correo',
+    defaultConfig: {
+      requires_attachments: false,
+      track_follow_up: false, follow_up_value: '7', follow_up_unit: 'days',
+      reminder_count: '1', reminder_subject: '', reminder_body: '',
+    },
+    configSchema: [],
     hasSourceHandle: true,
     hasTargetHandle: true,
   },

@@ -461,9 +461,21 @@ async function runFromNode(
   }
 
   // ── 3. Execute the node ─────────────────────────────────────────────────────
+  // nextNodeTypes: tipos de los nodos conectados directamente a la salida de
+  // éste — permite que un executor sepa qué viene a continuación sin recibir
+  // todo el grafo (usado por executeSendEmail para saber si debe marcar el
+  // correo como rastreable cuando le sigue un nodo wait_email_reply). No se
+  // filtra por condición: la capacidad de rastrear no depende de qué rama se
+  // tome en tiempo de ejecución.
+  const nextNodeTypes = allEdges
+    .filter((e) => e.source_node_id === node.node_id)
+    .map((e) => allNodes.find((n) => n.node_id === e.target_node_id)?.type)
+    .filter((t): t is WorkflowNodeRow['type'] => !!t);
+  const contextWithNext: ExecutionContext = { ...context, nextNodeTypes };
+
   let result;
   try {
-    result = await executeNode(node, context, supabase);
+    result = await executeNode(node, contextWithNext, supabase);
     logger.debug('Node executed', {
       nodeType: node.type,
       nodeId: node.node_id,

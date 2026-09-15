@@ -16,12 +16,16 @@ interface RawConnection {
   smtp_security: string | null;
   smtp_username: string | null;
   smtp_password_encrypted: string | null;
+  imap_host: string | null;
+  imap_port: number | null;
+  imap_security: string | null;
   updated_at: string;
 }
 
 const RAW_CONNECTION_COLUMNS =
   'provider, email, display_name, status, error_message, access_token, refresh_token, token_expires_at, ' +
-  'smtp_host, smtp_port, smtp_security, smtp_username, smtp_password_encrypted, updated_at';
+  'smtp_host, smtp_port, smtp_security, smtp_username, smtp_password_encrypted, ' +
+  'imap_host, imap_port, imap_security, updated_at';
 
 /**
  * Reads the organization's active (or most recent) email connection using the
@@ -91,6 +95,14 @@ export async function getEmailConnectionInfo(organizationId: string): Promise<Em
             port: connection.smtp_port,
             security: (connection.smtp_security as SmtpSecurity) ?? 'starttls',
             username: connection.smtp_username,
+            imap:
+              connection.imap_host && connection.imap_port
+                ? {
+                    host: connection.imap_host,
+                    port: connection.imap_port,
+                    security: (connection.imap_security as SmtpSecurity) ?? 'ssl_tls',
+                  }
+                : null,
           }
         : null,
   };
@@ -167,5 +179,41 @@ export async function getSmtpCredentials(organizationId: string): Promise<{
     password: decryptSecret(connection.smtp_password_encrypted),
     fromEmail: connection.email,
     fromName: connection.display_name,
+  };
+}
+
+/**
+ * Credenciales IMAP para leer la bandeja real de una organización SMTP —
+ * null si no completó los campos IMAP (en ese caso el nodo wait_email_reply
+ * usa el mecanismo webhook, no éste). Reutiliza smtp_username/
+ * smtp_password_encrypted: misma cuenta de correo, IMAP solo necesita su
+ * propio host/puerto/seguridad (suelen diferir de los de SMTP).
+ */
+export async function getImapCredentials(organizationId: string): Promise<{
+  host: string;
+  port: number;
+  security: SmtpSecurity;
+  username: string;
+  password: string;
+} | null> {
+  const connection = await getRawConnection(organizationId);
+  if (
+    !connection ||
+    connection.status !== 'connected' ||
+    connection.provider !== 'smtp' ||
+    !connection.imap_host ||
+    !connection.imap_port ||
+    !connection.smtp_username ||
+    !connection.smtp_password_encrypted
+  ) {
+    return null;
+  }
+
+  return {
+    host: connection.imap_host,
+    port: connection.imap_port,
+    security: (connection.imap_security as SmtpSecurity) ?? 'ssl_tls',
+    username: connection.smtp_username,
+    password: decryptSecret(connection.smtp_password_encrypted),
   };
 }

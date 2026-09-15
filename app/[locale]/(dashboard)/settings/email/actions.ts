@@ -6,6 +6,7 @@ import { requireAuth, requireOrgAdmin } from '@/lib/auth/permissions';
 import { demoteActiveConnection, getEmailConnectionInfo } from '@/lib/email/connection';
 import { encryptSecret } from '@/lib/email/crypto';
 import { verifySmtpConnection } from '@/lib/email/smtp/transport';
+import { createImapClient } from '@/lib/email/imap/imapClient';
 import { SmtpEmailService } from '@/lib/email/providers/smtpEmailService';
 import { createLogger } from '@/lib/utils/logger';
 import { revalidatePath } from 'next/cache';
@@ -21,6 +22,12 @@ const smtpSchema = z.object({
   security: z.enum(['ssl_tls', 'starttls', 'none']),
   username: z.string().trim().min(1, 'El usuario es obligatorio.').max(255),
   password: z.string().min(1, 'La contraseña es obligatoria.').max(500),
+  // Opcionales: habilitan lectura real de la bandeja para el nodo "Esperar
+  // Respuesta de Correo" (capture_mode='imap') — sin esto, ese nodo sigue
+  // funcionando en modo webhook (Reply-To de Aurali).
+  imapHost: z.string().trim().max(255).optional().or(z.literal('')),
+  imapPort: z.coerce.number().int().min(1).max(65535).optional(),
+  imapSecurity: z.enum(['ssl_tls', 'starttls', 'none']).optional(),
 });
 
 async function getOrgContext() {
@@ -79,7 +86,9 @@ export async function getEmailConnection(): Promise<EmailConnectionInfo> {
   return getEmailConnectionInfo(orgId);
 }
 
-/** Tests SMTP credentials without persisting anything. */
+/** Tests SMTP credentials without persisting anything — also tests IMAP when
+ *  imapHost/imapPort are filled in, since both must work for the "Esperar
+ *  Respuesta de Correo" node to actually read the org's real inbox. */
 export async function testSmtpConnection(
   input: SmtpConnectionInput,
 ): Promise<{ success: boolean; message: string }> {
@@ -97,11 +106,33 @@ export async function testSmtpConnection(
       username: parsed.data.username,
       password: parsed.data.password,
     });
-    return { success: true, message: 'Conexión SMTP exitosa' };
   } catch (err) {
     logger.error('SMTP test connection failed', err, { host: parsed.data.host, port: parsed.data.port });
     return { success: false, message: friendlySmtpError(err, parsed.data.host) };
   }
+
+  const imapConfigured = Boolean(parsed.data.imapHost && parsed.data.imapPort);
+
+  if (imapConfigured) {
+    try {
+      const client = await createImapClient({
+        host: parsed.data.imapHost!,
+        port: parsed.data.imapPort!,
+        security: parsed.data.imapSecurity ?? 'ssl_tls',
+        username: parsed.data.username,
+        password: parsed.data.password,
+      });
+      await client.logout();
+    } catch (err) {
+      logger.error('IMAP test connection failed', err, { host: parsed.data.imapHost, port: parsed.data.imapPort });
+      return { success: false, message: `SMTP correcto, pero falló la conexión IMAP: ${friendlySmtpError(err, parsed.data.imapHost)}` };
+    }
+  }
+
+  return {
+    success: true,
+    message: imapConfigured ? 'Conexión SMTP e IMAP exitosas' : 'Conexión SMTP exitosa',
+  };
 }
 
 /**
@@ -158,6 +189,9 @@ export async function saveSmtpConnection(
     smtp_security: data.security,
     smtp_username: data.username,
     smtp_password_encrypted: encryptedPassword,
+    imap_host: data.imapHost || null,
+    imap_port: data.imapPort ?? null,
+    imap_security: data.imapHost ? (data.imapSecurity ?? 'ssl_tls') : null,
   });
 
   if (insertError) {

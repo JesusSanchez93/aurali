@@ -34,6 +34,7 @@ import { TextStyleKit } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import { buildSignatureInstructionsHtml } from '@/lib/email/signatureRequestEmail';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
+import { buildInboundReplyAddress, buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 import type {
   WorkflowNodeRow,
   WorkflowEdgeRow,
@@ -59,6 +60,7 @@ export async function executeNode(
     case 'manual_action': return executeManualAction(node, context);
     case 'generate_document': return executeGenerateDocument(node, context, supabase);
     case 'send_documents': return executeSendDocuments(node, context, supabase);
+    case 'wait_email_reply': return executeWaitEmailReply(node, context, supabase);
     case 'status_update': return executeStatusUpdate(node, context, supabase);
     case 'end': return executeEnd();
     default:
@@ -244,13 +246,15 @@ async function sendEmail(
   attachments?: EmailAttachment[],
   ctaUrl?: string,
   ctaLabel?: string,
+  replyTo?: string,
+  messageId?: string,
 ): Promise<void> {
   if (!organizationId) {
     logger.error('sendEmail: missing organizationId, cannot resolve org email provider', undefined, { subject, to });
     throw new Error('El proceso legal no tiene organization_id');
   }
   try {
-    await sendOrgEmail(organizationId, { to, subject, bodyHtml, ctaUrl, ctaLabel, attachments });
+    await sendOrgEmail(organizationId, { to, subject, bodyHtml, ctaUrl, ctaLabel, attachments, replyTo, messageId });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error('Org email send failed', undefined, { subject, errorMessage: message });
@@ -282,6 +286,22 @@ function buildSignatureAccessLink(): { accessToken: string; accessTokenExpiresAt
 }
 
 /**
+ * Determina si el correo que está por enviarse debe quedar rastreable porque
+ * le sigue directamente un nodo wait_email_reply (mismo criterio para
+ * cualquier nodo que envíe correo: send_email plano, send_email con
+ * requiere-recepción, o send_documents) — ver executeWaitEmailReply.
+ */
+async function computeReplyTracking(
+  context: ExecutionContext,
+): Promise<{ willWaitForReply: boolean; replyToken?: string; captureMode?: 'imap' | 'webhook' }> {
+  const willWaitForReply = context.nextNodeTypes?.includes('wait_email_reply') ?? false;
+  if (!willWaitForReply) return { willWaitForReply };
+
+  const capture = await determineReplyCapture(context.legalProcess.organization_id);
+  return { willWaitForReply, replyToken: capture?.replyToken, captureMode: capture?.captureMode };
+}
+
+/**
  * Creates a document_signature_requests row (+ one document_signature_items row
  * per document) and emails the client the OTP-gated signature-portal link.
  * Shared by executeSendDocuments and executeSendEmail (when attach_enabled +
@@ -299,10 +319,12 @@ async function createSignatureRequestAndSend(
     accessToken: string;
     accessTokenExpiresAt: string;
     signUrl: string;
+    replyTo?: string;
+    messageId?: string;
   },
 ): Promise<{ requestId: string }> {
   const db = supabase as SupabaseClient & Record<string, unknown>;
-  const { to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl } = params;
+  const { to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl, replyTo, messageId } = params;
 
   const { data: request, error: requestErr } = await db
     .from('document_signature_requests')
@@ -335,7 +357,34 @@ async function createSignatureRequestAndSend(
   if (itemsErr) throw new Error(itemsErr.message);
 
   const bodyHtml = buildSignatureInstructionsHtml(introHtml, docs.map((d) => ({ document_name: d.document_name, file_url: d.file_url })));
-  await sendEmail(context.legalProcess.organization_id, to, subject, bodyHtml, undefined, signUrl, 'Firmar documentos →');
+
+  // "Requiere recepción" es un requisito ADICIONAL sobre "Adjuntar documentos
+  // PDF generados" (el builder lo muestra como un switch dependiente de ese,
+  // no como un modo excluyente) — el cliente debe poder ver/descargar los
+  // documentos desde el correo igual que en el flujo sin firma, además de
+  // recibir el enlace al portal para subir las copias firmadas.
+  const attachments: EmailAttachment[] = [];
+  for (const doc of docs) {
+    const filename = `${doc.document_name.replace(/\.(docx|pdf)$/i, '')}.pdf`;
+    const att = await fetchAttachment(doc.file_url, filename);
+    if (att) {
+      attachments.push(att);
+    } else {
+      logger.warn('fetchAttachment failed for signature-request document', { filename, requestId: request.id });
+    }
+  }
+
+  await sendEmail(
+    context.legalProcess.organization_id,
+    to,
+    subject,
+    bodyHtml,
+    attachments.length ? attachments : undefined,
+    signUrl,
+    'Firmar documentos →',
+    replyTo,
+    messageId,
+  );
 
   return { requestId: request.id };
 }
@@ -418,11 +467,42 @@ async function executeSendEmail(
     follow_up_unit?: string;
   };
 
+  // El cuerpo del correo puede incluir {FORM_URL} (legado, un solo formulario
+  // por workflow) o {FORM_URL:codigo} — el código identifica explícitamente
+  // cuál formulario dinámico (legal_process_form_schemas.code) referencia este
+  // enlace. Hoy cada workflow tiene un solo formulario, así que no cambia la
+  // URL generada (sigue resolviendo vía legal_processes.form_schema_id); el
+  // código solo se valida acá, y queda listo para cuando un flujo tenga más de
+  // una recolección de datos (varios client_form/formularios por workflow).
+  const rawBodyHtml = resolveBodyHtml(cfg.body);
+  const formUrlTokenMatch = rawBodyHtml.match(/\{\{?form_url(?::([a-z0-9]+))?\}?\}/i);
+  const formCode = formUrlTokenMatch?.[1];
+
   // Identifies this node's purpose for the dashboard's "sent emails" list
   // (signature-actions.ts getSentClientEmails) — 'client_form_email' is the
-  // convention set on the capture-form node by createLegalProcessDraft.
+  // legacy convention set on the capture-form node by createLegalProcessDraft;
+  // a body containing {FORM_URL} (con o sin código) has the same effect.
   const emailCategory: 'form' | 'documents' | 'other' =
-    cfg.email_template === 'client_form_email' ? 'form' : cfg.attach_enabled ? 'documents' : 'other';
+    cfg.email_template === 'client_form_email' || formUrlTokenMatch
+      ? 'form'
+      : cfg.attach_enabled ? 'documents' : 'other';
+
+  if (formCode) {
+    const { data: targetForm, error: formLookupError } = await supabase
+      .from('legal_process_form_schemas')
+      .select('id')
+      .eq('code', formCode)
+      .eq('is_published', true)
+      .maybeSingle();
+
+    if (formLookupError || !targetForm) {
+      return {
+        status: 'failed',
+        output: {},
+        error: `El código de formulario "${formCode}" (en {FORM_URL:${formCode}}) no corresponde a ningún formulario publicado`,
+      };
+    }
+  }
 
   const to = substituteVars(cfg.to ?? '', context).trim();
   const subject = substituteVars(cfg.subject ?? '(Sin asunto)', context);
@@ -463,8 +543,14 @@ async function executeSendEmail(
     const fallback = `Tiene ${docs.length} documento(s) legales que requieren su firma.`;
     const introHtml = substituteVars(resolveBodyHtml(cfg.body ?? fallback), enrichedContext);
 
+    // Igual que en el envío plano de abajo: si el grafo conecta este nodo
+    // directamente a wait_email_reply, el correo debe quedar rastreable.
+    const { willWaitForReply, replyToken, captureMode } = await computeReplyTracking(context);
+
     const { requestId } = await createSignatureRequestAndSend(supabase, context, {
       to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
+      replyTo: captureMode === 'webhook' ? buildInboundReplyAddress(replyToken!) : undefined,
+      messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
     });
 
     void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
@@ -484,15 +570,17 @@ async function executeSendEmail(
       },
     });
 
-    trackFollowUpIfEnabled(supabase, node, context, {
-      to,
-      trackFollowUp: cfg.track_follow_up,
-      followUpValue: cfg.follow_up_value,
-      followUpUnit: cfg.follow_up_unit,
-      resolutionMode: 'receipt',
-      requiresReceipt: true,
-      signatureRequestId: requestId,
-    });
+    if (!willWaitForReply) {
+      trackFollowUpIfEnabled(supabase, node, context, {
+        to,
+        trackFollowUp: cfg.track_follow_up,
+        followUpValue: cfg.follow_up_value,
+        followUpUnit: cfg.follow_up_unit,
+        resolutionMode: 'receipt',
+        requiresReceipt: true,
+        signatureRequestId: requestId,
+      });
+    }
 
     return {
       status: 'completed',
@@ -503,6 +591,7 @@ async function executeSendEmail(
         signature_request_id: requestId,
         document_count: docs.length,
         sent_at: new Date().toISOString(),
+        ...(willWaitForReply ? { reply_token: replyToken, capture_mode: captureMode } : {}),
       },
     };
   }
@@ -513,11 +602,11 @@ async function executeSendEmail(
 
   // Strip the form_url placeholder BEFORE substituteVars so the raw URL never gets
   // injected into the body — it's shown only as the CTA button below. Templates may
-  // use either the legacy {{form_url}} token or the current {FORM_URL} convention
+  // use either the legacy {{form_url}} token, {FORM_URL}, or {FORM_URL:codigo}
   // (case-insensitive, single or double braces), and TipTap may wrap it in <a>.
-  const cleanedTemplate = resolveBodyHtml(cfg.body)
-    .replace(/<a[^>]*>\s*\{\{?form_url\}?\}\s*<\/a>/gi, '')
-    .replace(/\{\{?form_url\}?\}/gi, '')
+  const cleanedTemplate = rawBodyHtml
+    .replace(/<a[^>]*>\s*\{\{?form_url(?::[a-z0-9]+)?\}?\}\s*<\/a>/gi, '')
+    .replace(/\{\{?form_url(?::[a-z0-9]+)?\}?\}/gi, '')
     .replace(/<p>(\s|&nbsp;)*<\/p>/g, '');
 
   const bodyHtml = substituteVars(cleanedTemplate, context);
@@ -544,7 +633,7 @@ async function executeSendEmail(
       };
 
     for (const doc of docs ?? []) {
-      const baseName = doc.document_name?.replace(/\.pdf$/i, '') ?? 'documento';
+      const baseName = doc.document_name?.replace(/\.(docx|pdf)$/i, '') ?? 'documento';
       const filename = `${baseName}.pdf`;
       const att = await fetchAttachment(doc.file_url, filename);
       if (!att) {
@@ -555,7 +644,25 @@ async function executeSendEmail(
     }
   }
 
-  await sendEmail(context.legalProcess.organization_id, to, subject, bodyHtml, attachments.length ? attachments : undefined, formUrl);
+  // Si el siguiente nodo del grafo es 'wait_email_reply', este correo debe
+  // poder rastrearse: se genera un reply_token propio (no depende de que
+  // exista todavía ninguna fila en BD) y se embebe como Reply-To (modo
+  // webhook) o Message-ID forzado (modo imap) — wait_email_reply usará este
+  // mismo token para crear su email_follow_ups al ejecutarse. Sin esa
+  // conexión, willWaitForReply es false y el envío es idéntico a siempre.
+  const { willWaitForReply, replyToken, captureMode } = await computeReplyTracking(context);
+
+  await sendEmail(
+    context.legalProcess.organization_id,
+    to,
+    subject,
+    bodyHtml,
+    attachments.length ? attachments : undefined,
+    formUrl,
+    undefined,
+    captureMode === 'webhook' ? buildInboundReplyAddress(replyToken!) : undefined,
+    captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
+  );
 
   void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
     organization_id: context.legalProcess.organization_id,
@@ -573,18 +680,25 @@ async function executeSendEmail(
     },
   });
 
-  trackFollowUpIfEnabled(supabase, node, context, {
-    to,
-    trackFollowUp: cfg.track_follow_up,
-    followUpValue: cfg.follow_up_value,
-    followUpUnit: cfg.follow_up_unit,
-    // 'form' rows are resolved when the client submits the public form
-    // (updateInfoAboutEventsAction resumes the workflow) — see
-    // supabase/migrations/20260911140000_email_follow_ups_form_resolution.sql.
-    // 'reply' has no inbound-email detection yet.
-    resolutionMode: emailCategory === 'form' ? 'form' : 'reply',
-    requiresReceipt: false,
-  });
+  // El seguimiento 'reply' basado en el propio switch de este nodo queda
+  // reemplazado por wait_email_reply cuando hay conexión a ese nodo (su
+  // email_follow_ups usa el reply_token real embebido arriba; esta fila
+  // usaría el default aleatorio de la BD y nunca matchearía nada). El caso
+  // 'form' es un flujo aparte (cliente completa el formulario público) y no
+  // se ve afectado por esta conexión.
+  if (emailCategory === 'form' || !willWaitForReply) {
+    trackFollowUpIfEnabled(supabase, node, context, {
+      to,
+      trackFollowUp: cfg.track_follow_up,
+      followUpValue: cfg.follow_up_value,
+      followUpUnit: cfg.follow_up_unit,
+      // 'form' rows are resolved when the client submits the public form
+      // (updateInfoAboutEventsAction resumes the workflow) — see
+      // supabase/migrations/20260911140000_email_follow_ups_form_resolution.sql.
+      resolutionMode: emailCategory === 'form' ? 'form' : 'reply',
+      requiresReceipt: false,
+    });
+  }
 
   return {
     status: 'completed',
@@ -593,6 +707,7 @@ async function executeSendEmail(
       subject,
       email_category: emailCategory,
       sent_at: new Date().toISOString(),
+      ...(willWaitForReply ? { reply_token: replyToken, capture_mode: captureMode } : {}),
     },
   };
 }
@@ -1284,10 +1399,16 @@ async function executeSendDocuments(
 
   logger.debug('Sending signature request email', { subject, nodeId: node.node_id, documentCount: docs.length });
 
+  // Igual que en executeSendEmail: si el grafo conecta este nodo directamente
+  // a wait_email_reply, el correo debe quedar rastreable.
+  const { willWaitForReply, replyToken, captureMode } = await computeReplyTracking(context);
+
   let requestId: string;
   try {
     ({ requestId } = await createSignatureRequestAndSend(supabase, context, {
       to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
+      replyTo: captureMode === 'webhook' ? buildInboundReplyAddress(replyToken!) : undefined,
+      messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
     }));
   } catch (err) {
     return { status: 'failed', output: {}, error: err instanceof Error ? err.message : String(err) };
@@ -1318,7 +1439,98 @@ async function executeSendDocuments(
       signature_request_id: requestId,
       document_count: docs.length,
       sent_at: new Date().toISOString(),
+      ...(willWaitForReply ? { reply_token: replyToken, capture_mode: captureMode } : {}),
     },
+  };
+}
+
+// ─── wait_email_reply ───────────────────────────────────────────────────────────
+// NO envía correo propio — se conecta a un nodo 'send_email' inmediatamente
+// anterior que ya lo envió con rastreo habilitado (ver executeSendEmail:
+// detecta automáticamente, por topología del grafo, si le sigue un
+// wait_email_reply y en ese caso embebe un reply_token/Message-ID/Reply-To
+// rastreable). Este nodo solo registra la espera usando ese mismo
+// reply_token. La respuesta del cliente llega vía el webhook
+// app/api/webhooks/email-inbound/route.ts (capture_mode='webhook') o el
+// poller app/api/cron/email-inbound-imap-poll (capture_mode='imap'), ambos
+// resolviendo a través de lib/workflow/emailReplyResolution.ts, que sube
+// adjuntos, notifica al abogado y llama resumeWorkflow — el nodo en sí nunca
+// vuelve a ejecutarse, igual que manual_action/client_form.
+
+async function executeWaitEmailReply(
+  node: WorkflowNodeRow,
+  context: ExecutionContext,
+  supabase: SupabaseClient,
+): Promise<NodeResult> {
+  const db = supabase as SupabaseClient & Record<string, unknown>;
+  const cfg = node.config as {
+    requires_attachments?: boolean;
+    follow_up_value?: string;
+    follow_up_unit?: string;
+  };
+
+  const replyToken = context.previousOutput?.reply_token as string | undefined;
+  const captureMode = context.previousOutput?.capture_mode as 'imap' | 'webhook' | undefined;
+  const toEmail = context.previousOutput?.sent_to as string | undefined;
+
+  if (!replyToken || !captureMode || !toEmail) {
+    return {
+      status: 'failed',
+      output: {},
+      error: 'Este nodo debe conectarse directamente después de un nodo "Enviar Correo".',
+    };
+  }
+  if (!context.legalProcess.organization_id) {
+    return { status: 'failed', output: {}, error: 'El proceso legal no tiene organization_id' };
+  }
+
+  const amount = Number(cfg.follow_up_value) || 7;
+  const unitMs = cfg.follow_up_unit === 'hours' ? 1000 * 60 * 60 : 1000 * 60 * 60 * 24;
+  const deadlineAt = new Date(Date.now() + amount * unitMs).toISOString();
+
+  // reply_token se fija explícitamente (no se deja el default de la BD):
+  // debe coincidir con el que executeSendEmail ya embebió en el correo real.
+  const { data: followUp, error: followUpErr } = await db
+    .from('email_follow_ups')
+    .insert({
+      organization_id: context.legalProcess.organization_id,
+      legal_process_id: context.legalProcess.id,
+      workflow_run_id: context.workflowRun.id,
+      node_id: node.node_id,
+      to_email: toEmail,
+      resolution_mode: 'reply',
+      requires_receipt: false,
+      requires_attachments: Boolean(cfg.requires_attachments),
+      capture_mode: captureMode,
+      reply_token: replyToken,
+      deadline_at: deadlineAt,
+    })
+    .select('id')
+    .single() as { data: { id: string } | null; error: { message: string } | null };
+
+  if (followUpErr || !followUp) {
+    return { status: 'failed', output: {}, error: followUpErr?.message ?? 'No se pudo registrar la espera del correo' };
+  }
+
+  void db.from('audit_logs').insert({
+    organization_id: context.legalProcess.organization_id,
+    user_id: context.legalProcess.lawyer_id,
+    action: 'wait_email_reply_started',
+    entity: 'legal_process',
+    entity_id: context.legalProcess.id,
+    metadata: {
+      to_email: toEmail,
+      requires_attachments: Boolean(cfg.requires_attachments),
+      capture_mode: captureMode,
+      email_follow_up_id: followUp.id,
+      workflow_run_id: context.workflowRun.id,
+      node_title: node.title,
+    },
+  });
+
+  return {
+    status: 'waiting',
+    output: { waiting_for: 'email_reply', email_follow_up_id: followUp.id },
   };
 }
 

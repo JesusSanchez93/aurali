@@ -8,6 +8,10 @@ import { autoAdvanceWorkflow } from '@/lib/workflow/autoAdvance';
 import { buildDocumentTemplateData } from '@/lib/workflow/nodeExecutors';
 import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
 import { approveGeneratedDocument } from '@/lib/onlyoffice/approveDocument';
+import type { FormSchema } from '@/lib/forms/types';
+import { resolveSectionOptions } from '@/lib/forms/catalogOptions';
+import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
+import { buildInboundReplyAddress, buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 
 type LocalizedString = {
   es?: string;
@@ -108,6 +112,41 @@ export async function getLegalProcesses(page: number = 1, pageSize: number = 10,
     client: legal_process_clients[0] || null
   })) || [];
 
+  // legal_process_clients.first_name/last_name solo se llenan hoy desde el
+  // formulario legado (personal-data hardcoded); un proceso con un formulario
+  // dinámico del DFB guarda el nombre dentro de legal_process_form_responses
+  // con alguna de las keys convencionales (nombres/apellidos o su equivalente
+  // en inglés first_name/last_name — ver dynamic-actions.ts). Si ya existen
+  // respuestas, se usan como fallback para no mostrar "Proceso no iniciado"
+  // cuando el cliente sí completó el formulario.
+  const missingNameIds = mappedProcesses
+    .filter((p) => p.form_schema_id && !p.client?.first_name && !p.client?.last_name)
+    .map((p) => p.id);
+
+  if (missingNameIds.length > 0) {
+    const { data: responseRows } = await supabase
+      .from('legal_process_form_responses')
+      .select('legal_process_id, data')
+      .in('legal_process_id', missingNameIds);
+
+    const namesByProcessId = new Map<string, { first_name?: string; last_name?: string }>();
+    for (const row of responseRows ?? []) {
+      const data = row.data as Record<string, unknown>;
+      const firstName = data.nombres ?? data.first_name ?? data.CLIENT__FIRST_NAME;
+      const lastName = data.apellidos ?? data.last_name ?? data.CLIENT__LAST_NAME;
+      const existing = namesByProcessId.get(row.legal_process_id) ?? {};
+      if (typeof firstName === 'string' && firstName) existing.first_name = firstName;
+      if (typeof lastName === 'string' && lastName) existing.last_name = lastName;
+      namesByProcessId.set(row.legal_process_id, existing);
+    }
+
+    for (const process of mappedProcesses) {
+      const names = namesByProcessId.get(process.id);
+      if (!names) continue;
+      process.client = { ...(process.client as object ?? {}), ...names } as typeof process.client;
+    }
+  }
+
   return { processes: mappedProcesses, count: count || 0 };
 }
 
@@ -154,6 +193,43 @@ export async function getDocuments() {
   }));
 }
 
+/**
+ * Tipos de proceso legal (workflow_templates) activos para la organización
+ * actual. Cuando hay más de uno, la UI de creación de caso muestra un
+ * selector "Tipo de proceso"; con uno solo, se usa automáticamente sin
+ * mostrar nada (comportamiento previo intacto).
+ */
+export async function getActiveWorkflowTemplates(): Promise<
+  { id: string; name: string; is_legacy_form: boolean }[]
+> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('current_organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.current_organization_id) return [];
+
+  const { data, error } = await (supabase as any)
+    .from('organization_workflows')
+    .select('workflow_template_id, workflow_templates(id, name, is_legacy_form)')
+    .eq('organization_id', profile.current_organization_id)
+    .eq('is_active', true);
+
+  if (error) {
+    console.error('getActiveWorkflowTemplates error:', error);
+    return [];
+  }
+
+  return (data ?? [])
+    .map((row: { workflow_templates: { id: string; name: string; is_legacy_form: boolean } | null }) => row.workflow_templates)
+    .filter((wf: unknown): wf is { id: string; name: string; is_legacy_form: boolean } => Boolean(wf));
+}
+
 export async function   getOrgLawyers() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -191,6 +267,8 @@ export async function createLegalProcessDraft(values: {
   document_number: string;
   email: string;
   assigned_to: string;
+  /** Requerido solo cuando la organización tiene más de un tipo de proceso activo. */
+  workflow_template_id?: string;
 }): Promise<{ id: string }> {
   const traceId = randomUUID();
   const supabase = await createClient();
@@ -217,6 +295,52 @@ export async function createLegalProcessDraft(values: {
 
     const organizationId = profile.current_organization_id;
     const normalizedEmail = values.email.trim().toLowerCase();
+
+    // Resolve which workflow_template (= tipo de proceso legal) applies to this
+    // case. Orgs with a single active workflow keep the previous behavior
+    // (no selection needed); orgs with several require values.workflow_template_id.
+    const { data: activeWorkflows, error: activeWorkflowsError } = await supabase
+      .from('organization_workflows')
+      .select('workflow_template_id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (activeWorkflowsError) {
+      throw new Error(activeWorkflowsError.message);
+    }
+    if (!activeWorkflows || activeWorkflows.length === 0) {
+      throw new Error('La organización no tiene un flujo de trabajo activo asignado');
+    }
+
+    let chosenWorkflowTemplateId: string;
+    if (activeWorkflows.length === 1) {
+      chosenWorkflowTemplateId = activeWorkflows[0].workflow_template_id;
+    } else {
+      if (!values.workflow_template_id) {
+        throw new Error('Debes seleccionar un tipo de proceso');
+      }
+      const match = activeWorkflows.find((w) => w.workflow_template_id === values.workflow_template_id);
+      if (!match) {
+        throw new Error('El tipo de proceso seleccionado no está activo para tu organización');
+      }
+      chosenWorkflowTemplateId = values.workflow_template_id;
+    }
+
+    // Snapshot the currently published dynamic form schema (if any) for that
+    // workflow_template — legacy templates simply have no published schema.
+    // A workflow_template can have more than one published form (several
+    // formularios asociados al mismo flujo); hasta que exista soporte para
+    // elegir cuál corresponde a cada caso, se usa el más recientemente
+    // actualizado como default determinístico.
+    const { data: publishedSchemas } = await supabase
+      .from('legal_process_form_schemas')
+      .select('id')
+      .eq('workflow_template_id', chosenWorkflowTemplateId)
+      .eq('is_published', true)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    const publishedSchema = publishedSchemas?.[0];
 
   // Look up existing client scoped to this org to avoid cross-org matches
     const { data: client } = await supabase
@@ -274,6 +398,7 @@ export async function createLegalProcessDraft(values: {
         access_token: publicToken,
         access_token_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString(), // 72 hours
         created_by: user.id,
+        form_schema_id: publishedSchema?.id ?? null,
       } as never)
       .select()
       .single();
@@ -316,21 +441,9 @@ export async function createLegalProcessDraft(values: {
         throw new Error(errorLegalProcessBanks.message);
       }
     }
-    // Get the active workflow template for this org
-    const { data: orgWorkflow } = await supabase
-      .from('organization_workflows')
-      .select('workflow_template_id')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .single();
-
-    if (!orgWorkflow?.workflow_template_id) {
-      throw new Error('La organización no tiene un flujo de trabajo activo asignado');
-    }
-
   // Start the workflow — it will send the invitation email automatically
   // via the send_email node configured with email_template: 'client_form_email'
-    await startWorkflow(orgWorkflow.workflow_template_id, newLegalProcess.id);
+    await startWorkflow(chosenWorkflowTemplateId, newLegalProcess.id);
 
   // Audit: process created
     void supabase.from('audit_logs').insert({
@@ -421,13 +534,346 @@ export async function getLegalProcessDetail(legalProcessId: string) {
       .order('payment_date', { ascending: true }),
   ]);
 
+  let formSchema: FormSchema | null = null;
+  let formResponses: Record<string, Record<string, unknown>> = {};
+
+  if (legalProcess.form_schema_id) {
+    const [{ data: schemaRow }, { data: responseRows }] = await Promise.all([
+      supabase
+        .from('legal_process_form_schemas')
+        .select('schema')
+        .eq('id', legalProcess.form_schema_id)
+        .maybeSingle(),
+      supabase
+        .from('legal_process_form_responses')
+        .select('section_key, data')
+        .eq('legal_process_id', legalProcessId),
+    ]);
+
+    if (schemaRow?.schema) {
+      formSchema = schemaRow.schema as unknown as FormSchema;
+
+      // Resuelve las `options` de los campos con optionsSource (catalog_banks/
+      // catalog_documents) contra el catálogo de la organización — sin esto,
+      // DynamicResponseViewer no tiene cómo mostrar el nombre del banco/tipo
+      // de documento seleccionado y termina mostrando el id/code crudo.
+      if (legalProcess.organization_id) {
+        const organizationId = legalProcess.organization_id;
+        formSchema = {
+          ...formSchema,
+          sections: await Promise.all(
+            formSchema.sections.map((section) => resolveSectionOptions(section, supabase, organizationId)),
+          ),
+        };
+      }
+
+      formResponses = Object.fromEntries(
+        (responseRows ?? []).map((r) => [r.section_key, r.data as Record<string, unknown>]),
+      );
+      await resolveFormResponseFileUrls(supabase, formSchema, formResponses);
+    }
+  }
+
+  // Documentos que el cliente adjuntó al responder un correo del nodo
+  // wait_email_reply (ver app/api/webhooks/email-inbound/route.ts) — nunca
+  // vienen de generated_documents ni de document_signature_items. Reemplazan
+  // al flujo de firma vía portal manual: el abogado los aprueba/rechaza acá
+  // mismo (ver approveEmailAttachmentAction/rejectEmailAttachmentAction).
+  const { data: emailAttachmentRows } = await supabase
+    .from('legal_process_email_attachments')
+    .select('id, filename, file_url, content_type, received_at, status, rejection_reason, matched_document_id, notified_at')
+    .eq('legal_process_id', legalProcessId)
+    .order('received_at', { ascending: false });
+
+  // Documentos originalmente enviados al cliente (generate_document, no
+  // preview) — el nombre del archivo que el cliente adjunta al responder
+  // puede no coincidir con el original (lo renombra, lo escanea de nuevo,
+  // etc.), así que el abogado elige a mano cuál de estos representa cada
+  // adjunto recibido (ver setEmailAttachmentMatchAction).
+  const { data: sentDocumentRows } = await supabase
+    .from('generated_documents')
+    .select('id, document_name')
+    .eq('legal_process_id', legalProcessId)
+    .eq('is_preview', false)
+    .order('created_at', { ascending: true });
+
   return {
     process: legalProcess,
     client: clientData ?? null,
     banking: bankingData ?? null,
     fee: feeData ?? null,
     payments: (paymentsData ?? []) as { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string }[],
+    formSchema,
+    formResponses,
+    emailAttachments: (emailAttachmentRows ?? []) as {
+      id: string; filename: string; file_url: string | null; content_type: string | null; received_at: string;
+      status: string; rejection_reason: string | null; matched_document_id: string | null; notified_at: string | null;
+    }[],
+    sentDocuments: (sentDocumentRows ?? []) as { id: string; document_name: string | null }[],
   };
+}
+
+/**
+ * Aprueba/rechaza un documento recibido por respuesta de correo
+ * (legal_process_email_attachments) — reemplaza, para este canal, el ciclo de
+ * revisión que signature-actions.ts implementa para document_signature_items
+ * (flujo de portal manual, en desuso). No hay reenvío automático al cliente
+ * en el rechazo: a diferencia del portal, no hay un link de re-subida — el
+ * abogado da seguimiento por correo directamente si hace falta corregir algo.
+ */
+export async function approveEmailAttachmentAction(attachmentId: string, legalProcessId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: attachment } = await supabase
+    .from('legal_process_email_attachments')
+    .select('id, organization_id, filename')
+    .eq('id', attachmentId)
+    .single();
+  if (!attachment) throw new Error('Documento no encontrado');
+
+  await supabase
+    .from('legal_process_email_attachments')
+    .update({ status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString(), rejection_reason: null })
+    .eq('id', attachmentId);
+
+  await supabase.from('audit_logs').insert({
+    organization_id: attachment.organization_id,
+    user_id: user.id,
+    action: 'email_attachment_approved',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { attachment_id: attachmentId, filename: attachment.filename },
+  });
+
+  revalidatePath('/legal-process');
+}
+
+export async function rejectEmailAttachmentAction(
+  attachmentId: string,
+  legalProcessId: string,
+  reason?: string,
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: attachment } = await supabase
+    .from('legal_process_email_attachments')
+    .select('id, organization_id, filename')
+    .eq('id', attachmentId)
+    .single();
+  if (!attachment) throw new Error('Documento no encontrado');
+
+  await supabase
+    .from('legal_process_email_attachments')
+    .update({
+      status: 'rejected',
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+      rejection_reason: reason || null,
+    })
+    .eq('id', attachmentId);
+
+  await supabase.from('audit_logs').insert({
+    organization_id: attachment.organization_id,
+    user_id: user.id,
+    action: 'email_attachment_rejected',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { attachment_id: attachmentId, filename: attachment.filename, reason: reason || null },
+  });
+
+  revalidatePath('/legal-process');
+}
+
+/**
+ * Asocia (o desasocia, con documentId=null) un documento recibido por correo
+ * al documento originalmente enviado (generated_documents) que representa —
+ * el nombre de archivo que llega en la respuesta del cliente no tiene por qué
+ * coincidir con el original, así que esta elección es manual, no inferida.
+ * Editable en cualquier momento, sin importar el status de revisión.
+ */
+export async function setEmailAttachmentMatchAction(
+  attachmentId: string,
+  legalProcessId: string,
+  documentId: string | null,
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: attachment } = await supabase
+    .from('legal_process_email_attachments')
+    .select('id, organization_id, filename')
+    .eq('id', attachmentId)
+    .single();
+  if (!attachment) throw new Error('Documento no encontrado');
+
+  await supabase
+    .from('legal_process_email_attachments')
+    .update({ matched_document_id: documentId })
+    .eq('id', attachmentId);
+
+  await supabase.from('audit_logs').insert({
+    organization_id: attachment.organization_id,
+    user_id: user.id,
+    action: 'email_attachment_matched',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { attachment_id: attachmentId, filename: attachment.filename, matched_document_id: documentId },
+  });
+
+  revalidatePath('/legal-process');
+}
+
+/**
+ * Notifica al cliente los documentos que el abogado rechazó (agrupa TODOS
+ * los rechazados de este proceso que aún no se han notificado en un solo
+ * correo, en vez de uno por documento) y reabre la captura de su corrección:
+ * el correo sale con el mismo mecanismo de reply_token/capture_mode que usa
+ * executeSendEmail (lib/workflow/nodeExecutors.ts) para el nodo
+ * wait_email_reply, creando una fila nueva en email_follow_ups
+ * (workflow_run_id: null — no hay un run que reanudar, el pipeline de
+ * recepción ya soporta esto sin cambios: resolveEmailReply solo llama
+ * resumeWorkflow si workflow_run_id no es null). Cuando el cliente responda
+ * con la corrección, el webhook/poller de siempre la captura igual que
+ * cualquier otra respuesta.
+ */
+export async function notifyRejectedEmailAttachmentsAction(legalProcessId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: rejectedAttachments } = await supabase
+    .from('legal_process_email_attachments')
+    .select('id, filename, subject, rejection_reason, matched_document_id, email_follow_up_id, organization_id')
+    .eq('legal_process_id', legalProcessId)
+    .eq('status', 'rejected')
+    .is('notified_at', null);
+
+  if (!rejectedAttachments || rejectedAttachments.length === 0) {
+    throw new Error('No hay documentos rechazados pendientes de notificar');
+  }
+
+  const organizationId = rejectedAttachments[0].organization_id;
+
+  const { data: followUp } = await supabase
+    .from('email_follow_ups')
+    .select('to_email')
+    .eq('id', rejectedAttachments[0].email_follow_up_id)
+    .single();
+  const toEmail = followUp?.to_email;
+  if (!toEmail) throw new Error('No se encontró el correo del cliente para este documento');
+
+  const matchedDocumentIds = rejectedAttachments
+    .map((a) => a.matched_document_id)
+    .filter((id): id is string => !!id);
+  const { data: matchedDocuments } = matchedDocumentIds.length > 0
+    ? await supabase.from('generated_documents').select('id, document_name').in('id', matchedDocumentIds)
+    : { data: [] as { id: string; document_name: string | null }[] };
+  const documentNameById = new Map((matchedDocuments ?? []).map((d) => [d.id, d.document_name]));
+
+  const capture = await determineReplyCapture(organizationId);
+  if (!capture) throw new Error('El proceso legal no tiene organization_id');
+  const { replyToken, captureMode } = capture;
+
+  const deadlineAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: newFollowUp, error: followUpErr } = await supabase
+    .from('email_follow_ups')
+    .insert({
+      organization_id: organizationId,
+      legal_process_id: legalProcessId,
+      workflow_run_id: null,
+      node_id: 'manual:email_attachment_rejection',
+      to_email: toEmail,
+      resolution_mode: 'reply',
+      requires_receipt: false,
+      requires_attachments: true,
+      capture_mode: captureMode,
+      reply_token: replyToken,
+      deadline_at: deadlineAt,
+    })
+    .select('id')
+    .single();
+  if (followUpErr || !newFollowUp) throw new Error(followUpErr?.message ?? 'No se pudo registrar el seguimiento');
+
+  const itemsHtml = rejectedAttachments
+    .map((a) => {
+      const name = (a.matched_document_id && documentNameById.get(a.matched_document_id)) || a.filename;
+      const reason = a.rejection_reason || 'No cumple con lo requerido';
+      return `<li><strong>${name}</strong>: ${reason}</li>`;
+    })
+    .join('');
+  const bodyHtml = `<p>Hola,</p>
+    <p>Revisamos los documentos que enviaste y encontramos un problema con ${rejectedAttachments.length === 1 ? 'el siguiente' : 'los siguientes'}:</p>
+    <ul>${itemsHtml}</ul>
+    <p>Por favor responde a este correo adjuntando la versión corregida.</p>`;
+
+  const originalSubject = rejectedAttachments.find((a) => a.subject)?.subject;
+  const subject = originalSubject ? `Re: ${originalSubject}` : 'Debes corregir uno o más documentos enviados';
+
+  await sendOrgEmail(organizationId, {
+    to: toEmail,
+    subject,
+    bodyHtml,
+    replyTo: captureMode === 'webhook' ? buildInboundReplyAddress(replyToken) : undefined,
+    messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken) : undefined,
+  });
+
+  const notifiedIds = rejectedAttachments.map((a) => a.id);
+  await supabase
+    .from('legal_process_email_attachments')
+    .update({ notified_at: new Date().toISOString() })
+    .in('id', notifiedIds);
+
+  await supabase.from('audit_logs').insert({
+    organization_id: organizationId,
+    user_id: user.id,
+    action: 'email_attachments_rejection_notified',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { attachment_ids: notifiedIds, email_follow_up_id: newFollowUp.id, to: toEmail },
+  });
+
+  revalidatePath('/legal-process');
+}
+
+/** Sustituye, en las respuestas de un formulario dinámico, los paths de Storage
+ *  de campos file_upload/image_upload por URLs firmadas — mismo patrón que se
+ *  usa para document_front_image/document_back_image del flujo legado. */
+async function resolveFormResponseFileUrls(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  schema: FormSchema,
+  responses: Record<string, Record<string, unknown>>,
+) {
+  const signPath = async (path: string): Promise<string> => {
+    if (path.startsWith('http')) return path;
+    const { data, error } = await supabase.storage.from('documents').createSignedUrl(path, 3600);
+    if (error || !data) {
+      console.error('createSignedUrl failed for form response file', path, error);
+      return path;
+    }
+    return data.signedUrl;
+  };
+
+  for (const section of schema.sections) {
+    const data = responses[section.key];
+    if (!data) continue;
+
+    for (const field of section.fields) {
+      if (field.type !== 'file_upload' && field.type !== 'image_upload') continue;
+      const value = data[field.key];
+      if (!value) continue;
+
+      if (Array.isArray(value)) {
+        data[field.key] = await Promise.all(value.map((p) => (typeof p === 'string' ? signPath(p) : p)));
+      } else if (typeof value === 'string') {
+        data[field.key] = await signPath(value);
+      }
+    }
+  }
 }
 
 /**

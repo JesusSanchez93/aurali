@@ -18,7 +18,7 @@ export class SmtpEmailService implements EmailService {
 
   constructor(private readonly organizationId: string) {}
 
-  async send({ to, subject, html, attachments, replyTo }: SendEmailParams): Promise<SendEmailResult> {
+  async send({ to, subject, html, attachments, replyTo, messageId }: SendEmailParams): Promise<SendEmailResult> {
     const credentials = await getSmtpCredentials(this.organizationId);
     if (!credentials) {
       throw new Error('No hay una configuración SMTP conectada para esta organización.');
@@ -36,6 +36,7 @@ export class SmtpEmailService implements EmailService {
         subject,
         html,
         replyTo,
+        messageId,
         attachments: attachments?.map((a) => ({ filename: a.filename, content: a.content })),
       });
 

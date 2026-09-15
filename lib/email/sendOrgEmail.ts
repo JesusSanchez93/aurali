@@ -15,7 +15,16 @@ import type { EmailAttachment } from '@/lib/email/types';
  */
 export async function sendOrgEmail(
   organizationId: string,
-  params: { to: string; subject: string; bodyHtml: string; ctaUrl?: string; ctaLabel?: string; attachments?: EmailAttachment[] },
+  params: {
+    to: string;
+    subject: string;
+    bodyHtml: string;
+    ctaUrl?: string;
+    ctaLabel?: string;
+    attachments?: EmailAttachment[];
+    replyTo?: string;
+    messageId?: string;
+  },
 ): Promise<void> {
   const html = await render(
     React.createElement(WorkflowEmail, {
@@ -27,5 +36,12 @@ export async function sendOrgEmail(
   );
 
   const service = await getEmailServiceForOrg(organizationId);
-  await service.send({ to: params.to, subject: params.subject, html, attachments: params.attachments });
+  await service.send({
+    to: params.to,
+    subject: params.subject,
+    html,
+    attachments: params.attachments,
+    replyTo: params.replyTo,
+    messageId: params.messageId,
+  });
 }

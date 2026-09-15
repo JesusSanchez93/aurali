@@ -24,6 +24,9 @@ const smtpFormSchema = z.object({
   security: z.enum(['ssl_tls', 'starttls', 'none']),
   username: z.string().trim().min(1, 'Ingresa el usuario.').max(255),
   password: z.string().min(1, 'Ingresa la contraseña.').max(500),
+  imapHost: z.string().trim().max(255).optional().or(z.literal('')),
+  imapPort: z.coerce.number({ invalid_type_error: 'Ingresa un puerto válido.' }).int().min(1).max(65535).optional(),
+  imapSecurity: z.enum(['ssl_tls', 'starttls', 'none']).optional(),
 });
 
 type SmtpFormValues = z.infer<typeof smtpFormSchema>;
@@ -71,6 +74,9 @@ export function SmtpFormSheet({
       security: isSmtpAlready ? initialConnection.smtp?.security ?? 'starttls' : 'starttls',
       username: isSmtpAlready ? initialConnection.smtp?.username ?? '' : '',
       password: '',
+      imapHost: isSmtpAlready ? initialConnection.smtp?.imap?.host ?? '' : '',
+      imapPort: isSmtpAlready ? initialConnection.smtp?.imap?.port : undefined,
+      imapSecurity: isSmtpAlready ? initialConnection.smtp?.imap?.security ?? 'ssl_tls' : 'ssl_tls',
     },
   });
 
@@ -216,6 +222,41 @@ export function SmtpFormSheet({
               required
             />
 
+            <div className="space-y-3 rounded-md border p-3">
+              <div>
+                <p className="text-sm font-medium">Lectura de respuestas (opcional)</p>
+                <p className="text-xs text-muted-foreground">
+                  Completa esto para que el nodo &quot;Esperar Respuesta de Correo&quot; lea directamente tu bandeja real
+                  (misma cuenta, credenciales de arriba) en vez de un mecanismo alterno. Si lo dejas vacío, ese nodo
+                  sigue funcionando igual, solo que las respuestas no llegan a tu bandeja.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <FormInput
+                  control={form.control}
+                  name="imapHost"
+                  label="Servidor IMAP"
+                  placeholder="imap.hostinger.com"
+                  disabled={isSaving}
+                />
+                <FormInput
+                  control={form.control}
+                  name="imapPort"
+                  label="Puerto"
+                  placeholder="993"
+                  type="number"
+                  disabled={isSaving}
+                />
+              </div>
+              <FormSelect
+                control={form.control}
+                name="imapSecurity"
+                label="Seguridad"
+                options={SECURITY_OPTIONS}
+                disabled={isSaving}
+              />
+            </div>
+
             {testMessage && (
               <div
                 className={cn(
@@ -229,7 +270,7 @@ export function SmtpFormSheet({
                 ) : (
                   <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 )}
-                <span>{testState === 'success' ? '✓ Conexión SMTP exitosa' : testMessage}</span>
+                <span>{testState === 'success' ? `✓ ${testMessage}` : testMessage}</span>
               </div>
             )}
 

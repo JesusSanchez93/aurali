@@ -1,12 +1,14 @@
 'use client';
 
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { PlayCircle, RotateCcw, FileCheck, FilePlus } from 'lucide-react';
+import { PlayCircle, RotateCcw, FileCheck, FilePlus, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import {
@@ -74,6 +76,12 @@ function reducer(state: State, action: ReducerAction): State {
 
 export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: Props) {
   const [{ loading, confirming, executing, action, templates, selectedTemplateIds }, dispatch] = useReducer(reducer, initialState);
+  // Progreso simulado (documento a documento) del avance de generación —
+  // executeDocumentWithTemplates genera todos los documentos en una sola
+  // llamada atómica al backend (no reporta progreso real por documento), así
+  // que este índice avanza a un ritmo fijo mientras la llamada real está en
+  // vuelo, y salta al final apenas esta resuelve.
+  const [generatingIndex, setGeneratingIndex] = useState(-1);
 
   const fetchAction = useCallback(() => {
     dispatch({ type: 'FETCH_START' });
@@ -161,23 +169,31 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
   const handleConfirmTemplates = async () => {
     if (selectedTemplateIds.length === 0) return;
     dispatch({ type: 'EXEC_START' });
-    const loadingToast = toast.loading('Generando documentos...', {
-      description: 'Esto puede tardar unos segundos.',
-    });
+
+    const selectedCount = selectedTemplateIds.length;
+    setGeneratingIndex(0);
+    const STEP_MS = 1500;
+    const interval = setInterval(() => {
+      setGeneratingIndex((i) => Math.min(i + 1, selectedCount - 1));
+    }, STEP_MS);
+
     try {
       await confirmDocumentTemplates(legalProcessId, selectedTemplateIds);
-      toast.dismiss(loadingToast);
+      clearInterval(interval);
+      setGeneratingIndex(selectedCount);
+      await new Promise((resolve) => setTimeout(resolve, 500));
       toast.success('Documentos generados', {
         description: 'Las vistas previas están listas para revisar.',
       });
       onSuccess();
     } catch (err) {
-      toast.dismiss(loadingToast);
+      clearInterval(interval);
       toast.error('Error al generar los documentos', {
         description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
       });
     } finally {
       dispatch({ type: 'EXEC_DONE' });
+      setGeneratingIndex(-1);
     }
   };
 
@@ -245,19 +261,57 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
             <DialogHeader>
               <DialogTitle>Seleccionar plantillas de documentos</DialogTitle>
             </DialogHeader>
-            <div className="space-y-2 py-2">
+            <div className="space-y-1 py-2">
               {templates.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Cargando plantillas...</p>
               ) : (
-                templates.map((tpl) => (
-                  <label key={tpl.id} className="flex items-center gap-3 cursor-pointer rounded-md p-2 hover:bg-muted">
-                    <Checkbox
-                      checked={selectedTemplateIds.includes(tpl.id)}
-                      onCheckedChange={() => dispatch({ type: 'TOGGLE_TEMPLATE', id: tpl.id })}
-                    />
-                    <span className="text-sm">{tpl.name}</span>
-                  </label>
-                ))
+                <AnimatePresence initial={false}>
+                  {templates.map((tpl) => {
+                    const isSelected = selectedTemplateIds.includes(tpl.id);
+                    // Mientras se genera, las plantillas no seleccionadas se
+                    // ocultan animadas — solo queda el progreso de las elegidas.
+                    if (executing && !isSelected) return null;
+
+                    const selectedIndex = selectedTemplateIds.indexOf(tpl.id);
+                    const status = !executing
+                      ? null
+                      : selectedIndex < generatingIndex
+                        ? 'done'
+                        : selectedIndex === generatingIndex
+                          ? 'active'
+                          : 'pending';
+
+                    return (
+                      <motion.label
+                        key={tpl.id}
+                        layout
+                        initial={false}
+                        exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className={cn(
+                          'flex items-center gap-3 rounded-md p-2 overflow-hidden',
+                          !executing && 'cursor-pointer hover:bg-muted',
+                        )}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={executing}
+                          onCheckedChange={() => dispatch({ type: 'TOGGLE_TEMPLATE', id: tpl.id })}
+                        />
+                        <span className={cn('flex-1 text-sm', status === 'pending' && 'text-muted-foreground')}>
+                          {tpl.name}
+                        </span>
+                        {status === 'active' && (
+                          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Spinner className="h-3 w-3" />
+                            Generando…
+                          </span>
+                        )}
+                        {status === 'done' && <Check className="h-4 w-4 text-emerald-500" />}
+                      </motion.label>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </div>
             <DialogFooter>
@@ -269,7 +323,9 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
                 disabled={executing || selectedTemplateIds.length === 0}
               >
                 {executing ? <Spinner className="mr-2 h-4 w-4" /> : null}
-                Generar documentos
+                {executing
+                  ? `Generando ${Math.min(generatingIndex + 1, selectedTemplateIds.length)} de ${selectedTemplateIds.length}…`
+                  : 'Generar documentos'}
               </Button>
             </DialogFooter>
           </DialogContent>

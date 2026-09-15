@@ -10,6 +10,10 @@ export interface SmtpConnectionDetails {
   port: number;
   security: SmtpSecurity;
   username: string;
+  /** Solo si la organización configuró lectura real de su bandeja (usado
+   *  por el nodo wait_email_reply en capture_mode='imap') — ver
+   *  lib/email/connection.ts:getImapCredentials. */
+  imap: { host: string; port: number; security: SmtpSecurity } | null;
 }
 
 /** Safe-to-expose view of an org's email connection — never includes tokens or the SMTP password. */
@@ -32,6 +36,12 @@ export interface SmtpConnectionInput {
   security: SmtpSecurity;
   username: string;
   password: string;
+  /** Opcionales — solo si la organización quiere habilitar lectura real de
+   *  su bandeja para el nodo "Esperar Respuesta de Correo". Reutiliza el
+   *  mismo username/password de arriba. */
+  imapHost?: string;
+  imapPort?: number;
+  imapSecurity?: SmtpSecurity;
 }
 
 export interface EmailAttachment {
@@ -45,6 +55,10 @@ export interface SendEmailParams {
   html: string;
   attachments?: EmailAttachment[];
   replyTo?: string;
+  /** Fuerza el header Message-ID del envío (solo soportado por SMTP hoy) —
+   *  usado por el nodo wait_email_reply en modo capture_mode='imap' para
+   *  poder encontrar la respuesta por threading (In-Reply-To/References). */
+  messageId?: string;
 }
 
 export interface SendEmailResult {

@@ -49,6 +49,7 @@
         "exit_organization": "Exit organization"
       },
       "workflows": "Workflows",
+      "form_builder": "Forms",
       "admin_clients": "Clients",
       "admin_audit": "Audit",
       "catalog": "Global Catalog",
@@ -239,7 +240,8 @@
       "used_to_operate_stolen_amount": "Operations for stolen amount?",
       "lost_card": "Did you lose your card?",
       "fraud_incident_summary": "Incident summary",
-      "assigned_to": "Assigned to"
+      "assigned_to": "Assigned to",
+      "workflow_template": "Process type"
     },
     "list": {
       "empty_title": "No active processes found.",
@@ -375,6 +377,7 @@
         "client_document_validation_failed": "Document validation failed",
         "client_banking_info_submitted": "Client submitted banking information",
         "client_image_deleted": "Client deleted an uploaded image",
+        "client_form_section_submitted": "Client submitted a form section",
         "client_process_completed": "Client completed the form",
         "default": "Event"
       },
@@ -451,6 +454,33 @@
       "title": "Email follow-up",
       "waiting": "Waiting for response",
       "overdue": "Follow-up overdue"
+    },
+    "email_attachments": {
+      "title": "Documents received by email",
+      "btn_view": "View",
+      "btn_approve": "Approve",
+      "btn_reject": "Reject",
+      "approve_success": "Document approved",
+      "reject_success": "Document rejected",
+      "action_error": "Something went wrong processing the action",
+      "rejection_reason_label": "Rejection reason",
+      "matched_document_label": "Matches:",
+      "matched_document_placeholder": "Select sent document...",
+      "btn_notify": "Notify client ({count})",
+      "notify_success": "Client notified",
+      "notified_label": "Client notified on {date}",
+      "status": {
+        "pending": "Needs review",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "reject_dialog": {
+        "title": "Reject document",
+        "description": "The document will be marked as rejected. Follow up with the client by email if something needs to be corrected.",
+        "reason_label": "Reason (optional)",
+        "reason_placeholder": "Describe what the client needs to fix...",
+        "confirm": "Reject"
+      }
     }
   },
   "clients": {
@@ -952,6 +982,11 @@
       "node_title_label": "Node title",
       "node_title_placeholder": "Node name",
       "config_section": "Configuration",
+      "previous_node_section": "Email being waited on",
+      "previous_node_missing_warning": "This node must be connected directly after a \"Send Email\" node.",
+      "previous_node_to": "To",
+      "previous_node_subject": "Subject",
+      "previous_node_body": "Body",
       "apply_changes": "Apply changes",
       "sidebar_title": "Nodes",
       "sidebar_hint": "Drag to canvas",

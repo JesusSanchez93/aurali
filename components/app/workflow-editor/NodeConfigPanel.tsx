@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
+import { AlertTriangle } from 'lucide-react';
 import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -11,13 +12,32 @@ import { FormInput } from '@/components/common/form/form-input';
 import { FormTextarea } from '@/components/common/form/form-textarea';
 import { FormSelect } from '@/components/common/form/form-select';
 import Tiptap from '@/components/common/tip-tap';
+import { isFieldVisible as isFieldVisibleShared } from '@/lib/forms/fieldVisibility';
+import { tiptapToHTML } from '@/lib/tiptap-to-html';
 import { NODE_TYPES_CONFIG, type ConfigField } from './node-config';
-import type { WorkflowNode, WorkflowNodeType } from './types';
+import type { WorkflowNode, WorkflowNodeType, WorkflowEdge } from './types';
 
 interface NodeConfigPanelProps {
   node: WorkflowNode;
+  edges?: WorkflowEdge[];
+  allNodes?: WorkflowNode[];
   onUpdate: (id: string, data: Partial<WorkflowNode['data']>) => void;
   onClose: () => void;
+}
+
+const SEND_EMAIL_NODE_TYPES: WorkflowNodeType[] = ['send_email', 'send_documents'];
+
+/** Same guard pattern as resolveBodyHtml (lib/workflow/nodeExecutors.ts) —
+ *  body puede venir vacío, como string plano (legado) o como JSON de TipTap;
+ *  generateHTML solo acepta lo último y lanza con cualquier otra cosa. */
+function safeTiptapToHTML(body: unknown): string {
+  if (!body) return '';
+  if (typeof body === 'string') return body.replace(/\n/g, '<br>');
+  try {
+    return tiptapToHTML(body);
+  } catch {
+    return '';
+  }
 }
 
 type FormValues = Record<string, string>;
@@ -51,7 +71,7 @@ function buildFormDefaults(node: WorkflowNode): FormValues {
   };
 }
 
-export function NodeConfigPanel({ node, onUpdate, onClose }: NodeConfigPanelProps) {
+export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onClose }: NodeConfigPanelProps) {
   const t = useTranslations('settings.workflow_editor');
   const methods = useForm<FormValues>({ defaultValues: buildFormDefaults(node) });
   const { handleSubmit, reset, control } = methods;
@@ -72,17 +92,25 @@ export function NodeConfigPanel({ node, onUpdate, onClose }: NodeConfigPanelProp
 
   const cfg = NODE_TYPES_CONFIG[node.data.type as WorkflowNodeType];
 
+  // wait_email_reply no tiene config propia editable (ver node-config.ts) —
+  // en su lugar se muestra, de solo lectura, el detalle del nodo "Enviar
+  // Correo" real conectado justo antes en el grafo (no el anterior en el
+  // array `nodes`, que solo sirve para los botones ‹/› de navegación).
+  const isWaitEmailReply = node.data.type === 'wait_email_reply';
+  const previousNode = useMemo(() => {
+    if (!isWaitEmailReply) return null;
+    const incomingEdge = edges.find((e) => e.target === node.id);
+    if (!incomingEdge) return null;
+    return allNodes.find((n) => n.id === incomingEdge.source) ?? null;
+  }, [isWaitEmailReply, edges, allNodes, node.id]);
+  const previousNodeIsSendEmail = !!previousNode && SEND_EMAIL_NODE_TYPES.includes(previousNode.data.type as WorkflowNodeType);
+
   const watchedValues = useWatch({ control });
 
   const isFieldVisible = useCallback(
     (field: Pick<ConfigField, 'dependsOn'>): boolean => {
-      if (!field.dependsOn) return true;
-      return field.dependsOn.every(({ key, value }) => {
-        const current = key in boolValues ? boolValues[key] : (watchedValues as Record<string, unknown>)[key];
-        if (Array.isArray(value)) return value.includes(String(current));
-        if (typeof value === 'boolean') return current === value;
-        return String(current) === value;
-      });
+      const values = { ...(watchedValues as Record<string, unknown>), ...boolValues };
+      return isFieldVisibleShared(field.dependsOn, values);
     },
     [boolValues, watchedValues],
   );
@@ -226,6 +254,44 @@ export function NodeConfigPanel({ node, onUpdate, onClose }: NodeConfigPanelProp
             label={t('node_title_label')}
             placeholder={t('node_title_placeholder')}
           />
+
+          {/* wait_email_reply: detalle de solo lectura del nodo "Enviar Correo" anterior */}
+          {isWaitEmailReply && (
+            <>
+              <Separator />
+              {previousNodeIsSendEmail && previousNode ? (
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('previous_node_section')}
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">{t('previous_node_to')}</span>
+                    <p className="text-sm">{String((previousNode.data.config as Record<string, unknown>)?.to ?? '—')}</p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">{t('previous_node_subject')}</span>
+                    <p className="text-sm">{String((previousNode.data.config as Record<string, unknown>)?.subject ?? '—')}</p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">{t('previous_node_body')}</span>
+                    <div
+                      className="prose prose-sm max-w-none rounded-md border bg-muted/30 px-3 py-2 dark:prose-invert"
+                      dangerouslySetInnerHTML={{
+                        __html: safeTiptapToHTML((previousNode.data.config as Record<string, unknown>)?.body),
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 dark:border-amber-800/40 dark:bg-amber-950/30">
+                  <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <p className="text-[11px] leading-snug text-amber-700 dark:text-amber-300">
+                    {t('previous_node_missing_warning')}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Dynamic config fields */}
           {visibleConfigFields.length > 0 && (
