@@ -71,6 +71,7 @@ export const adminItems: NavItem[] = [
   { titleKey: 'analytics',     url: '/analytics',       icon: Home       },
   { titleKey: 'admin_clients', url: '/admin/clients',   icon: Users      },
   { titleKey: 'workflows',     url: '/admin/workflows', icon: ShieldCheck},
+  { titleKey: 'form_builder',  url: '/admin/form-builder', icon: FileText},
   { titleKey: 'catalog',       url: '/admin/catalog',   icon: BookOpen   },
   { titleKey: 'admin_audit',   url: '/admin/audit',     icon: ShieldAlert},
 ];

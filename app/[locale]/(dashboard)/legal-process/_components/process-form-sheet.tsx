@@ -8,13 +8,17 @@ import { useTranslations } from 'next-intl';
 
 type Lawyer = { id: string; firstname: string | null; lastname: string | null; email: string | null };
 
+type WorkflowTemplateOption = { id: string; name: string; is_legacy_form: boolean };
+
 export default function ProcessFormSheet({
   documents,
   lawyers,
+  workflowTemplates,
   currentUserId,
 }: {
   documents: { label: string; value: string; key?: string }[];
   lawyers: Lawyer[];
+  workflowTemplates: WorkflowTemplateOption[];
   currentUserId: string;
 }) {
   const t = useTranslations('process.form');
@@ -31,6 +35,7 @@ export default function ProcessFormSheet({
           <ProcessForm
             documents={documents}
             lawyers={lawyers}
+            workflowTemplates={workflowTemplates}
             currentUserId={currentUserId}
             onSuccess={() => setOpen(false)}
           />

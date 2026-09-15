@@ -5,6 +5,7 @@ import { ReactNode } from 'react';
 import { LegalProcessClientSideProvider } from './_context/LegalProcessClientSideProvider';
 import { ProcessCompleteMain } from './_components/ProcessCompleteMain';
 import { getLegalProcessBankingInformation, getLegalProcessClientData, getLegalProcessDocumentTypes, getLegalProcessBanks } from './[step]/actions';
+import { getFormSchema } from './[step]/dynamic-actions';
 import { FormUnavailable } from './_components/FormUnavailable';
 
 interface Props {
@@ -22,7 +23,7 @@ export default async function ProcessCompleteLayout({
 
   const { data: process, error } = await supabase
     .from('legal_processes')
-    .select('id, access_token, status')
+    .select('id, access_token, status, form_schema_id')
     .eq('id', id)
     .single();
 
@@ -45,11 +46,12 @@ export default async function ProcessCompleteLayout({
     return <FormUnavailable reason="unavailable" />;
   }
 
-  const [clientData, bankingData, documentTypes, banks] = await Promise.all([
+  const [clientData, bankingData, documentTypes, banks, formSchema] = await Promise.all([
     getLegalProcessClientData(id),
     getLegalProcessBankingInformation(id),
     getLegalProcessDocumentTypes(id),
     getLegalProcessBanks(id),
+    process.form_schema_id ? getFormSchema(process.form_schema_id) : Promise.resolve(null),
   ]);
 
   return (
@@ -60,6 +62,7 @@ export default async function ProcessCompleteLayout({
         bankingData={bankingData}
         documentTypes={documentTypes}
         banks={banks}
+        formSchema={formSchema}
       >
         <ProcessCompleteMain>{children}</ProcessCompleteMain>
       </LegalProcessClientSideProvider>

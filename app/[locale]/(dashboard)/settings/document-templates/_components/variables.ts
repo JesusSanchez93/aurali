@@ -16,6 +16,8 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'EMAIL',           label: 'Email' },
             { key: 'PHONE',           label: 'Teléfono' },
             { key: 'ADDRESS',         label: 'Dirección' },
+            { key: 'DOCUMENT_FRONT_IMAGE', label: 'Foto del documento (frente)' },
+            { key: 'DOCUMENT_BACK_IMAGE',  label: 'Foto del documento (reverso)' },
         ],
     },
     {
@@ -33,9 +35,16 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
         label: 'Banco',
         variables: [
             { key: 'NAME',                  label: 'Nombre del Banco' },
+            { key: 'CODE',                  label: 'Código del Banco' },
             { key: 'DOCUMENT_SLUG',         label: 'Tipo de Documento del Banco' },
             { key: 'DOCUMENT_NUMBER',       label: 'Número de Documento del Banco' },
             { key: 'LAST_4_DIGITS',         label: 'Últimos 4 Dígitos' },
+            // A diferencia de LAST_4_DIGITS (un solo string ya armado, para
+            // mostrar directo en un template), PRODUCTS guarda el listado
+            // completo de productos financieros afectados — por su naturaleza
+            // puede tener más de un valor (el field type financial_product del
+            // DFB produce un array, no un valor único).
+            { key: 'PRODUCTS',              label: 'Productos Financieros Afectados' },
             { key: 'FRAUD_INCIDENT_SUMMARY', label: 'Relato de los Hechos' },
             { key: 'LEGAL_REP_FIRST_NAME',  label: 'Nombre del Representante Legal del Banco' },
             { key: 'LEGAL_REP_LAST_NAME',   label: 'Apellido del Representante Legal del Banco' },

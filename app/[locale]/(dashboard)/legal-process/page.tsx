@@ -1,6 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import ProcessList from '@/app/[locale]/(dashboard)/legal-process/_components/process-list';
-import { getDocuments, getLegalProcesses, getOrgLawyers } from './actions';
+import { getActiveWorkflowTemplates, getDocuments, getLegalProcesses, getOrgLawyers } from './actions';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import { Button } from '@/components/ui/button';
 import { Link } from '@/i18n/routing';
@@ -32,13 +32,15 @@ export default async function ProcessPage(props: {
   let count = 0;
   let documents: Awaited<ReturnType<typeof getDocuments>> = [];
   let lawyers: Awaited<ReturnType<typeof getOrgLawyers>> = [];
+  let workflowTemplates: Awaited<ReturnType<typeof getActiveWorkflowTemplates>> = [];
   let profile: Awaited<ReturnType<typeof getSessionProfile>>['profile'] = null;
 
   try {
-    const [processesResult, documentsResult, lawyersResult, profileResult] = await Promise.all([
+    const [processesResult, documentsResult, lawyersResult, workflowTemplatesResult, profileResult] = await Promise.all([
       getLegalProcesses(page, pageSize, search, status),
       getDocuments(),
       getOrgLawyers(),
+      getActiveWorkflowTemplates(),
       getSessionProfile(),
     ]);
 
@@ -46,6 +48,7 @@ export default async function ProcessPage(props: {
     count = processesResult.count;
     documents = documentsResult;
     lawyers = lawyersResult;
+    workflowTemplates = workflowTemplatesResult;
     profile = profileResult.profile;
   } catch (error) {
     const e = error as Error & { digest?: string };
@@ -97,6 +100,7 @@ export default async function ProcessPage(props: {
           <ProcessFormSheet
             documents={options}
             lawyers={lawyers}
+            workflowTemplates={workflowTemplates}
             currentUserId={profile?.id ?? ''}
           />
         </div>

@@ -350,9 +350,12 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail, className }
                             ? 'audit_actions.status_declined'
                             : null
                       : null;
+                    const actionKey = `audit_actions.${entry.data.action}`;
                     const label = specificKey
                       ? t(specificKey as never, undefined as never)
-                      : t(`audit_actions.${entry.data.action}` as never, undefined as never) ?? t('audit_actions.default');
+                      : t.has(actionKey as never)
+                        ? t(actionKey as never, undefined as never)
+                        : t('audit_actions.default');
                     const meta  = formatAuditMeta(entry.data, t, tS);
                     const emailCategory = auditMeta?.email_category;
                     const resendable = emailCategory === 'form' || emailCategory === 'documents' ? emailCategory : null;
@@ -388,7 +391,8 @@ export function ProcessTimelineButton({ legalProcessId, clientEmail, className }
                   const step     = entry.data;
                   const sCfg     = STEP_STATUS_CONFIG[step.status] ?? STEP_STATUS_CONFIG.pending;
                   const meta     = formatStepMeta(step, t);
-                  const label    = t(`node_types.${step.node_type}` as never, undefined as never) ?? step.node_title;
+                  const nodeTypeKey = `node_types.${step.node_type}`;
+                  const label    = t.has(nodeTypeKey as never) ? t(nodeTypeKey as never, undefined as never) : step.node_title;
                   const isFailed = step.status === 'failed';
                   const stepResendable = step.status === 'completed'
                     && (step.email_category === 'form' || step.email_category === 'documents')

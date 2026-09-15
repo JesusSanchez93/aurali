@@ -2,6 +2,7 @@
 
 import { Tables } from '@/types/database.types';
 import { createContext, ReactNode, useContext } from 'react';
+import type { FormSchema } from '@/lib/forms/types';
 
 type DocumentType = { id: string; slug: string | null; name: string };
 type BankType = { id: string; name: string; slug: string };
@@ -12,6 +13,8 @@ interface LegalProcessClientSideContextType {
   bankingData: Tables<'legal_process_banks'> | null;
   documentTypes: DocumentType[];
   banks: BankType[];
+  /** null cuando el proceso usa el flujo legado (fraude bancario, pasos fijos) */
+  formSchema: FormSchema | null;
 }
 
 const LegalProcessClientSideContext =
@@ -23,6 +26,7 @@ interface ProviderProps {
   bankingData: Tables<'legal_process_banks'> | null;
   documentTypes: DocumentType[];
   banks: BankType[];
+  formSchema: FormSchema | null;
   children: ReactNode;
 }
 
@@ -32,10 +36,11 @@ export function LegalProcessClientSideProvider({
   bankingData,
   documentTypes,
   banks,
+  formSchema,
   children,
 }: ProviderProps) {
   return (
-    <LegalProcessClientSideContext.Provider value={{ id, clientData, bankingData, documentTypes, banks }}>
+    <LegalProcessClientSideContext.Provider value={{ id, clientData, bankingData, documentTypes, banks, formSchema }}>
       {children}
     </LegalProcessClientSideContext.Provider>
   );
@@ -71,4 +76,8 @@ export function useLegalProcessDocumentTypes() {
 
 export function useLegalProcessBanks() {
   return useLegalProcessClientSide().banks;
+}
+
+export function useLegalProcessFormSchema() {
+  return useLegalProcessClientSide().formSchema;
 }

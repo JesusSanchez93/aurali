@@ -16,21 +16,28 @@ import { createLegalProcessDraft, setProcessFee } from '../actions';
 
 
 type Lawyer = { id: string; firstname: string | null; lastname: string | null; email: string | null };
+type WorkflowTemplateOption = { id: string; name: string; is_legacy_form: boolean };
 
 interface Props {
   documents: { label: string; value: string; key?: string }[];
   lawyers: Lawyer[];
+  workflowTemplates: WorkflowTemplateOption[];
   currentUserId: string;
   onSuccess?: () => void;
 }
 
-export default function ProcessForm({ documents, lawyers, currentUserId, onSuccess }: Props) {
+export default function ProcessForm({ documents, lawyers, workflowTemplates, currentUserId, onSuccess }: Props) {
   const t = useTranslations();
   const commonT = useTranslations('common');
   const processT = useTranslations('process');
   const validationT = useTranslations('common.validation');
 
   const [isPending, startTransition] = useTransition();
+
+  // El selector de tipo de proceso solo se muestra (y es requerido) cuando la
+  // organización tiene más de un workflow_template activo; con uno solo se
+  // sigue usando automáticamente, sin mostrar nada.
+  const showWorkflowTemplateSelector = workflowTemplates.length > 1;
 
   const formSchema = useMemo(() => z.object({
     document_id: z.string().min(1, validationT('required')),
@@ -41,14 +48,22 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
       .email(validationT('invalid_email'))
       .min(1, validationT('required')),
     assigned_to: z.string().min(1, validationT('required')),
+    workflow_template_id: showWorkflowTemplateSelector
+      ? z.string().min(1, validationT('required'))
+      : z.string().optional(),
     total_amount: z.coerce
       .number({ required_error: validationT('required'), invalid_type_error: validationT('required') })
       .positive({ message: validationT('required') }),
-  }), [validationT]);
+  }), [validationT, showWorkflowTemplateSelector]);
 
   const lawyerOptions = lawyers.map((l) => ({
     value: l.id,
     label: [l.firstname, l.lastname].filter(Boolean).join(' ') || l.email || l.id,
+  }));
+
+  const workflowTemplateOptions = workflowTemplates.map((wf) => ({
+    value: wf.id,
+    label: wf.name,
   }));
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -58,6 +73,7 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
       document_id: '',
       document_number: '',
       assigned_to: currentUserId,
+      workflow_template_id: '',
       total_amount: undefined,
     },
   });
@@ -101,6 +117,17 @@ export default function ProcessForm({ documents, lawyers, currentUserId, onSucce
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 gap-4">
+          {showWorkflowTemplateSelector && (
+            <FormSelect
+              control={form.control}
+              name="workflow_template_id"
+              label={processT('fields.workflow_template')}
+              className="flex-auto"
+              required
+              disabled={isPending}
+              options={workflowTemplateOptions}
+            />
+          )}
           <FormSelect
             control={form.control}
             name="document_id"

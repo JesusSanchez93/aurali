@@ -11,24 +11,12 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { userAgent } from 'next/server'
 import { Laptop2, Sparkles, Workflow } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { WorkflowEditor } from '@/components/app/workflow-editor/WorkflowEditor'
 import { WorkflowSelector } from './workflow-selector'
+import { ActiveWorkflowsManager } from './_components/active-workflows-manager'
 import { getAvailableWorkflows } from '@/app/[locale]/onboarding/workflow-selection/actions'
-import { updateEmailNodeConfig } from './actions'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Supabase = any
-
-interface DbWorkflowNode {
-  id: string; node_id: string; type: string; title: string
-  config: Record<string, unknown>; position_x: number; position_y: number; created_at: string
-}
-interface DbWorkflowEdge {
-  id: string; source_node_id: string; target_node_id: string
-  source_handle_id: string | null; target_handle_id: string | null
-  condition: Record<string, unknown> | null
-}
 
 export default async function WorkflowsPage() {
   const t = await getTranslations('settings.workflows')
@@ -114,88 +102,34 @@ export default async function WorkflowsPage() {
     )
   }
 
-  // Find the active workflow assignment for this org
-  const { data: assignment } = await db
+  // Find ALL active workflow assignments for this org — an organization can
+  // run several tipos de proceso legal (workflow_templates) in parallel.
+  const { data: assignments } = await db
     .from('organization_workflows')
-    .select('workflow_template_id, workflow_templates(id, name, description)')
+    .select('workflow_template_id, workflow_templates(id, name, description, is_legacy_form)')
     .eq('organization_id', orgId)
     .eq('is_active', true)
-    .single()
 
-  const template = assignment?.workflow_templates as
-    | { id: string; name: string; description: string | null }
-    | null
-    | undefined
+  const activeTemplates = (assignments ?? [])
+    .map((a: { workflow_templates: { id: string; name: string; description: string | null; is_legacy_form: boolean } | null }) => a.workflow_templates)
+    .filter((wf: unknown): wf is { id: string; name: string; description: string | null; is_legacy_form: boolean } => Boolean(wf))
 
-  if (!template) {
+  if (activeTemplates.length === 0) {
     const workflows = await getAvailableWorkflows()
     return <WorkflowSelector workflows={workflows} />
   }
 
-  // Load nodes and edges in parallel
-  const [{ data: dbNodes }, { data: dbEdges }] = await Promise.all([
-    db
-      .from('workflow_nodes')
-      .select('*')
-      .eq('template_id', template.id)
-      .order('created_at', { ascending: true }) as Promise<{ data: DbWorkflowNode[] | null }>,
-    db
-      .from('workflow_edges')
-      .select('*')
-      .eq('template_id', template.id) as Promise<{ data: DbWorkflowEdge[] | null }>,
-  ])
-
-  const nodes = (dbNodes ?? []).map((n) => ({
-    id: n.node_id,
-    type: n.type as 'start',
-    position: { x: n.position_x, y: n.position_y },
-    data: { nodeId: n.node_id, type: n.type as 'start', title: n.title, config: n.config ?? {} },
-  }))
-
-  const edges = (dbEdges ?? []).map((e) => ({
-    id: e.id,
-    source: e.source_node_id,
-    target: e.target_node_id,
-    sourceHandle: e.source_handle_id ?? undefined,
-    targetHandle: e.target_handle_id ?? undefined,
-    type: 'bezier' as const,
-    animated: true,
-    markerEnd: { type: 'arrowclosed' as const, width: 18, height: 18 },
-    data: (e.condition ?? undefined) as undefined,
-  }))
+  const allWorkflows = await getAvailableWorkflows()
+  const availableToActivate = allWorkflows.filter(
+    (wf) => !activeTemplates.some((active: { id: string }) => active.id === wf.id),
+  )
 
   return (
-    <div className="space-y-4 px-6 py-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('readonly_title')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('readonly_description')}
-          </p>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{template.name}</CardTitle>
-          {template.description && (
-            <CardDescription>{template.description}</CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="h-[calc(100vh-18rem)] overflow-hidden rounded-b-lg">
-            <WorkflowEditor
-              templateId={template.id}
-              templateName={template.name ?? ''}
-              initialNodes={nodes}
-              initialEdges={edges}
-              readOnly
-              backHref="/settings/workflows"
-              onNodeEdit={updateEmailNodeConfig}
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <ActiveWorkflowsManager
+      activeTemplates={activeTemplates}
+      availableToActivate={availableToActivate}
+      title={t('readonly_title')}
+      description={t('readonly_description')}
+    />
   )
 }
