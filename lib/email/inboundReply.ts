@@ -37,16 +37,24 @@ export function buildTrackingMessageId(replyToken: string): string {
  * — mismo criterio sin importar quién lo dispare: un nodo de workflow
  * (executeSendEmail/executeSendDocuments en lib/workflow/nodeExecutors.ts) o
  * una notificación manual (ej. avisar al cliente que un documento recibido
- * fue rechazado). Null si la organización no existe — no debería pasar en
- * la práctica, cualquier proceso legal tiene organization_id.
+ * fue rechazado).
+ *
+ * Solo soporta IMAP por ahora: el modo 'webhook' (Reply-To propio de Aurali +
+ * Resend Inbound) requiere RESEND_INBOUND_WEBHOOK_SECRET/INBOUND_EMAIL_DOMAIN,
+ * que aún no están configurados — hasta que lo estén, una organización sin
+ * IMAP simplemente no puede rastrear respuestas (null) en vez de intentar un
+ * webhook roto que tumbaría el envío del correo. El código del webhook
+ * (app/api/webhooks/email-inbound/route.ts) y buildInboundReplyAddress más
+ * abajo quedan listos para reactivarse: solo hay que volver a construir el
+ * objeto con captureMode: 'webhook' acá cuando esas variables existan.
  */
 export async function determineReplyCapture(
   organizationId: string | null,
-): Promise<{ replyToken: string; captureMode: 'imap' | 'webhook' } | null> {
+): Promise<{ replyToken: string; captureMode: 'imap' } | null> {
   if (!organizationId) return null;
-  const replyToken = randomUUID();
   const imapCredentials = await getImapCredentials(organizationId);
-  return { replyToken, captureMode: imapCredentials ? 'imap' : 'webhook' };
+  if (!imapCredentials) return null;
+  return { replyToken: randomUUID(), captureMode: 'imap' };
 }
 
 /** Verifica la firma Svix de un webhook de Resend Inbound (mismo esquema que

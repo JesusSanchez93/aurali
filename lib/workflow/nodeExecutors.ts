@@ -34,7 +34,7 @@ import { TextStyleKit } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import { buildSignatureInstructionsHtml } from '@/lib/email/signatureRequestEmail';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
-import { buildInboundReplyAddress, buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
+import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 import type {
   WorkflowNodeRow,
   WorkflowEdgeRow,
@@ -293,7 +293,7 @@ function buildSignatureAccessLink(): { accessToken: string; accessTokenExpiresAt
  */
 async function computeReplyTracking(
   context: ExecutionContext,
-): Promise<{ willWaitForReply: boolean; replyToken?: string; captureMode?: 'imap' | 'webhook' }> {
+): Promise<{ willWaitForReply: boolean; replyToken?: string; captureMode?: 'imap' }> {
   const willWaitForReply = context.nextNodeTypes?.includes('wait_email_reply') ?? false;
   if (!willWaitForReply) return { willWaitForReply };
 
@@ -549,7 +549,6 @@ async function executeSendEmail(
 
     const { requestId } = await createSignatureRequestAndSend(supabase, context, {
       to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
-      replyTo: captureMode === 'webhook' ? buildInboundReplyAddress(replyToken!) : undefined,
       messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
     });
 
@@ -660,7 +659,7 @@ async function executeSendEmail(
     attachments.length ? attachments : undefined,
     formUrl,
     undefined,
-    captureMode === 'webhook' ? buildInboundReplyAddress(replyToken!) : undefined,
+    undefined,
     captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
   );
 
@@ -1407,7 +1406,6 @@ async function executeSendDocuments(
   try {
     ({ requestId } = await createSignatureRequestAndSend(supabase, context, {
       to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
-      replyTo: captureMode === 'webhook' ? buildInboundReplyAddress(replyToken!) : undefined,
       messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
     }));
   } catch (err) {
@@ -1470,14 +1468,24 @@ async function executeWaitEmailReply(
   };
 
   const replyToken = context.previousOutput?.reply_token as string | undefined;
-  const captureMode = context.previousOutput?.capture_mode as 'imap' | 'webhook' | undefined;
+  const captureMode = context.previousOutput?.capture_mode as 'imap' | undefined;
   const toEmail = context.previousOutput?.sent_to as string | undefined;
 
-  if (!replyToken || !captureMode || !toEmail) {
+  if (!toEmail) {
     return {
       status: 'failed',
       output: {},
       error: 'Este nodo debe conectarse directamente después de un nodo "Enviar Correo".',
+    };
+  }
+  // toEmail presente pero sin reply_token/capture_mode: el grafo está bien
+  // conectado, lo que falta es IMAP — determineReplyCapture (por ahora, único
+  // modo soportado) devolvió null porque la organización no lo configuró.
+  if (!replyToken || !captureMode) {
+    return {
+      status: 'failed',
+      output: {},
+      error: 'La organización no tiene IMAP configurado — configúralo en Ajustes → Correo para poder recibir respuestas del cliente.',
     };
   }
   if (!context.legalProcess.organization_id) {

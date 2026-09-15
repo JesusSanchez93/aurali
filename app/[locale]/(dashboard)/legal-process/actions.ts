@@ -11,7 +11,7 @@ import { approveGeneratedDocument } from '@/lib/onlyoffice/approveDocument';
 import type { FormSchema } from '@/lib/forms/types';
 import { resolveSectionOptions } from '@/lib/forms/catalogOptions';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
-import { buildInboundReplyAddress, buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
+import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 
 type LocalizedString = {
   es?: string;
@@ -776,7 +776,7 @@ export async function notifyRejectedEmailAttachmentsAction(legalProcessId: strin
   const documentNameById = new Map((matchedDocuments ?? []).map((d) => [d.id, d.document_name]));
 
   const capture = await determineReplyCapture(organizationId);
-  if (!capture) throw new Error('El proceso legal no tiene organization_id');
+  if (!capture) throw new Error('La organización no tiene IMAP configurado — configúralo en Ajustes → Correo para poder recibir la corrección del cliente.');
   const { replyToken, captureMode } = capture;
 
   const deadlineAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -818,7 +818,6 @@ export async function notifyRejectedEmailAttachmentsAction(legalProcessId: strin
     to: toEmail,
     subject,
     bodyHtml,
-    replyTo: captureMode === 'webhook' ? buildInboundReplyAddress(replyToken) : undefined,
     messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken) : undefined,
   });
 
