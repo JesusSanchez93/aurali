@@ -1,6 +1,7 @@
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import { redirect } from 'next/navigation';
 import { OnboardingProgress } from '@/components/app/onboarding/onboarding-progress';
+import { OnboardingUserMenu } from '@/components/app/onboarding/onboarding-user-menu';
 import { Logo } from '@/components/common/logo';
 import { ScrollToTop } from '@/components/app/onboarding/scroll-to-top';
 
@@ -30,6 +31,11 @@ export default async function OnboardingLayout({
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <ScrollToTop />
+      <OnboardingUserMenu
+        firstname={profile?.firstname ?? ''}
+        lastname={profile?.lastname ?? ''}
+        email={profile?.email ?? user.email ?? ''}
+      />
       <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-center backdrop-blur-sm bg-background/80 px-6">
         <OnboardingProgress />
       </header>
