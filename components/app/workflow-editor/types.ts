@@ -8,6 +8,7 @@ export type WorkflowNodeType =
   | 'manual_action'
   | 'generate_document'
   | 'send_documents'
+  | 'wait_email_reply'
   | 'status_update'
   | 'end';
 

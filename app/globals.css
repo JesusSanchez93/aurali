@@ -495,3 +495,12 @@
 .tiptap-editing-footer .rm-page-footer-content {
   visibility: hidden;
 }
+
+/* Workflow editor edges: the animated dash-flow effect (react-flow's default
+   `.react-flow__edge.animated path` rule) targets every <path> in the edge,
+   including the arrowhead drawn inside the <marker>. Keep the arrow static
+   while the edge body keeps moving. */
+.react-flow__edge.animated path.workflow-edge-arrow {
+  stroke-dasharray: none;
+  animation: none;
+}

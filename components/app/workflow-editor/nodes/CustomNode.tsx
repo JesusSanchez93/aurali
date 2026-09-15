@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import { Handle, Position, useReactFlow, useConnection, useEdges, useStore, type NodeProps } from '@xyflow/react';
 import * as LucideIcons from 'lucide-react';
-import { Trash2 } from 'lucide-react';
+import { MailQuestion, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NODE_TYPES_CONFIG } from '../node-config';
 import type { WorkflowNode, WorkflowNodeType } from '../types';
@@ -18,6 +18,7 @@ const COLOR_MAP: Record<string, string> = {
   'bg-rose-500':    '#f43f5e',
   'bg-slate-500':   '#64748b',
   'bg-indigo-500':  '#6366f1',
+  'bg-teal-500':    '#14b8a6',
 };
 
 function getIcon(name: string): React.ComponentType<{ className?: string; style?: React.CSSProperties }> {
@@ -50,6 +51,15 @@ export const CustomNode = memo(function CustomNode({
   // lag on multi-selection via drag-box when the component is memoized.
   const isNodeSelected = useStore(s => !!s.nodes.find(n => n.id === id)?.selected);
   const selectedCount = useStore(s => s.nodes.filter(n => n.selected).length);
+  // Puramente informativo: si este es un nodo send_email conectado a un
+  // wait_email_reply, ese correo se marcará como rastreable automáticamente
+  // (ver executeSendEmail) — no afecta guardado ni ejecución, solo avisa.
+  const hasReplyTracking = useStore(s => {
+    if (data.type !== 'send_email') return false;
+    return s.edges.some(
+      e => e.source === id && s.nodes.find(n => n.id === e.target)?.type === 'wait_email_reply',
+    );
+  });
 
   const connectedHandles = new Set<string>();
   for (const edge of edges) {
@@ -148,6 +158,12 @@ export const CustomNode = memo(function CustomNode({
             {cfg.label}
           </p>
           <p className="truncate text-sm font-semibold text-foreground">{data.title as string}</p>
+          {hasReplyTracking && (
+            <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-teal-600 dark:text-teal-400">
+              <MailQuestion className="h-3 w-3 shrink-0" />
+              Seguimiento de respuesta activo
+            </p>
+          )}
         </div>
       </div>
     </div>

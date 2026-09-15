@@ -12,7 +12,7 @@ import {
   type Connection,
 } from '@xyflow/react';
 import { toast } from '@/lib/toast';
-import { Save, Loader2, ArrowLeft, Eye, ChevronLeft, ChevronRight, AlignCenterHorizontal, AlignCenterVertical } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,9 @@ import type { WorkflowNode, WorkflowEdge, WorkflowNodeType } from './types';
 import { NODE_TYPES_CONFIG } from './node-config';
 import { saveWorkflow } from '@/app/[locale]/(dashboard)/settings/workflows/[id]/actions';
 
+// wait_email_reply queda fuera: ya no tiene subject/body propios que un
+// abogado pueda personalizar por caso — el diálogo de edición (NodeEditDialog)
+// está pensado para esos campos.
 const EDITABLE_NODE_TYPES: WorkflowNodeType[] = ['send_email', 'send_documents'];
 
 interface WorkflowEditorProps {
@@ -71,7 +74,7 @@ function WorkflowEditorInner({
     (connection) =>
       setEdges((eds) =>
         addEdge(
-          { ...connection, type: 'bezier', animated: true } as WorkflowEdge,
+          { ...connection, type: 'bezier', animated: false } as WorkflowEdge,
           eds,
         ),
       ),
@@ -252,20 +255,6 @@ function WorkflowEditorInner({
         {!readOnly && <NodeSidebar onDragStart={onDragStart} />}
 
         <main className="relative flex-1">
-          {!readOnly && selectedNodes.length >= 2 && (
-            <div
-              className="absolute top-3 left-1/2 z-10 -translate-x-1/2 flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 shadow-md"
-              onMouseDown={e => e.stopPropagation()}
-            >
-              <span className="pr-1 text-xs text-muted-foreground">{selectedNodes.length} nodos</span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={alignY} title="Alinear horizontal">
-                <AlignCenterHorizontal className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={alignX} title="Alinear vertical">
-                <AlignCenterVertical className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
           <WorkflowCanvas
             nodes={displayNodes}
             edges={edges}
@@ -277,6 +266,9 @@ function WorkflowEditorInner({
             onAddNode={onAddNode}
             onPaneClick={() => setSelectedNode(null)}
             readOnly={readOnly}
+            selectedNodeIds={selectedNodes.map((n) => n.id)}
+            onAlignX={alignX}
+            onAlignY={alignY}
           />
         </main>
 
@@ -304,7 +296,7 @@ function WorkflowEditorInner({
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold leading-none">{cfg.label}</p>
-                    <p className="mt-0.5 truncate text-xs font-normal text-muted-foreground">{cfg.description}</p>
+                    <p className="mt-0.5 text-xs font-normal text-muted-foreground">{cfg.description}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5">
@@ -336,6 +328,8 @@ function WorkflowEditorInner({
               <NodeConfigPanel
                 key={selectedNode.id}
                 node={selectedNode}
+                edges={edges}
+                allNodes={nodes}
                 onUpdate={onUpdateNode}
                 onClose={() => setSelectedNode(null)}
               />

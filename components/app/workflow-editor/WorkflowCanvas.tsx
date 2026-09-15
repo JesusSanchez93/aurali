@@ -7,6 +7,8 @@ import {
   BackgroundVariant,
   Controls,
   MiniMap,
+  NodeToolbar,
+  Position,
   useReactFlow,
   ConnectionLineType,
   type OnConnect,
@@ -15,6 +17,8 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { AlignCenterHorizontal, AlignCenterVertical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { nodeTypes } from './nodes';
 import { GradientEdge } from './edges/GradientEdge';
 import { NODE_TYPES_CONFIG } from './node-config';
@@ -31,13 +35,19 @@ interface WorkflowCanvasProps {
   onAddNode: (node: WorkflowNode) => void;
   onPaneClick: () => void;
   readOnly?: boolean;
+  /** IDs of the currently multi-selected nodes — drives the floating align
+   *  toolbar below, positioned over their bounding box (via NodeToolbar) so
+   *  it follows the selection instead of sitting fixed at the top. */
+  selectedNodeIds?: string[];
+  onAlignX?: () => void;
+  onAlignY?: () => void;
 }
 
 const edgeTypes = { bezier: GradientEdge };
 
 const DEFAULT_EDGE_OPTIONS = {
   type: 'bezier',
-  animated: true,
+  animated: false,
   style: { strokeWidth: 2 },
 };
 
@@ -52,6 +62,9 @@ export function WorkflowCanvas({
   onAddNode,
   onPaneClick,
   readOnly = false,
+  selectedNodeIds = [],
+  onAlignX,
+  onAlignY,
 }: WorkflowCanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -119,6 +132,23 @@ export function WorkflowCanvas({
         panActivationKeyCode="Meta"
         proOptions={{ hideAttribution: true }}
       >
+        {!readOnly && selectedNodeIds.length >= 2 && (
+          <NodeToolbar
+            nodeId={selectedNodeIds}
+            isVisible
+            position={Position.Top}
+            className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 shadow-md"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <span className="pr-1 text-xs text-muted-foreground">{selectedNodeIds.length} nodos</span>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAlignY} title="Alinear horizontal">
+              <AlignCenterHorizontal className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAlignX} title="Alinear vertical">
+              <AlignCenterVertical className="h-4 w-4" />
+            </Button>
+          </NodeToolbar>
+        )}
         <Background
           variant={BackgroundVariant.Dots}
           gap={16}
@@ -140,6 +170,8 @@ export function WorkflowCanvas({
               'bg-cyan-500': '#06b6d4',
               'bg-rose-500': '#f43f5e',
               'bg-slate-500': '#64748b',
+              'bg-indigo-500': '#6366f1',
+              'bg-teal-500': '#14b8a6',
             };
             return colorMap[cfg.colorClass] ?? '#6366f1';
           }}

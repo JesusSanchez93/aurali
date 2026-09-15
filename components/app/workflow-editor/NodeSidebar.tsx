@@ -15,12 +15,14 @@ const COLOR_MAP: Record<string, string> = {
   'bg-rose-500':    '#f43f5e',
   'bg-slate-500':   '#64748b',
   'bg-indigo-500':  '#6366f1',
+  'bg-teal-500':    '#14b8a6',
 };
 
 const NODE_ORDER: WorkflowNodeType[] = [
   'start',
   'client_form',
   'send_email',
+  'wait_email_reply',
   'status_update',
   'generate_document',
   'notify_lawyer',
