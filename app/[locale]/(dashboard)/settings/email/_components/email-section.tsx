@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from '@/i18n/routing';
-import { Mail, CheckCircle2, ExternalLink, Server, Send } from 'lucide-react';
+import { Mail, CheckCircle2, ExternalLink, Loader2, Server, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,15 +54,17 @@ const DEFAULT_AURALI: EmailConnectionInfo = {
 
 interface Props {
   initialConnection: EmailConnectionInfo;
+  locale: string;
 }
 
-export function EmailSection({ initialConnection }: Props) {
+export function EmailSection({ initialConnection, locale }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [connection, setConnection] = useState(initialConnection);
   const [smtpSheetOpen, setSmtpSheetOpen] = useState(false);
   const [smtpTestDialogOpen, setSmtpTestDialogOpen] = useState(false);
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
   const [isDisconnecting, startDisconnect] = useTransition();
 
   // Replace-confirmation: set when the user tries to activate a different
@@ -87,6 +89,22 @@ export function EmailSection({ initialConnection }: Props) {
   const isError = connection.status === 'error';
   const hasOtherActiveConnection = (target: EmailProvider) =>
     connection.status === 'connected' && connection.provider !== target;
+
+  function goToOAuthConnect(provider: 'google' | 'microsoft') {
+    setConnectingProvider(provider);
+    window.location.href = `/api/auth/email/${provider}/connect?locale=${locale}`;
+  }
+
+  function handleConnectOAuth(provider: 'google' | 'microsoft') {
+    if (hasOtherActiveConnection(provider)) {
+      setReplaceConfirm({
+        targetLabel: PROVIDER_LABEL[provider],
+        proceed: () => goToOAuthConnect(provider),
+      });
+      return;
+    }
+    goToOAuthConnect(provider);
+  }
 
   function handleDisconnect() {
     startDisconnect(async () => {
@@ -239,29 +257,37 @@ export function EmailSection({ initialConnection }: Props) {
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {/* Google/Microsoft: el envío vía Gmail API / Microsoft Graph aún no
-              está implementado (ver GoogleEmailService/MicrosoftEmailService
-              en lib/email/providers/) — se muestran deshabilitadas en vez de
-              dejar conectar una cuenta que no podría enviar nada. */}
-          <Card className="opacity-60">
+          <Card className={cn(connection.provider === 'google' && isConnected && 'border-emerald-500/40')}>
             <CardContent className="flex h-full flex-col gap-3 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <GoogleIcon className="h-5 w-5 grayscale" />
-                  <span className="font-medium">Google</span>
-                </div>
-                <Badge variant="secondary" className="text-xs">Próximamente</Badge>
+              <div className="flex items-center gap-2">
+                <GoogleIcon className="h-5 w-5" />
+                <span className="font-medium">Google</span>
               </div>
               <p className="flex-1 text-xs text-muted-foreground">
                 Conecta tu cuenta de Google o Gmail personal o de Google Workspace.
               </p>
-              <Button variant="outline" size="sm" disabled>
-                Conectar Google
-                <ExternalLink className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={connectingProvider !== null}
+                onClick={() => handleConnectOAuth('google')}
+              >
+                {connectingProvider === 'google' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    Conectar Google
+                    <ExternalLink className="ml-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
 
+          {/* Microsoft: el envío vía Microsoft Graph aún no está implementado
+              (ver MicrosoftEmailService en lib/email/providers/) — se muestra
+              deshabilitada en vez de dejar conectar una cuenta que no podría
+              enviar nada. */}
           <Card className="opacity-60">
             <CardContent className="flex h-full flex-col gap-3 p-4">
               <div className="flex items-center justify-between gap-2">

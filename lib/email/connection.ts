@@ -136,6 +136,8 @@ export async function getConnectionTokens(organizationId: string): Promise<{
   accessToken: string;
   refreshToken: string;
   expiresAt: string | null;
+  email: string;
+  displayName: string | null;
 } | null> {
   const connection = await getRawConnection(organizationId);
   if (!connection || connection.status !== 'connected' || !connection.access_token || !connection.refresh_token) {
@@ -145,7 +147,32 @@ export async function getConnectionTokens(organizationId: string): Promise<{
     accessToken: connection.access_token,
     refreshToken: connection.refresh_token,
     expiresAt: connection.token_expires_at,
+    email: connection.email,
+    displayName: connection.display_name,
   };
+}
+
+/**
+ * Internal — persists a silently-refreshed OAuth access token after
+ * GoogleEmailService/MicrosoftEmailService renew it ahead of a send. Scoped
+ * to the still-'connected' row for this provider so a connection the user
+ * replaced in the meantime is never resurrected.
+ */
+export async function updateConnectionAccessToken(
+  organizationId: string,
+  provider: EmailProvider,
+  accessToken: string,
+  expiresAt: string,
+): Promise<void> {
+  const supabase = await createClient({ admin: true });
+  const { error } = await supabase
+    .from('email_connections')
+    .update({ access_token: accessToken, token_expires_at: expiresAt })
+    .eq('organization_id', organizationId)
+    .eq('provider', provider)
+    .eq('status', 'connected');
+
+  if (error) throw new Error(error.message);
 }
 
 /** Internal — only for use inside lib/email/providers/smtpEmailService.ts. Decrypts the password on read, never caches it. */

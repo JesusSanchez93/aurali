@@ -36,3 +36,35 @@ export function getRedirectUri(provider: OAuthEmailProvider): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   return `${base}/api/auth/email/${provider}/callback`;
 }
+
+/**
+ * Exchanges a stored refresh token for a fresh access token — used by
+ * GoogleEmailService/MicrosoftEmailService right before sending once the
+ * cached access token is at or past expiry. Returns null on failure (e.g. the
+ * refresh token was revoked); callers should surface a reconnect prompt.
+ */
+export async function refreshAccessToken(
+  provider: OAuthEmailProvider,
+  refreshToken: string,
+): Promise<{ accessToken: string; expiresAt: string } | null> {
+  const config = OAUTH_PROVIDERS[provider];
+  if (!config.clientId || !config.clientSecret) return null;
+
+  const res = await fetch(config.tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+  if (!res.ok) return null;
+
+  const data = (await res.json()) as { access_token: string; expires_in: number };
+  return {
+    accessToken: data.access_token,
+    expiresAt: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+  };
+}
