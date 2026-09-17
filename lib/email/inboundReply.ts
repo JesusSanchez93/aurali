@@ -1,5 +1,5 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
-import { getImapCredentials } from './connection';
+import { getImapCredentials, getEmailProvider } from './connection';
 
 /** Dirección Reply-To propia de Aurali para un correo que espera respuesta —
  *  usada por el nodo de workflow 'wait_email_reply' sin importar por qué
@@ -39,22 +39,37 @@ export function buildTrackingMessageId(replyToken: string): string {
  * una notificación manual (ej. avisar al cliente que un documento recibido
  * fue rechazado).
  *
- * Solo soporta IMAP por ahora: el modo 'webhook' (Reply-To propio de Aurali +
- * Resend Inbound) requiere RESEND_INBOUND_WEBHOOK_SECRET/INBOUND_EMAIL_DOMAIN,
- * que aún no están configurados — hasta que lo estén, una organización sin
- * IMAP simplemente no puede rastrear respuestas (null) en vez de intentar un
- * webhook roto que tumbaría el envío del correo. El código del webhook
+ * Dos mecanismos soportados hoy:
+ *   - 'imap': la organización conectó SMTP + IMAP en Ajustes → Correo — el
+ *     poller abre su bandeja real (app/api/cron/email-inbound-imap-poll) y
+ *     hace threading por Message-ID/In-Reply-To (buildTrackingMessageId).
+ *   - 'google': la organización conectó Gmail vía OAuth — Gmail sobrescribe
+ *     cualquier Message-ID propio, así que en vez de eso se guarda el
+ *     threadId que la Gmail API devuelve al enviar (ver
+ *     GoogleEmailService.send) y el mismo poller lee ese hilo con
+ *     lib/email/gmail/gmailInboxClient.ts.
+ *
+ * El modo 'webhook' (Reply-To propio de Aurali + Resend Inbound) requiere
+ * RESEND_INBOUND_WEBHOOK_SECRET/INBOUND_EMAIL_DOMAIN, que aún no están
+ * configurados — hasta que lo estén, una organización sin IMAP ni Google no
+ * puede rastrear respuestas (null) en vez de intentar un webhook roto que
+ * tumbaría el envío del correo. El código del webhook
  * (app/api/webhooks/email-inbound/route.ts) y buildInboundReplyAddress más
  * abajo quedan listos para reactivarse: solo hay que volver a construir el
  * objeto con captureMode: 'webhook' acá cuando esas variables existan.
  */
 export async function determineReplyCapture(
   organizationId: string | null,
-): Promise<{ replyToken: string; captureMode: 'imap' } | null> {
+): Promise<{ replyToken: string; captureMode: 'imap' | 'google' } | null> {
   if (!organizationId) return null;
+
   const imapCredentials = await getImapCredentials(organizationId);
-  if (!imapCredentials) return null;
-  return { replyToken: randomUUID(), captureMode: 'imap' };
+  if (imapCredentials) return { replyToken: randomUUID(), captureMode: 'imap' };
+
+  const provider = await getEmailProvider(organizationId);
+  if (provider === 'google') return { replyToken: randomUUID(), captureMode: 'google' };
+
+  return null;
 }
 
 /** Verifica la firma Svix de un webhook de Resend Inbound (mismo esquema que

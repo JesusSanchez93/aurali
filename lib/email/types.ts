@@ -64,6 +64,10 @@ export interface SendEmailParams {
 export interface SendEmailResult {
   id: string | null;
   provider: EmailProvider;
+  /** Gmail thread id del envío — solo provider='google' (ver GoogleEmailService.send).
+   *  Gmail sobrescribe cualquier Message-ID propio, así que este es el único
+   *  identificador estable para volver a encontrar la respuesta del cliente. */
+  threadId?: string | null;
 }
 
 /**

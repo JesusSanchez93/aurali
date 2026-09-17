@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@react-email/render';
 import { WorkflowEmail } from '@/emails/WorkflowEmail';
 import { getEmailServiceForOrg } from '@/lib/email/emailService';
-import type { EmailAttachment } from '@/lib/email/types';
+import type { EmailAttachment, SendEmailResult } from '@/lib/email/types';
 
 /**
  * Sends a client-facing email through the organization's configured provider
@@ -25,7 +25,7 @@ export async function sendOrgEmail(
     replyTo?: string;
     messageId?: string;
   },
-): Promise<void> {
+): Promise<SendEmailResult> {
   const html = await render(
     React.createElement(WorkflowEmail, {
       bodyHtml: params.bodyHtml,
@@ -36,7 +36,7 @@ export async function sendOrgEmail(
   );
 
   const service = await getEmailServiceForOrg(organizationId);
-  await service.send({
+  return service.send({
     to: params.to,
     subject: params.subject,
     html,

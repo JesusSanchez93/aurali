@@ -2,12 +2,16 @@
  * GET /api/cron/email-inbound-imap-poll
  *
  * Contraparte de app/api/webhooks/email-inbound para organizaciones con
- * capture_mode='imap' (SMTP + campos IMAP configurados en Ajustes → Email —
- * ver lib/email/connection.ts:getImapCredentials): en vez de esperar un
- * webhook, este cron abre la bandeja real de cada organización con una
- * espera pendiente y busca respuestas por threading (Message-ID forzado al
+ * capture_mode='imap' (SMTP + campos IMAP configurados en Ajustes → Correo —
+ * ver lib/email/connection.ts:getImapCredentials): abre la bandeja real de
+ * la organización y busca respuestas por threading (Message-ID forzado al
  * enviar, ver lib/email/inboundReply.ts:buildTrackingMessageId, encontrado
  * en In-Reply-To/References del mensaje entrante).
+ *
+ * capture_mode='google' ya NO se procesa aquí — Gmail usa Push + Cloud
+ * Pub/Sub (app/api/webhooks/gmail-push, con resincronización de respaldo en
+ * app/api/cron/gmail-watch-renew) en vez de polling, porque a diferencia de
+ * IMAP sí existe un mecanismo push oficial para Gmail.
  *
  * Una conexión IMAP por organización (no por fila pendiente) — se agrupan
  * las filas pendientes antes de conectar. Un fallo de credenciales/conexión

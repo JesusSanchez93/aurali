@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/email-inbound-imap-poll",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/gmail-watch-renew",
+      "schedule": "0 15 * * *"
     }
   ]
 }

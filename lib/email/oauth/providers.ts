@@ -16,7 +16,11 @@ export const OAUTH_PROVIDERS: Record<OAuthEmailProvider, OAuthProviderConfig> = 
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
-    scope: 'openid email https://www.googleapis.com/auth/gmail.send',
+    // gmail.readonly habilita la lectura del hilo para wait_email_reply
+    // (capture_mode='google', ver lib/email/gmail/gmailInboxClient.ts) —
+    // cuentas conectadas antes de este cambio deben reconectarse en Ajustes →
+    // Correo para otorgar este scope nuevo; el refresh_token viejo no lo cubre.
+    scope: 'openid email https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly',
     extraAuthorizeParams: { access_type: 'offline', prompt: 'consent' },
   },
   microsoft: {

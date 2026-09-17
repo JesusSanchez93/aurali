@@ -715,6 +715,8 @@ export type Database = {
           display_name: string | null
           email: string
           error_message: string | null
+          google_watch_expiration: string | null
+          google_watch_history_id: string | null
           id: string
           imap_host: string | null
           imap_port: number | null
@@ -738,6 +740,8 @@ export type Database = {
           display_name?: string | null
           email: string
           error_message?: string | null
+          google_watch_expiration?: string | null
+          google_watch_history_id?: string | null
           id?: string
           imap_host?: string | null
           imap_port?: number | null
@@ -761,6 +765,8 @@ export type Database = {
           display_name?: string | null
           email?: string
           error_message?: string | null
+          google_watch_expiration?: string | null
+          google_watch_history_id?: string | null
           id?: string
           imap_host?: string | null
           imap_port?: number | null
@@ -799,6 +805,7 @@ export type Database = {
           capture_mode: string
           created_at: string
           deadline_at: string
+          google_thread_id: string | null
           id: string
           legal_process_id: string
           node_id: string
@@ -818,6 +825,7 @@ export type Database = {
           capture_mode?: string
           created_at?: string
           deadline_at: string
+          google_thread_id?: string | null
           id?: string
           legal_process_id: string
           node_id: string
@@ -837,6 +845,7 @@ export type Database = {
           capture_mode?: string
           created_at?: string
           deadline_at?: string
+          google_thread_id?: string | null
           id?: string
           legal_process_id?: string
           node_id?: string

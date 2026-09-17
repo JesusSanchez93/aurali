@@ -35,6 +35,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { buildSignatureInstructionsHtml } from '@/lib/email/signatureRequestEmail';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
+import type { SendEmailResult } from '@/lib/email/types';
 import type {
   WorkflowNodeRow,
   WorkflowEdgeRow,
@@ -248,13 +249,13 @@ async function sendEmail(
   ctaLabel?: string,
   replyTo?: string,
   messageId?: string,
-): Promise<void> {
+): Promise<SendEmailResult> {
   if (!organizationId) {
     logger.error('sendEmail: missing organizationId, cannot resolve org email provider', undefined, { subject, to });
     throw new Error('El proceso legal no tiene organization_id');
   }
   try {
-    await sendOrgEmail(organizationId, { to, subject, bodyHtml, ctaUrl, ctaLabel, attachments, replyTo, messageId });
+    return await sendOrgEmail(organizationId, { to, subject, bodyHtml, ctaUrl, ctaLabel, attachments, replyTo, messageId });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error('Org email send failed', undefined, { subject, errorMessage: message });
@@ -293,7 +294,7 @@ function buildSignatureAccessLink(): { accessToken: string; accessTokenExpiresAt
  */
 async function computeReplyTracking(
   context: ExecutionContext,
-): Promise<{ willWaitForReply: boolean; replyToken?: string; captureMode?: 'imap' }> {
+): Promise<{ willWaitForReply: boolean; replyToken?: string; captureMode?: 'imap' | 'google' }> {
   const willWaitForReply = context.nextNodeTypes?.includes('wait_email_reply') ?? false;
   if (!willWaitForReply) return { willWaitForReply };
 
@@ -322,7 +323,7 @@ async function createSignatureRequestAndSend(
     replyTo?: string;
     messageId?: string;
   },
-): Promise<{ requestId: string }> {
+): Promise<{ requestId: string; threadId: string | null }> {
   const db = supabase as SupabaseClient & Record<string, unknown>;
   const { to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl, replyTo, messageId } = params;
 
@@ -374,7 +375,7 @@ async function createSignatureRequestAndSend(
     }
   }
 
-  await sendEmail(
+  const sendResult = await sendEmail(
     context.legalProcess.organization_id,
     to,
     subject,
@@ -386,7 +387,7 @@ async function createSignatureRequestAndSend(
     messageId,
   );
 
-  return { requestId: request.id };
+  return { requestId: request.id, threadId: sendResult.threadId ?? null };
 }
 
 // ─── Follow-up tracking (send_email "seguimiento") ─────────────────────────────
@@ -547,7 +548,7 @@ async function executeSendEmail(
     // directamente a wait_email_reply, el correo debe quedar rastreable.
     const { willWaitForReply, replyToken, captureMode } = await computeReplyTracking(context);
 
-    const { requestId } = await createSignatureRequestAndSend(supabase, context, {
+    const { requestId, threadId } = await createSignatureRequestAndSend(supabase, context, {
       to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
       messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
     });
@@ -590,7 +591,13 @@ async function executeSendEmail(
         signature_request_id: requestId,
         document_count: docs.length,
         sent_at: new Date().toISOString(),
-        ...(willWaitForReply ? { reply_token: replyToken, capture_mode: captureMode } : {}),
+        ...(willWaitForReply
+          ? {
+              reply_token: replyToken,
+              capture_mode: captureMode,
+              ...(captureMode === 'google' ? { google_thread_id: threadId } : {}),
+            }
+          : {}),
       },
     };
   }
@@ -651,7 +658,7 @@ async function executeSendEmail(
   // conexión, willWaitForReply es false y el envío es idéntico a siempre.
   const { willWaitForReply, replyToken, captureMode } = await computeReplyTracking(context);
 
-  await sendEmail(
+  const sendResult = await sendEmail(
     context.legalProcess.organization_id,
     to,
     subject,
@@ -706,7 +713,13 @@ async function executeSendEmail(
       subject,
       email_category: emailCategory,
       sent_at: new Date().toISOString(),
-      ...(willWaitForReply ? { reply_token: replyToken, capture_mode: captureMode } : {}),
+      ...(willWaitForReply
+        ? {
+            reply_token: replyToken,
+            capture_mode: captureMode,
+            ...(captureMode === 'google' ? { google_thread_id: sendResult.threadId ?? null } : {}),
+          }
+        : {}),
     },
   };
 }
@@ -1403,8 +1416,9 @@ async function executeSendDocuments(
   const { willWaitForReply, replyToken, captureMode } = await computeReplyTracking(context);
 
   let requestId: string;
+  let threadId: string | null;
   try {
-    ({ requestId } = await createSignatureRequestAndSend(supabase, context, {
+    ({ requestId, threadId } = await createSignatureRequestAndSend(supabase, context, {
       to, subject, introHtml, docs, accessToken, accessTokenExpiresAt, signUrl,
       messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
     }));
@@ -1437,7 +1451,13 @@ async function executeSendDocuments(
       signature_request_id: requestId,
       document_count: docs.length,
       sent_at: new Date().toISOString(),
-      ...(willWaitForReply ? { reply_token: replyToken, capture_mode: captureMode } : {}),
+      ...(willWaitForReply
+        ? {
+            reply_token: replyToken,
+            capture_mode: captureMode,
+            ...(captureMode === 'google' ? { google_thread_id: threadId } : {}),
+          }
+        : {}),
     },
   };
 }
@@ -1450,10 +1470,10 @@ async function executeSendDocuments(
 // rastreable). Este nodo solo registra la espera usando ese mismo
 // reply_token. La respuesta del cliente llega vía el webhook
 // app/api/webhooks/email-inbound/route.ts (capture_mode='webhook') o el
-// poller app/api/cron/email-inbound-imap-poll (capture_mode='imap'), ambos
-// resolviendo a través de lib/workflow/emailReplyResolution.ts, que sube
-// adjuntos, notifica al abogado y llama resumeWorkflow — el nodo en sí nunca
-// vuelve a ejecutarse, igual que manual_action/client_form.
+// poller app/api/cron/email-inbound-imap-poll (capture_mode='imap'|'google'),
+// ambos resolviendo a través de lib/workflow/emailReplyResolution.ts, que
+// sube adjuntos, notifica al abogado y llama resumeWorkflow — el nodo en sí
+// nunca vuelve a ejecutarse, igual que manual_action/client_form.
 
 async function executeWaitEmailReply(
   node: WorkflowNodeRow,
@@ -1468,7 +1488,8 @@ async function executeWaitEmailReply(
   };
 
   const replyToken = context.previousOutput?.reply_token as string | undefined;
-  const captureMode = context.previousOutput?.capture_mode as 'imap' | undefined;
+  const captureMode = context.previousOutput?.capture_mode as 'imap' | 'google' | undefined;
+  const googleThreadId = context.previousOutput?.google_thread_id as string | null | undefined;
   const toEmail = context.previousOutput?.sent_to as string | undefined;
 
   if (!toEmail) {
@@ -1479,13 +1500,23 @@ async function executeWaitEmailReply(
     };
   }
   // toEmail presente pero sin reply_token/capture_mode: el grafo está bien
-  // conectado, lo que falta es IMAP — determineReplyCapture (por ahora, único
-  // modo soportado) devolvió null porque la organización no lo configuró.
+  // conectado, lo que falta es la escucha — determineReplyCapture devolvió
+  // null porque la organización no tiene IMAP ni Google configurados.
   if (!replyToken || !captureMode) {
     return {
       status: 'failed',
       output: {},
-      error: 'La organización no tiene IMAP configurado — configúralo en Ajustes → Correo para poder recibir respuestas del cliente.',
+      error: 'La organización no tiene IMAP ni Google configurado — configúralo en Ajustes → Correo para poder recibir respuestas del cliente.',
+    };
+  }
+  // captureMode='google' sin threadId significa que el envío por Gmail API
+  // no devolvió uno (no debería pasar, pero sin él el poller no tiene forma
+  // de encontrar la respuesta).
+  if (captureMode === 'google' && !googleThreadId) {
+    return {
+      status: 'failed',
+      output: {},
+      error: 'El envío por Gmail no devolvió un hilo rastreable — reintenta el envío.',
     };
   }
   if (!context.legalProcess.organization_id) {
@@ -1511,6 +1542,7 @@ async function executeWaitEmailReply(
       requires_attachments: Boolean(cfg.requires_attachments),
       capture_mode: captureMode,
       reply_token: replyToken,
+      google_thread_id: captureMode === 'google' ? googleThreadId : null,
       deadline_at: deadlineAt,
     })
     .select('id')

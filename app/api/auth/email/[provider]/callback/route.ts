@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createLogger } from '@/lib/utils/logger';
 import { demoteActiveConnection } from '@/lib/email/connection';
 import { OAUTH_PROVIDERS, getRedirectUri, isOAuthEmailProvider } from '@/lib/email/oauth/providers';
+import { startOrRenewGmailWatch } from '@/lib/email/gmail/gmailWatch';
 import { OAUTH_STATE_COOKIE } from '../connect/route';
 
 const logger = createLogger('API:EMAIL_OAUTH_CALLBACK');
@@ -121,6 +122,19 @@ export async function GET(
     if (insertError) {
       logger.error('Failed to persist email connection', undefined, { errorMessage: insertError.message });
       return failTo('save_failed');
+    }
+
+    // Registra users.watch() para que Gmail empiece a publicar al topic de
+    // Pub/Sub (app/api/webhooks/gmail-push) — sin esto la conexión queda
+    // 'connected' pero nunca llega ninguna notificación push. Falla
+    // silenciosamente hacia el cron de renovación (gmail-watch-renew corre
+    // 1x/día y reintenta) en vez de tumbar la conexión ya guardada.
+    if (provider === 'google') {
+      try {
+        await startOrRenewGmailWatch(parsed.orgId);
+      } catch (err) {
+        logger.error('No se pudo registrar el watch de Gmail tras conectar', err, { organizationId: parsed.orgId });
+      }
     }
 
     return NextResponse.redirect(new URL(`/${locale}/settings/email?email_connected=1`, request.url));
