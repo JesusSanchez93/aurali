@@ -6,6 +6,7 @@ import { logClientAction } from '@/lib/audit/logClientAction';
 import { decodeSectionFormValue } from '@/lib/forms/formDataCodec';
 import { runDomainSync } from '@/lib/forms/domainSync/registry';
 import type { FormSchema, FormSection } from '@/lib/forms/types';
+import { requireClientFormAccess } from './actions';
 
 const EMPTY_SCHEMA: FormSchema = { version: 1, sections: [] };
 
@@ -54,6 +55,7 @@ export async function submitSectionAction(
   sectionKey: string,
   formData: FormData,
 ): Promise<SubmitResult> {
+  await requireClientFormAccess(legalProcessId);
   const supabase = await createClient();
 
   const { data: legalProcess, error: processError } = await supabase

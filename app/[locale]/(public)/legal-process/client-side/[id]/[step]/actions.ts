@@ -34,6 +34,34 @@ export async function confirmClientFormAccess(): Promise<void> {
     await logClientAction({ legalProcessId: process.id, action: 'client_form_link_opened' });
 }
 
+/**
+ * Confirma que la cookie legal_process_token del llamador corresponde al
+ * legalProcessId recibido — las policies RLS anon de legal_process_clients/
+ * legal_process_banks solo filtran por status (ver
+ * anon_update_legal_process_clients/anon_update_legal_process_banks en
+ * supabase/migrations), no por token, así que sin este chequeo cualquiera
+ * que conozca un legalProcessId (visible en la URL del formulario) podría
+ * escribir sobre el proceso de otro cliente llamando la Server Action
+ * directamente, sin pasar por el layout que sí valida la cookie para el
+ * render de la página. Lanza si no coincide.
+ */
+export async function requireClientFormAccess(legalProcessId: string): Promise<void> {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('legal_process_token')?.value;
+    if (!token) throw new Error('Sesión inválida, abre el enlace del correo nuevamente');
+
+    const supabase = await createClient();
+    const { data: process } = await supabase
+        .from('legal_processes')
+        .select('access_token')
+        .eq('id', legalProcessId)
+        .maybeSingle();
+
+    if (!process || process.access_token !== token) {
+        throw new Error('Sesión inválida, abre el enlace del correo nuevamente');
+    }
+}
+
 type PersonalDataActionResult =
     | { success: true }
     | {
@@ -48,6 +76,7 @@ export async function updatePersonalDataAction(
     legalProcessId: string,
     formData: FormData
 ): Promise<PersonalDataActionResult> {
+    await requireClientFormAccess(legalProcessId);
     const supabase = await createClient();
 
     // Extract form data
@@ -360,6 +389,7 @@ export async function deleteImageAction(
     legalProcessId: string,
     field: 'document_front_image' | 'document_back_image'
 ) {
+    await requireClientFormAccess(legalProcessId);
     const supabase = await createClient();
 
     // Get current path to delete from storage
@@ -451,6 +481,7 @@ export async function updateBankingInformationAction(
     legalProcessId: string,
     formData: FormData
 ) {
+    await requireClientFormAccess(legalProcessId);
     const supabase = await createClient();
 
     // Extract basic fields
@@ -607,6 +638,7 @@ export async function updateInfoAboutEventsAction(
     legalProcessId: string,
     formData: FormData
 ) {
+    await requireClientFormAccess(legalProcessId);
     const supabase = await createClient();
 
     const { data: legalProcess, error: processError } = await supabase
