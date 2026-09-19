@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { requireSuperAdmin } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 
 // ─── READ ──────────────────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ export async function addCatalogBank(
   legalRepFirstName?: string,
   legalRepLastName?: string,
 ) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const normalizedCode = code.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
@@ -82,6 +84,7 @@ export async function updateCatalogBank(
   legalRepFirstName?: string,
   legalRepLastName?: string,
 ) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const normalizedCode = code.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
@@ -106,6 +109,7 @@ export async function updateCatalogBank(
 }
 
 export async function toggleCatalogBank(id: string, isActive: boolean) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const { error } = await supabase
     .from('catalog_banks')
@@ -117,6 +121,7 @@ export async function toggleCatalogBank(id: string, isActive: boolean) {
 }
 
 export async function deleteCatalogBank(id: string) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from('catalog_banks').delete().eq('id', id);
   if (error) throw new Error(error.message);
@@ -126,6 +131,7 @@ export async function deleteCatalogBank(id: string) {
 // ─── DOCUMENTS ─────────────────────────────────────────────────────────────────
 
 export async function addCatalogDocument(nameEs: string, nameEn: string, slug: string) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const normalizedSlug = slug.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
 
@@ -138,6 +144,7 @@ export async function addCatalogDocument(nameEs: string, nameEn: string, slug: s
 }
 
 export async function updateCatalogDocument(id: string, nameEs: string, nameEn: string, slug: string) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const normalizedSlug = slug.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
 
@@ -151,6 +158,7 @@ export async function updateCatalogDocument(id: string, nameEs: string, nameEn: 
 }
 
 export async function toggleCatalogDocument(id: string, isActive: boolean) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const { error } = await supabase
     .from('catalog_documents')
@@ -162,6 +170,7 @@ export async function toggleCatalogDocument(id: string, isActive: boolean) {
 }
 
 export async function deleteCatalogDocument(id: string) {
+  await requireSuperAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from('catalog_documents').delete().eq('id', id);
   if (error) throw new Error(error.message);

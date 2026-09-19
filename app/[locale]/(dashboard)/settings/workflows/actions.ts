@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -167,6 +168,8 @@ export async function updateEmailNodeConfig(
     reminder_body?: unknown;
   },
 ) {
+  await requireAuth();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = (await createClient()) as any;
 
@@ -221,10 +224,8 @@ export async function createWorkflowTemplate(name: string, description?: string)
 }
 
 export async function updateWorkflowSteps(templateId: string, steps: any[]) {
+    await requireAuth();
     const supabase = await createClient();
-
-    // In a production app, we should verify the template belongs to the user's org
-    // For now, let's assume RLS handles it or we add a check if needed.
 
     // 1. Delete existing steps for this template to replace them (simplest way for DnD updates)
     // Alternatively, we could do an upsert but that requires more complex logic for deletions.
@@ -252,6 +253,7 @@ export async function updateWorkflowSteps(templateId: string, steps: any[]) {
 }
 
 export async function deleteWorkflowTemplate(id: string) {
+    await requireAuth();
     const supabase = await createClient();
 
     const { error } = await supabase

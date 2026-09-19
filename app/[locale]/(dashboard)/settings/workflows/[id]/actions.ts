@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/permissions';
 import type { WorkflowNode, WorkflowEdge } from '@/components/app/workflow-editor/types';
 
 // Raw DB row shapes — matches the migration schema.
@@ -86,6 +87,7 @@ export async function saveWorkflow(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
 ): Promise<void> {
+  await requireAuth();
   const supabase = await createClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
