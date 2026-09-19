@@ -453,7 +453,11 @@
     "follow_up": {
       "title": "Email follow-up",
       "waiting": "Waiting for response",
-      "overdue": "Follow-up overdue"
+      "overdue": "Follow-up overdue",
+      "sync_now": "Sync now",
+      "sync_found": "Client reply found and processed",
+      "sync_not_found": "The client hasn't replied yet",
+      "sync_error": "Couldn't sync with Gmail"
     },
     "email_attachments": {
       "title": "Documents received by email",

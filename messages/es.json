@@ -453,7 +453,11 @@
     "follow_up": {
       "title": "Seguimiento de correos",
       "waiting": "Esperando respuesta",
-      "overdue": "Seguimiento vencido"
+      "overdue": "Seguimiento vencido",
+      "sync_now": "Sincronizar",
+      "sync_found": "Se encontró y procesó la respuesta del cliente",
+      "sync_not_found": "El cliente todavía no ha respondido",
+      "sync_error": "No se pudo sincronizar con Gmail"
     },
     "email_attachments": {
       "title": "Documentos recibidos por correo",

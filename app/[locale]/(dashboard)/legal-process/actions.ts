@@ -12,6 +12,9 @@ import type { FormSchema } from '@/lib/forms/types';
 import { resolveSectionOptions } from '@/lib/forms/catalogOptions';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
+import { fetchLatestGmailThreadReply } from '@/lib/email/gmail/gmailInboxClient';
+import { getValidGoogleAccessToken } from '@/lib/email/providers/googleEmailService';
+import { resolveEmailReply } from '@/lib/workflow/emailReplyResolution';
 
 type LocalizedString = {
   es?: string;
@@ -611,6 +614,50 @@ export async function getLegalProcessDetail(legalProcessId: string) {
     }[],
     sentDocuments: (sentDocumentRows ?? []) as { id: string; document_name: string | null }[],
   };
+}
+
+/**
+ * Consulta el hilo de Gmail del seguimiento directamente (Gmail
+ * threads.get), sin esperar al webhook de Pub/Sub — para cuando el cliente ya
+ * respondió antes de que el watch quedara activo (p.ej. reconexión tardía de
+ * Google) y por eso nunca aparece en users.history.list. Idempotente: si no
+ * hay mensaje nuevo en el hilo, no hace nada.
+ */
+export async function syncEmailFollowUpAction(
+  followUpId: string,
+  legalProcessId: string,
+): Promise<{ found: boolean }> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: followUp } = await supabase
+    .from('email_follow_ups')
+    .select('id, organization_id, legal_process_id, workflow_run_id, requires_attachments, google_thread_id, status, capture_mode')
+    .eq('id', followUpId)
+    .eq('legal_process_id', legalProcessId)
+    .maybeSingle();
+
+  if (!followUp || followUp.capture_mode !== 'google' || followUp.status !== 'pending' || !followUp.google_thread_id) {
+    throw new Error('No hay un seguimiento de Gmail pendiente para sincronizar');
+  }
+
+  const tokens = await getValidGoogleAccessToken(followUp.organization_id);
+  if (!tokens) throw new Error('La organización no tiene una cuenta de Google conectada');
+
+  const reply = await fetchLatestGmailThreadReply(tokens.accessToken, followUp.google_thread_id);
+  if (!reply) return { found: false };
+
+  const adminSupabase = await createClient({ admin: true });
+  const result = await resolveEmailReply(adminSupabase, followUp, {
+    from: reply.from,
+    subject: reply.subject,
+    text: reply.text,
+    attachments: reply.attachments,
+  });
+
+  revalidateLegalProcessPaths();
+  return { found: result !== null };
 }
 
 /**

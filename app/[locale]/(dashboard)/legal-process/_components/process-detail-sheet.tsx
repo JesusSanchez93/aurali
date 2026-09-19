@@ -706,6 +706,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                 <FollowUpStatus
                                     legalProcessId={processId}
                                     refreshKey={refreshKey}
+                                    onSynced={() => loadData(processId)}
                                 />
                             )}
                         </div>

@@ -57,6 +57,8 @@ export type EmailFollowUpView = {
   status: string;
   deadline_at: string;
   overdue: boolean;
+  /** true cuando puede sincronizarse manualmente contra Gmail (ver syncEmailFollowUpAction en actions.ts) */
+  syncable: boolean;
 };
 
 /**
@@ -71,14 +73,20 @@ export async function getEmailFollowUps(legalProcessId: string): Promise<EmailFo
 
   const { data } = await supabase
     .from('email_follow_ups')
-    .select('id, to_email, resolution_mode, requires_receipt, status, deadline_at')
+    .select('id, to_email, resolution_mode, requires_receipt, status, deadline_at, capture_mode, google_thread_id')
     .eq('legal_process_id', legalProcessId)
     .order('created_at', { ascending: false });
 
   const now = Date.now();
   return (data ?? []).map((f) => ({
-    ...f,
+    id: f.id,
+    to_email: f.to_email,
+    resolution_mode: f.resolution_mode,
+    requires_receipt: f.requires_receipt,
+    status: f.status,
+    deadline_at: f.deadline_at,
     overdue: f.status === 'pending' && new Date(f.deadline_at).getTime() < now,
+    syncable: f.status === 'pending' && f.capture_mode === 'google' && Boolean(f.google_thread_id),
   }));
 }
 

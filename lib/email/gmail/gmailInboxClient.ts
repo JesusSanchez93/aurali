@@ -41,3 +41,30 @@ export async function fetchGmailMessageParsed(accessToken: string, messageId: st
     })),
   };
 }
+
+/**
+ * Sincronización bajo demanda para un hilo puntual — usada por
+ * syncEmailFollowUpAction (app/[locale]/(dashboard)/legal-process/actions.ts)
+ * cuando el cliente ya respondió pero el watch de Pub/Sub no estaba activo en
+ * ese momento (p.ej. la organización aún no había reconectado Google), así
+ * que la respuesta nunca aparece en el delta de users.history.list. A
+ * diferencia de fetchGmailMessageParsed, esto no requiere saber el messageId
+ * de antemano: lista el hilo completo por su threadId y toma el último
+ * mensaje si hay más de uno (el primero siempre es el correo que Aurali
+ * envió). Devuelve null si el hilo aún no tiene respuesta.
+ */
+export async function fetchLatestGmailThreadReply(
+  accessToken: string,
+  threadId: string,
+): Promise<GmailInboundMessage | null> {
+  const res = await fetch(`${GMAIL_API_BASE}/threads/${threadId}?format=metadata&metadataHeaders=none`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return null;
+
+  const { messages } = (await res.json()) as { messages?: { id: string }[] };
+  if (!messages || messages.length < 2) return null;
+
+  const lastMessageId = messages[messages.length - 1].id;
+  return fetchGmailMessageParsed(accessToken, lastMessageId);
+}
