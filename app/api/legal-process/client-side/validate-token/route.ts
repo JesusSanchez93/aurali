@@ -51,11 +51,13 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/legal-process/form-unavailable', request.url));
   }
 
-  await supabase
-    .from('legal_processes')
-    .update({ access_token_used: true })
-    .eq('access_token', token);
-
+  // access_token_used se marca en confirmClientFormAccess (llamada desde
+  // LegalProcessClientSideProvider al montar en el navegador real), no acá —
+  // escáneres de enlaces de correo corporativo (Safe Links, Proofpoint, etc.)
+  // pre-visitan este GET automáticamente antes de que el cliente real haga
+  // clic, y si el token se quemara aquí el cliente vería "enlace ya usado" sin
+  // haberlo abierto nunca. Fijar la cookie sí es seguro: es idempotente y no
+  // tiene efecto si nadie más la usa.
   const cookieStore = await cookies();
 
   cookieStore.set({
@@ -65,11 +67,6 @@ export async function GET(request: Request) {
     secure: true,
     path: "/",
     maxAge: 60 * 60 * 24, //24horas
-  });
-
-  await logClientAction({
-    legalProcessId: process.id,
-    action: 'client_form_link_opened',
   });
 
   return NextResponse.redirect(

@@ -1,8 +1,9 @@
 'use client';
 
 import { Tables } from '@/types/database.types';
-import { createContext, ReactNode, useContext } from 'react';
+import { createContext, ReactNode, useContext, useEffect } from 'react';
 import type { FormSchema } from '@/lib/forms/types';
+import { confirmClientFormAccess } from '../[step]/actions';
 
 type DocumentType = { id: string; slug: string | null; name: string };
 type BankType = { id: string; name: string; slug: string };
@@ -39,6 +40,12 @@ export function LegalProcessClientSideProvider({
   formSchema,
   children,
 }: ProviderProps) {
+  // Solo corre en un navegador real con JS habilitado — a diferencia del GET
+  // de validate-token, esto no lo dispara un escáner de enlaces de correo.
+  useEffect(() => {
+    void confirmClientFormAccess();
+  }, []);
+
   return (
     <LegalProcessClientSideContext.Provider value={{ id, clientData, bankingData, documentTypes, banks, formSchema }}>
       {children}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
@@ -8,13 +8,35 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { verifyOtpAction, resendOtpAction } from '../actions';
 
-export function VerifyOtpForm({ requestId, clientEmail }: { requestId: string; clientEmail: string }) {
+export function VerifyOtpForm({
+  requestId,
+  clientEmail,
+  otpPending,
+}: {
+  requestId: string;
+  clientEmail: string;
+  /** true cuando aún no se ha enviado ningún código — hay que disparar el primer envío al montar. */
+  otpPending: boolean;
+}) {
   const router = useRouter();
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  // Solo corre en un navegador real con JS habilitado — a diferencia del GET
+  // de validate-token, un escáner de enlaces de correo nunca llega a esto.
+  const [sendingFirstCode, setSendingFirstCode] = useState(otpPending);
+
+  useEffect(() => {
+    if (!otpPending) return;
+    resendOtpAction(requestId)
+      .then((result) => {
+        if (!result.success) setError(result.error);
+      })
+      .finally(() => setSendingFirstCode(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async () => {
     if (code.length !== 6) return;
@@ -41,6 +63,17 @@ export function VerifyOtpForm({ requestId, clientEmail }: { requestId: string; c
     }
     setResending(false);
   };
+
+  if (sendingFirstCode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 p-6">
+        <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-xl border bg-white dark:bg-card p-8 text-center shadow-sm">
+          <Spinner className="h-6 w-6" />
+          <p className="text-sm text-muted-foreground">Enviando código de verificación a {clientEmail}…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-950 dark:to-slate-900 p-6">

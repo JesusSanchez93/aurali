@@ -14,5 +14,5 @@ export default async function VerifySignatureOtpPage({ params }: Props) {
     return <SignatureUnavailable reason={state.reason} />;
   }
 
-  return <VerifyOtpForm requestId={id} clientEmail={state.clientEmail} />;
+  return <VerifyOtpForm requestId={id} clientEmail={state.clientEmail} otpPending={state.otpPending} />;
 }

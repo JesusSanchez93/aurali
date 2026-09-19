@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { logClientAction } from '@/lib/audit/logClientAction';
-import { generateOtpCode, hashOtpCode } from '@/lib/auth/otp';
-import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -42,26 +40,12 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL('/legal-process/form-unavailable', request.url));
   }
 
-  // ── Generate and send the OTP code ─────────────────────────────────────────
-  const code = generateOtpCode();
-  const otpExpiresAt = new Date(Date.now() + 1000 * 60 * 10).toISOString(); // 10 minutes
-
-  await supabase
-    .from('document_signature_requests')
-    .update({
-      otp_code_hash: hashOtpCode(code),
-      otp_expires_at: otpExpiresAt,
-      otp_attempts: 0,
-      status: 'otp_sent',
-    })
-    .eq('id', signatureRequest.id);
-
-  await sendOrgEmail(signatureRequest.organization_id, {
-    to: signatureRequest.client_email,
-    subject: 'Código de verificación para firmar sus documentos',
-    bodyHtml: `<p>Su código de verificación es:</p><p style="font-size:28px;font-weight:700;letter-spacing:4px;">${code}</p><p>Este código vence en 10 minutos. Si no solicitó este código, ignore este correo.</p>`,
-  });
-
+  // El código OTP se genera y envía desde VerifyOtpForm (vía resendOtpAction)
+  // al montar en el navegador real, no acá — este GET puede dispararlo un
+  // escáner de enlaces de correo corporativo antes de que el cliente abra el
+  // mensaje, lo que enviaría un código que nadie pidió y reiniciaría
+  // otp_attempts en cada re-escaneo. Fijar la cookie sí es seguro: es
+  // idempotente y solo la usa quien realmente carga la página de verificación.
   const cookieStore = await cookies();
   cookieStore.set({
     name: 'signature_request_token',

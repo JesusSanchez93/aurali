@@ -33,7 +33,7 @@ async function loadRequest(requestId: string): Promise<SignatureRequestRow | nul
 
 /** Server-side view for the verify page — confirms the pre-verification cookie matches this request. */
 export async function getVerifyPageState(requestId: string): Promise<
-  | { ok: true; clientEmail: string }
+  | { ok: true; clientEmail: string; otpPending: boolean }
   | { ok: false; reason: 'not_found' | 'no_access' | 'already_reviewed' }
 > {
   const request = await loadRequest(requestId);
@@ -46,7 +46,10 @@ export async function getVerifyPageState(requestId: string): Promise<
   const token = cookieStore.get('signature_request_token')?.value;
   if (!token || token !== request.access_token) return { ok: false, reason: 'no_access' };
 
-  return { ok: true, clientEmail: request.client_email };
+  // otp_code_hash sigue null hasta que VerifyOtpForm dispara el primer envío
+  // client-side (ver validate-token/route.ts) — le indica al form si debe
+  // enviar el código automáticamente al montar.
+  return { ok: true, clientEmail: request.client_email, otpPending: !request.otp_code_hash };
 }
 
 /** Server-side view for the upload page — confirms the post-verification session cookie matches this request. */
