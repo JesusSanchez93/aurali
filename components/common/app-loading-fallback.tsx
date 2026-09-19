@@ -84,9 +84,9 @@ export function AppLoadingFallback({ label, description }: AppLoadingFallbackPro
                       <div className="h-3 w-32 rounded-full bg-slate-200/90" />
                       <div className="h-2.5 rounded-full bg-slate-100">
                         <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-indigo-950 via-violet-600 to-amber-400"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${width}%` }}
+                          className="h-full w-full origin-left rounded-full bg-gradient-to-r from-indigo-950 via-violet-600 to-amber-400"
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: width / 100 }}
                           transition={{ duration: 1.1, delay: 0.2 + index * 0.15, ease: 'easeOut' }}
                         />
                       </div>

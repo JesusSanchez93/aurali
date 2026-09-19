@@ -115,9 +115,9 @@ export function DashboardLoadingState() {
                         <div className="h-3 w-40 rounded-full bg-slate-200/90 sm:w-52 dark:bg-white/10" />
                         <div className="h-2.5 rounded-full bg-slate-100 dark:bg-white/10">
                           <motion.div
-                            className="h-full rounded-full bg-gradient-to-r from-indigo-950 via-violet-600 to-amber-400"
-                            initial={{ width: 0 }}
-                            animate={{ width: step.width }}
+                            className="h-full w-full origin-left rounded-full bg-gradient-to-r from-indigo-950 via-violet-600 to-amber-400"
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: parseFloat(step.width) / 100 }}
                             transition={{ duration: 1.1, delay: 0.2 + index * 0.15, ease: 'easeOut' }}
                           />
                         </div>

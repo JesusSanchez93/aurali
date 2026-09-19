@@ -631,10 +631,10 @@ function HeroSection({ t }: { t: Translator }) {
                         <p className="text-sm font-semibold text-[var(--landing-text)]">{step.label}</p>
                         <div className="mt-2 h-2 overflow-hidden rounded-full bg-[rgba(17,24,39,0.06)] dark:bg-white/10">
                           <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${68 + index * 8}%` }}
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: (68 + index * 8) / 100 }}
                             transition={{ duration: 0.6, delay: 0.55 + index * 0.12, ease: 'easeOut' }}
-                            className="h-full rounded-full bg-gradient-to-r from-[var(--landing-primary)] to-[var(--landing-accent)]"
+                            className="h-full w-full origin-left rounded-full bg-gradient-to-r from-[var(--landing-primary)] to-[var(--landing-accent)]"
                             style={{ willChange: 'transform' }}
                           />
                         </div>
