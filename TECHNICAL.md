@@ -405,7 +405,6 @@ When `mode="document"`, the editor activates `PaginationPlus` (A4 page simulatio
 ```
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
-GOOGLE_REDIRECT_URI
 ```
 
 If any are missing, the Google features are disabled in the UI (setup guide shown with instructions).
@@ -487,7 +486,6 @@ EMAIL_FROM                      # Default: noreply@aurali.app
 # Google OAuth
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
-GOOGLE_REDIRECT_URI
 
 # AI
 ANTHROPIC_API_KEY               # For AI variable resolution
