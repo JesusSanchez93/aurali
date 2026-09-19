@@ -72,10 +72,10 @@ export default function ClientDetailSheet({ clientId, documentTypes, open, onOpe
     useEffect(() => {
         if (!open) return;
         if (!clientId) {
-            setTimeout(() => {
+            const timeout = setTimeout(() => {
                 setClient(null);
             }, 200);
-            return;
+            return () => clearTimeout(timeout);
         }
         refetch(clientId);
     }, [open, clientId]);

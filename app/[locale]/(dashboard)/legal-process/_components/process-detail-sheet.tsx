@@ -143,10 +143,10 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
     useEffect(() => {
         if (!open) return;
         if (!processId) {
-            setTimeout(() => {
+            const timeout = setTimeout(() => {
                 setData(null);
             }, 200);
-            return;
+            return () => clearTimeout(timeout);
         }
         loadData(processId);
     }, [open, processId]);
