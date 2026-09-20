@@ -154,6 +154,9 @@ export function VariableSuggestionDropdown({ editor, groups }: { editor: Editor;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const storage = (editor.storage as any).variableSuggestion;
         if (!storage) return;
+        // storage is TipTap's own mutable extension-storage object (a side-channel
+        // to the ProseMirror plugin), not React-owned state — safe to mutate.
+        // eslint-disable-next-line react-hooks/immutability
         storage._onStateChange = () => setTick((n) => n + 1);
         return () => {
             storage._onStateChange = null;
@@ -193,10 +196,12 @@ export function VariableSuggestionDropdown({ editor, groups }: { editor: Editor;
             .deleteRange({ from: storage.from as number, to: storage.to as number })
             .insertVariable(fullKey)
             .run();
+        // eslint-disable-next-line react-hooks/immutability
         storage.active = false;
         storage._onStateChange?.();
     }
 
+    // eslint-disable-next-line react-hooks/immutability
     storage._confirmSelection = () => {
         const selected = filtered[selectedIdx];
         if (selected) insertVariable(selected.group, selected.key);

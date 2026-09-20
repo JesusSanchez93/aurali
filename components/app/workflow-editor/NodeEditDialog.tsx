@@ -30,6 +30,7 @@ import {
 import { FormInput } from '@/components/common/form/form-input';
 import { FormSelect } from '@/components/common/form/form-select';
 import Tiptap from '@/components/common/tip-tap';
+import type { Content } from '@tiptap/react';
 import type { WorkflowNode } from './types';
 
 /** Config fields a lawyer (not the admin) is allowed to set for an
@@ -84,20 +85,20 @@ function legacyToHtml(text: string): string {
     .join('');
 }
 
-function resolveInitialBody(node: NodeEditDialogProps['node']): unknown {
+function resolveInitialBody(node: NodeEditDialogProps['node']): Content {
   if (!node) return null;
   const raw = (node.data.config as Record<string, unknown>).body;
   if (!raw) return null;
   if (typeof raw === 'string') return legacyToHtml(raw);
-  return raw;
+  return raw as Content;
 }
 
-function resolveInitialReminderBody(node: NodeEditDialogProps['node']): unknown {
+function resolveInitialReminderBody(node: NodeEditDialogProps['node']): Content {
   if (!node) return null;
   const raw = (node.data.config as Record<string, unknown>).reminder_body;
   if (!raw) return null;
   if (typeof raw === 'string') return legacyToHtml(raw);
-  return raw;
+  return raw as Content;
 }
 
 export function NodeEditDialog({
@@ -110,8 +111,8 @@ export function NodeEditDialog({
   const t = useTranslations('settings.workflow_editor');
   const tCommon = useTranslations('common');
   const [isSaving, setIsSaving] = useState(false);
-  const [bodyContent, setBodyContent] = useState<unknown>(() => resolveInitialBody(node));
-  const [reminderBodyContent, setReminderBodyContent] = useState<unknown>(() => resolveInitialReminderBody(node));
+  const [bodyContent, setBodyContent] = useState<Content>(() => resolveInitialBody(node));
+  const [reminderBodyContent, setReminderBodyContent] = useState<Content>(() => resolveInitialReminderBody(node));
 
   const configOf = (n: NodeEditDialogProps['node']) => (n?.data.config ?? {}) as Record<string, unknown>;
 
@@ -138,6 +139,7 @@ export function NodeEditDialog({
       reminder_count: String(cfg.reminder_count ?? '1'),
       reminder_subject: String(cfg.reminder_subject ?? ''),
     });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBodyContent(resolveInitialBody(node));
     setReminderBodyContent(resolveInitialReminderBody(node));
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -86,7 +86,7 @@ export async function updateFirstOrganization(values: {
     throw new Error('Organization not found');
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('organizations')
     .update({
       name: values.name,

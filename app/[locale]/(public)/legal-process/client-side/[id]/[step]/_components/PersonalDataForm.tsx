@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { ViewTransition } from 'react';
 import { deleteImageAction, updatePersonalDataAction } from '../actions';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { FormSelect } from '@/components/common/form/form-select';
 import { FormImageUpload } from '@/components/common/form/form-image-upload';
 import { useLegalProcessClientData, useLegalProcessDocumentTypes, useLegalProcessId } from '@/app/[locale]/(public)/legal-process/client-side/[id]/_context/LegalProcessClientSideProvider';

@@ -51,12 +51,13 @@ export interface ImageUploadValue {
 
 interface Props {
   required?: boolean;
+  disabled?: boolean;
   value?: ImageUploadValue;
   onChange: (value?: ImageUploadValue) => void;
   onDeleteClick?: () => void;
 }
 
-export function ImageUpload({ required = false, value, onChange, onDeleteClick }: Props) {
+export function ImageUpload({ required = false, disabled = false, value, onChange, onDeleteClick }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -116,7 +117,8 @@ export function ImageUpload({ required = false, value, onChange, onDeleteClick }
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white text-gray-500 transition hover:border-gray-400 hover:text-gray-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-300"
+            disabled={disabled}
+            className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white text-gray-500 transition hover:border-gray-400 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-300"
             style={{ aspectRatio: 1.55 / 1 }}
           >
             <span className="text-sm">{t('click_to_upload_image')}</span>
@@ -137,6 +139,7 @@ export function ImageUpload({ required = false, value, onChange, onDeleteClick }
             variant="destructive"
             size="icon"
             onClick={handleDelete}
+            disabled={disabled}
           >
             <Trash2 />
           </Button>

@@ -12,6 +12,7 @@ import { FormInput } from '@/components/common/form/form-input';
 import { FormTextarea } from '@/components/common/form/form-textarea';
 import { FormSelect } from '@/components/common/form/form-select';
 import Tiptap from '@/components/common/tip-tap';
+import type { Content } from '@tiptap/react';
 import { isFieldVisible as isFieldVisibleShared } from '@/lib/forms/fieldVisibility';
 import { tiptapToHTML } from '@/lib/tiptap-to-html';
 import { NODE_TYPES_CONFIG, type ConfigField } from './node-config';
@@ -42,8 +43,8 @@ function safeTiptapToHTML(body: unknown): string {
 
 type FormValues = Record<string, string>;
 
-function buildRichtextValues(node: WorkflowNode): Record<string, unknown> {
-  const config = (node.data.config ?? {}) as Record<string, unknown>;
+function buildRichtextValues(node: WorkflowNode): Record<string, Content> {
+  const config = (node.data.config ?? {}) as Record<string, Content>;
   const cfg = NODE_TYPES_CONFIG[node.data.type as WorkflowNodeType];
   const richtextKeys = cfg.configSchema.filter((f) => f.type === 'richtext').map((f) => f.key);
   return Object.fromEntries(richtextKeys.map((key) => [key, config[key] ?? null]));
@@ -76,7 +77,7 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
   const methods = useForm<FormValues>({ defaultValues: buildFormDefaults(node) });
   const { handleSubmit, reset, control } = methods;
 
-  const [richtextValues, setRichtextValues] = useState<Record<string, unknown>>(
+  const [richtextValues, setRichtextValues] = useState<Record<string, Content>>(
     () => buildRichtextValues(node),
   );
   const [boolValues, setBoolValues] = useState<Record<string, boolean>>(
@@ -85,6 +86,7 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
 
   useEffect(() => {
     reset(buildFormDefaults(node));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRichtextValues(buildRichtextValues(node));
     setBoolValues(buildBoolValues(node));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,7 +139,7 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
     return rows;
   }, [visibleConfigFields]);
 
-  const handleRichtextChange = useCallback((key: string, v: unknown) => {
+  const handleRichtextChange = useCallback((key: string, v: Content) => {
     setRichtextValues((prev) => ({ ...prev, [key]: v }));
   }, []);
 

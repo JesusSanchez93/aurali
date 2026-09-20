@@ -118,6 +118,10 @@ function TwoColumnComponent({ node, editor, getPos, deleteNode }: NodeViewProps)
     // Stable ref so the useEditorState selector always reads the latest getPos
     // without needing to re-register the hook on every position change.
     const getPosRef = useRef(getPos);
+    // Written during render (not an effect) so the useEditorState selector below,
+    // which ProseMirror can invoke synchronously outside React's commit/effect phase,
+    // never reads a stale getPos.
+    // eslint-disable-next-line react-hooks/refs
     getPosRef.current = getPos;
 
     // ── DOM measurements (handle positions + per-column rects) ────────────────
@@ -175,7 +179,6 @@ function TwoColumnComponent({ node, editor, getPos, deleteNode }: NodeViewProps)
         const ro = new ResizeObserver(measure);
         ro.observe(wrap);
         return () => ro.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // ── Focused column detection ──────────────────────────────────────────────

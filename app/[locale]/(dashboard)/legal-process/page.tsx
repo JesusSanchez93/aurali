@@ -66,11 +66,14 @@ export default async function ProcessPage(props: {
   }
   const totalPages = Math.ceil(count / pageSize);
 
-  const options = (documents || [])?.map((e) => ({
-    label: (e?.name as any)?.[locale] ?? (e?.name as any)?.es ?? '',
-    value: e.id,
-    key: e?.slug || '',
-  }));
+  const options = (documents || [])?.map((e) => {
+    const name = e?.name as Record<string, string> | null;
+    return {
+      label: name?.[locale] ?? name?.es ?? '',
+      value: e.id,
+      key: e?.slug || '',
+    };
+  });
 
   const getPaginationLink = (targetPage: number) => {
     const queryParams = new URLSearchParams();

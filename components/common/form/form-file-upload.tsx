@@ -63,6 +63,7 @@ export function FormFileUpload<T extends FieldValues>(props: Props<T>): JSX.Elem
 
                 <FileUpload
                     required={required}
+                    disabled={disabled}
                     value={value}
                     onChange={onChange}
                     onDeleteClick={onDeleteClick}
@@ -93,7 +94,8 @@ export function FormFileUpload<T extends FieldValues>(props: Props<T>): JSX.Elem
                         <FormControl>
                             <FileUpload
                                 required={required}
-                                value={field.value as any}
+                                disabled={disabled}
+                                value={field.value as FileUploadValue | FileUploadValue[] | undefined}
                                 onChange={(val) => field.onChange(val)}
                                 onDeleteClick={onDeleteClick}
                                 accept={accept}

@@ -76,6 +76,7 @@ export function FormBuilderCanvas({ initialSchemaRow, catalogOptions, workflowTe
   const [name, setName] = useState(initialSchemaRow.name);
   const debouncedNameDraft = useDebounce(nameDraft, 400);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(debouncedNameDraft);
   }, [debouncedNameDraft]);
   const [workflowTemplateId, setWorkflowTemplateId] = useState(initialSchemaRow.workflow_template_id);

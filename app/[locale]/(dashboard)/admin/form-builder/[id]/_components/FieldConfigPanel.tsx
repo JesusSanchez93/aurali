@@ -318,6 +318,9 @@ export function FieldConfigPanel({
                 </p>
               ) : (
                 <div className="space-y-2">
+                  {/* optionIdsRef is only ever mutated in addOption/removeOption
+                      (event handlers), never during render — safe to read here. */}
+                  {/* eslint-disable-next-line react-hooks/refs */}
                   {(field.options ?? []).map((opt, i) => (
                     <div key={optionIdsRef.current[i] ?? i} className="flex gap-2">
                       <Input

@@ -10,7 +10,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,8 +39,8 @@ export function NavUser() {
   const { isMobile } = useSidebar();
 
   const initials =
-    profile.firstname[0]?.toUpperCase() + profile.lastname[0]?.toUpperCase();
-  const fullName = profile.firstname + ' ' + profile.lastname;
+    (profile.firstname?.[0]?.toUpperCase() ?? '') + (profile.lastname?.[0]?.toUpperCase() ?? '');
+  const fullName = `${profile.firstname ?? ''} ${profile.lastname ?? ''}`.trim();
 
   const isSuperAdmin = profile?.system_role === 'SUPERADMIN';
   const isInsideOrg = isSuperAdmin && !!profile?.current_organization_id;

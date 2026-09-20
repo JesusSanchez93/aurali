@@ -124,13 +124,12 @@ export const DocumentHeaderExtension = Node.create({
   },
 
   addCommands() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return {
       insertDocumentHeader:
         () =>
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ({ state, dispatch }: any) => {
-          const { schema, doc, tr } = state;
+          const { schema, tr } = state;
           const nodeType = schema.nodes.documentHeader;
           if (!nodeType) return false;
           const node = nodeType.create(null, schema.nodes.paragraph.create());

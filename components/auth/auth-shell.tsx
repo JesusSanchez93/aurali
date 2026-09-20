@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { ArrowLeft, Bot, FileText, ShieldCheck, Workflow } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 import { ThemeSwitcher } from '@/components/app/theme-switcher';
 import { Logo } from '@/components/common/logo';
@@ -9,12 +9,6 @@ interface AuthShellProps {
   children: ReactNode;
   variant: 'login' | 'signup';
 }
-
-const workflowCards = [
-  { icon: Workflow, width: '74%' },
-  { icon: Bot, width: '61%' },
-  { icon: FileText, width: '83%' },
-];
 
 export async function AuthShell({ children, variant }: AuthShellProps) {
   const t = await getTranslations('auth.shell');

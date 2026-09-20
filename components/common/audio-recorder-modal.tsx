@@ -52,6 +52,7 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
   useEffect(() => {
     if (!open) {
       cleanup();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState('idle');
       setElapsed(0);
       setErrorMsg('');

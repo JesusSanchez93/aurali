@@ -58,6 +58,7 @@ export function SignatureReview({ legalProcessId, refreshKey }: Props) {
   }, [legalProcessId, latestCallId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRequests([]);
     load();
   }, [load, refreshKey]);

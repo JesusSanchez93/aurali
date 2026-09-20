@@ -33,6 +33,7 @@ export function ActiveWorkflowsManager({ activeTemplates, availableToActivate, t
 
   useEffect(() => {
     if (!selected) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingGraph(true)
     getWorkflowGraphForOrgAdmin(selected.id)
       .then(setGraph)

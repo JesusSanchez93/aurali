@@ -20,6 +20,7 @@ export default function ProcessSearch() {
 
     useEffect(() => {
         const query = searchParams.get('search') || '';
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSearchTerm(query);
     }, [searchParams]);
 

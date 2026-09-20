@@ -12,6 +12,7 @@ export interface FileUploadValue {
 
 interface Props {
     required?: boolean;
+    disabled?: boolean;
     value?: FileUploadValue | FileUploadValue[];
     onChange: (value: FileUploadValue | FileUploadValue[] | undefined) => void;
     onDeleteClick?: (index?: number) => void;
@@ -22,6 +23,7 @@ interface Props {
 
 export function FileUpload({
     required = false,
+    disabled = false,
     value,
     onChange,
     onDeleteClick,
@@ -90,6 +92,7 @@ export function FileUpload({
                                 size="icon"
                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => handleDelete(index)}
+                                disabled={disabled}
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
@@ -112,7 +115,8 @@ export function FileUpload({
                     <button
                         type="button"
                         onClick={() => inputRef.current?.click()}
-                        className="group flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 py-8 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 hover:text-foreground"
+                        disabled={disabled}
+                        className="group flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 py-8 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <UploadCloud className="h-6 w-6 text-muted-foreground/70 transition-colors group-hover:text-primary" />
                         <span className="text-sm font-medium">{t('click_to_upload')}</span>

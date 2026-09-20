@@ -1,14 +1,15 @@
 'use client';
 
 import { createContext, useContext, useMemo } from 'react';
+import type { SessionProfile } from '@/lib/auth/get-session-profile';
 
-const ProfileContext = createContext<any>(null);
+const ProfileContext = createContext<SessionProfile | null>(null);
 
 export default function ProfileProvider({
   profile,
   children,
 }: {
-  profile: any;
+  profile: SessionProfile;
   children: React.ReactNode;
 }) {
   const value = useMemo(() => profile, [profile]);

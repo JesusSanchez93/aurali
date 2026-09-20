@@ -49,6 +49,7 @@ export function AiVariableForm({ open, onOpenChange, variable }: Props) {
   // Reset form when sheet opens/closes or variable changes
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(variable?.name ?? '');
       setKey(variable?.key ?? 'AI_');
       setKeyManuallyEdited(!!variable);

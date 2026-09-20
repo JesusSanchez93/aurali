@@ -51,7 +51,6 @@ export default function Stepper({ steps, currentStep }: StepperProps) {
             </div>
             <div className="w-full flex items-center justify-between">
                 {steps.map((step, index) => {
-                    const isCompleted = index < currentStep;
                     const isActive = index === currentStep;
                     return (
                         <div key={index} className="flex justify-center items-center w-full">

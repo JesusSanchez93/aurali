@@ -27,7 +27,6 @@ interface Props {
 }
 
 export default function ProcessForm({ documents, lawyers, workflowTemplates, currentUserId, onSuccess }: Props) {
-  const t = useTranslations();
   const commonT = useTranslations('common');
   const processT = useTranslations('process');
   const validationT = useTranslations('common.validation');

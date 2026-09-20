@@ -34,7 +34,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, Archive, Check, CheckCircle2, Clock, Eye, MoreHorizontal, Paperclip, RotateCcw, ShieldQuestion, X, XCircle } from 'lucide-react';
+import { AlertTriangle, Archive, Check, CheckCircle2, Clock, Eye, MoreHorizontal, Paperclip, RotateCcw, X, XCircle } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { ProcessPaymentsSection } from '@/app/[locale]/(dashboard)/legal-process/_components/process-payments-section';
 import { useTranslations } from 'next-intl';
@@ -148,6 +148,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
             }, 200);
             return () => clearTimeout(timeout);
         }
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         loadData(processId);
     }, [open, processId]);
 

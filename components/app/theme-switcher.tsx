@@ -10,18 +10,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 
+const emptySubscribe = () => () => {};
+
 const ThemeSwitcher = () => {
-  const [mounted, setMounted] = useState(false);
+  // Hydration-safe "has mounted" check: server always renders false,
+  // client renders true after the first paint.
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const { theme, setTheme } = useTheme();
   const t = useTranslations('common.theme');
-
-  // useEffect only runs on the client, so now we can safely show the UI
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     return null;

@@ -77,6 +77,7 @@ export default function ClientDetailSheet({ clientId, documentTypes, open, onOpe
             }, 200);
             return () => clearTimeout(timeout);
         }
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         refetch(clientId);
     }, [open, clientId]);
 

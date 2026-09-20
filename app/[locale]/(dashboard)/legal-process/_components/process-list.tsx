@@ -46,6 +46,7 @@ export default function ProcessList({ data }: ProcessListProps) {
   const selectedId = searchParams.get('id');
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (selectedId) setLoadingId(null);
   }, [selectedId]);
 
@@ -139,7 +140,6 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
   const isFinished = status === 'finished';
   const isArchived = status === 'archived';
   const isDeclined = status === 'declined';
-  const isTerminal = isFinished || isDeclined; // archived is NOT terminal — it can be reverted
   const showDropdown = !isFinished && !isDeclined; // show for active + archived
 
   const statusStyle = STATUS_STYLE[status] ?? STATUS_STYLE.draft;

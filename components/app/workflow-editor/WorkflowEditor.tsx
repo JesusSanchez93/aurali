@@ -1,13 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlowProvider,
   addEdge,
   reconnectEdge,
   useNodesState,
   useEdgesState,
-  useReactFlow,
   type OnConnect,
   type Connection,
 } from '@xyflow/react';
@@ -161,7 +160,9 @@ function WorkflowEditorInner({
   // Ref always contains current selected IDs — used inside align callbacks
   // to avoid stale closures without adding selectedNodes to dependencies.
   const selectedIdsRef = useRef<string[]>([]);
-  selectedIdsRef.current = selectedNodes.map(n => n.id);
+  useEffect(() => {
+    selectedIdsRef.current = selectedNodes.map(n => n.id);
+  });
 
   const makeAlignFn = useCallback(
     (axis: 'x' | 'y', strategy: 'min' | 'avg' | 'max') =>
@@ -305,7 +306,7 @@ function WorkflowEditorInner({
                     size="icon"
                     className="h-7 w-7"
                     disabled={!prevNode}
-                    onClick={(e) => { e.stopPropagation(); prevNode && setSelectedNode(prevNode); }}
+                    onClick={(e) => { e.stopPropagation(); if (prevNode) setSelectedNode(prevNode); }}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -317,7 +318,7 @@ function WorkflowEditorInner({
                     size="icon"
                     className="h-7 w-7"
                     disabled={!nextNode}
-                    onClick={(e) => { e.stopPropagation(); nextNode && setSelectedNode(nextNode); }}
+                    onClick={(e) => { e.stopPropagation(); if (nextNode) setSelectedNode(nextNode); }}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

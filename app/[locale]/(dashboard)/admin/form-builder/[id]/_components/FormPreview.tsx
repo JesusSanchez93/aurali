@@ -45,6 +45,7 @@ export function FormPreview({ open, onOpenChange, schema, catalogOptions }: Prop
 
   // Reiniciar al primer paso cada vez que se reabre la vista previa
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) setStepIndex(0);
   }, [open]);
 

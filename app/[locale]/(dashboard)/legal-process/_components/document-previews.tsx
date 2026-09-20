@@ -49,6 +49,7 @@ export function DocumentPreviews({ legalProcessId, refreshKey, readOnly = false 
       .finally(() => setLoading(false));
   }, [legalProcessId, readOnly]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load, refreshKey]);
 
   // Re-fetch after the edit dialog closes so any ONLYOFFICE-persisted change

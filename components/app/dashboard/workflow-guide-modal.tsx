@@ -26,7 +26,6 @@ import {
   CalendarDays,
   History,
   MoreHorizontal,
-  Phone,
 } from 'lucide-react'
 
 // ─── Step IDs (labels resolved via translations) ─────────────────────────────

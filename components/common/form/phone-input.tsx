@@ -53,7 +53,11 @@ const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
            */
           onChange={(value) => onChange?.(value || ('' as RPNInput.Value))}
           {...props}
+          /* `size` here is our custom sizing prop, not the library's native
+             HTML `size: number` — cast past the conflicting type. */
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           size={size as any}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           countrySelectProps={{ size } as any}
         />
       );
@@ -101,7 +105,7 @@ const CountrySelect = ({
       modal
       onOpenChange={(open) => {
         setIsOpen(open);
-        open && setSearchValue('');
+        if (open) setSearchValue('');
       }}
     >
       <PopoverTrigger asChild>

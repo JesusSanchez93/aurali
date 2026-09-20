@@ -373,7 +373,7 @@ export async function getLegalProcessBanks(legalProcessId: string) {
 
     if (!process?.organization_id) return [];
 
-    const { data: banks, error } = await supabase
+    const { data: banks } = await supabase
         .from('banks')
         .select('id, name, slug')
         .eq('organization_id', process.organization_id);
@@ -403,8 +403,8 @@ export async function deleteImageAction(
         throw new Error('No se pudo encontrar el cliente para eliminar la imagen');
     }
 
-    const clientAny = client as any;
-    const path = clientAny[field] as string;
+    const clientRecord = client as unknown as Record<string, string | null>;
+    const path = clientRecord[field] as string;
 
     if (path && !path.startsWith('http')) {
         // Delete from storage
@@ -541,7 +541,7 @@ export async function updateBankingInformationAction(
         throw new Error('Este proceso ya fue completado y no puede modificarse');
     }
 
-    const { data: existingBank, error: bankFetchError } = await supabase
+    const { data: existingBank } = await supabase
         .from('legal_process_banks')
         .select('*')
         .eq('legal_process_id', legalProcessId)
@@ -664,7 +664,7 @@ export async function updateInfoAboutEventsAction(
     const lost_card = formData.get('lost_card') === 'true';
     const fraud_incident_summary = formData.get('fraud_incident_summary') as string;
 
-    const { data: existingBank, error: bankFetchError } = await supabase
+    const { data: existingBank } = await supabase
         .from('legal_process_banks')
         .select('id')
         .eq('legal_process_id', legalProcessId)

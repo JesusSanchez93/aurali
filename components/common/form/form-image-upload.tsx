@@ -58,6 +58,7 @@ export function FormImageUpload<T extends FieldValues>(props: Props<T>): JSX.Ele
 
                 <ImageUpload
                     required={required}
+                    disabled={disabled}
                     value={value}
                     onChange={onChange}
                     onDeleteClick={onDeleteClick}
@@ -75,7 +76,9 @@ export function FormImageUpload<T extends FieldValues>(props: Props<T>): JSX.Ele
             <FormField
                 control={control}
                 name={name}
-                render={({ field, fieldState }) => (
+                render={({ field, fieldState }) => {
+                    const fieldValue = field.value as unknown;
+                    return (
                     <FormItem>
                         <FormLabel className="text-sm font-medium">
                             {label}
@@ -85,11 +88,12 @@ export function FormImageUpload<T extends FieldValues>(props: Props<T>): JSX.Ele
                         <FormControl>
                             <ImageUpload
                                 required={required}
+                                disabled={disabled}
                                 value={{
-                                    file: (field.value as any) instanceof File ? field.value : null,
-                                    previewUrl: (field.value as any) instanceof File
-                                        ? URL.createObjectURL(field.value)
-                                        : (typeof field.value === 'string' ? field.value : undefined),
+                                    file: fieldValue instanceof File ? fieldValue : null,
+                                    previewUrl: fieldValue instanceof File
+                                        ? URL.createObjectURL(fieldValue)
+                                        : (typeof fieldValue === 'string' ? fieldValue : undefined),
                                 }}
                                 onChange={(val) => field.onChange(val?.file)}
                                 onDeleteClick={onDeleteClick}
@@ -102,7 +106,8 @@ export function FormImageUpload<T extends FieldValues>(props: Props<T>): JSX.Ele
 
                         {fieldState.error && <FormMessage />}
                     </FormItem>
-                )}
+                    );
+                }}
             />
         </div>
     );

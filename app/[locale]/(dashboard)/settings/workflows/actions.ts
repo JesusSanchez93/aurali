@@ -3,6 +3,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/permissions';
 import { revalidatePath } from 'next/cache';
+import type { Database } from '@/types/database.types';
+
+type WorkflowStepInput = Omit<Database['public']['Tables']['workflow_steps']['Insert'], 'template_id' | 'order_index'>;
 
 /**
  * Activa un workflow_template global adicional para la organización actual,
@@ -223,7 +226,7 @@ export async function createWorkflowTemplate(name: string, description?: string)
     return data;
 }
 
-export async function updateWorkflowSteps(templateId: string, steps: any[]) {
+export async function updateWorkflowSteps(templateId: string, steps: WorkflowStepInput[]) {
     await requireAuth();
     const supabase = await createClient();
 

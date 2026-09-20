@@ -217,7 +217,7 @@ export async function getActiveWorkflowTemplates(): Promise<
 
   if (!profile?.current_organization_id) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('organization_workflows')
     .select('workflow_template_id, workflow_templates(id, name, is_legacy_form)')
     .eq('organization_id', profile.current_organization_id)
@@ -246,7 +246,7 @@ export async function   getOrgLawyers() {
 
   if (!profile?.current_organization_id) return [];
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('organization_members')
     .select('user_id, profiles!user_id(id, firstname, lastname, email)')
     .eq('organization_id', profile.current_organization_id)
@@ -1034,7 +1034,7 @@ export async function archiveLegalProcess(legalProcessId: string, note?: string)
     throw new Error('Este proceso ya está en un estado que no permite archivarlo');
   }
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('legal_processes')
     .update({ status: 'archived', previous_status: process.status, status_note: note ?? null })
     .eq('id', legalProcessId);
@@ -1061,7 +1061,7 @@ export async function revertArchivedProcess(legalProcessId: string) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (!user || authError) throw new Error('Unauthorized');
 
-  const { data: process } = await (supabase as any)
+  const { data: process } = await supabase
     .from('legal_processes')
     .select('status, previous_status, organization_id')
     .eq('id', legalProcessId)
@@ -1074,7 +1074,7 @@ export async function revertArchivedProcess(legalProcessId: string) {
 
   const restoredStatus = process.previous_status ?? 'draft';
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('legal_processes')
     .update({ status: restoredStatus, previous_status: null, status_note: null })
     .eq('id', legalProcessId);
@@ -1159,7 +1159,7 @@ export async function getPendingManualAction(
 
   if (!lp?.workflow_run_id) return null;
 
-  const { data: run } = await (supabase as any)
+  const { data: run } = await supabase
     .from('workflow_runs')
     .select('id, template_id, current_node_id, status')
     .eq('id', lp.workflow_run_id)
@@ -1169,7 +1169,7 @@ export async function getPendingManualAction(
 
   // ── Failed run: allow retry ─────────────────────────────────────────────────
   if (run.status === 'failed') {
-    const { data: failedStep } = await (supabase as any)
+    const { data: failedStep } = await supabase
       .from('workflow_step_runs')
       .select('output')
       .eq('workflow_run_id', run.id)
@@ -1177,7 +1177,7 @@ export async function getPendingManualAction(
       .eq('status', 'failed')
       .maybeSingle() as { data: { output: Record<string, unknown> } | null };
 
-    const { data: node } = await (supabase as any)
+    const { data: node } = await supabase
       .from('workflow_nodes')
       .select('title')
       .eq('template_id', run.template_id)
@@ -1197,7 +1197,7 @@ export async function getPendingManualAction(
 
   // Fetch ALL running step_runs — current_node_id alone is unreliable in fan-out
   // workflows where one branch may still be waiting while another has completed.
-  const { data: runningSteps } = await (supabase as any)
+  const { data: runningSteps } = await supabase
     .from('workflow_step_runs')
     .select('node_id, output')
     .eq('workflow_run_id', run.id)
@@ -1208,7 +1208,7 @@ export async function getPendingManualAction(
   for (const step of runningSteps) {
     const stepOutput = (step.output ?? {}) as Record<string, unknown>;
 
-    const { data: node } = await (supabase as any)
+    const { data: node } = await supabase
       .from('workflow_nodes')
       .select('title, config, type')
       .eq('template_id', run.template_id)
@@ -1234,7 +1234,7 @@ export async function getPendingManualAction(
     }
 
     if (node.type === 'send_email' && stepOutput.waitingFor === 'document_attachment_selection') {
-      const { data: docs } = await (supabase as any)
+      const { data: docs } = await supabase
         .from('generated_documents')
         .select('id, document_name')
         .eq('legal_process_id', legalProcessId)
@@ -1258,7 +1258,7 @@ export async function getPendingManualAction(
       }
 
       if ((node.config as { preview?: boolean }).preview === true) {
-        const { count } = await (supabase as any)
+        const { count } = await supabase
           .from('generated_documents')
           .select('id', { count: 'exact', head: true })
           .eq('legal_process_id', legalProcessId)
@@ -1384,7 +1384,7 @@ export async function getProcessWorkflowSteps(legalProcessId: string): Promise<W
   if (!user) throw new Error('Unauthorized');
 
   // Get the workflow_run for this process
-  const { data: run } = await (supabase as any)
+  const { data: run } = await supabase
     .from('workflow_runs')
     .select('id, template_id')
     .eq('legal_process_id', legalProcessId)
@@ -1395,7 +1395,7 @@ export async function getProcessWorkflowSteps(legalProcessId: string): Promise<W
   if (!run) return [];
 
   // Get all step runs for this workflow run
-  const { data: steps, error } = await (supabase as any)
+  const { data: steps, error } = await supabase
     .from('workflow_step_runs')
     .select('id, node_id, status, output, created_at, executed_at')
     .eq('workflow_run_id', run.id)
@@ -1407,7 +1407,7 @@ export async function getProcessWorkflowSteps(legalProcessId: string): Promise<W
   if (error || !steps || steps.length === 0) return [];
 
   // Load node metadata (title, type, config) for all nodes in this template
-  const { data: nodes } = await (supabase as any)
+  const { data: nodes } = await supabase
     .from('workflow_nodes')
     .select('node_id, title, type, config')
     .eq('template_id', run.template_id) as {
@@ -1437,7 +1437,7 @@ export async function getDocumentPreviews(legalProcessId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from('generated_documents')
     .select('id, document_name, docx_storage_path, created_at')
     .eq('legal_process_id', legalProcessId)
@@ -1459,8 +1459,6 @@ export async function getDocumentPreviews(legalProcessId: string) {
  */
 export async function approveDocumentPreviews(legalProcessId: string): Promise<void> {
   const supabase = await createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any;
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (!user || authError) throw new Error('Unauthorized');
@@ -1474,7 +1472,7 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
 
   if (!lp?.workflow_run_id) throw new Error('No hay flujo de trabajo asociado');
 
-  const { data: run } = await db
+  const { data: run } = await supabase
     .from('workflow_runs')
     .select('id, template_id, current_node_id, status')
     .eq('id', lp.workflow_run_id)
@@ -1485,7 +1483,7 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
   }
 
   // ── 2. Verify current node is generate_document(preview=true) ─────────────
-  const { data: node } = await db
+  const { data: node } = await supabase
     .from('workflow_nodes')
     .select('type, config')
     .eq('template_id', run.template_id)
@@ -1498,7 +1496,7 @@ export async function approveDocumentPreviews(legalProcessId: string): Promise<v
 
   // ── 3. Convert each preview's current .docx (possibly lawyer-edited via the
   //      embedded ONLYOFFICE editor) to a final PDF ────────────────────────
-  const { data: previewDocs, error: previewDocsError } = await db
+  const { data: previewDocs, error: previewDocsError } = await supabase
     .from('generated_documents')
     .select('id')
     .eq('legal_process_id', legalProcessId)
@@ -1535,7 +1533,7 @@ export async function getFinalDocuments(legalProcessId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from('generated_documents')
     .select('id, document_name, file_url, created_at')
     .eq('legal_process_id', legalProcessId)
@@ -1595,7 +1593,7 @@ export async function getProcessAuditLogs(legalProcessId: string): Promise<Audit
     }
   }
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('audit_logs')
     .select('id, action, entity, entity_id, metadata, created_at, user_id')
     .eq('entity', 'legal_process')
@@ -1610,7 +1608,7 @@ export async function getProcessAuditLogs(legalProcessId: string): Promise<Audit
 
   // Load profile info for each unique user_id
   const userIds = [...new Set(data.map((e) => e.user_id).filter(Boolean))] as string[];
-  let profileMap: Record<string, { id: string; firstname: string | null; lastname: string | null; email: string | null }> = {};
+  const profileMap: Record<string, { id: string; firstname: string | null; lastname: string | null; email: string | null }> = {};
 
   if (userIds.length > 0) {
     const { data: profiles } = await supabase

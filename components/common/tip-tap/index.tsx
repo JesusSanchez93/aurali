@@ -1,6 +1,6 @@
 'use client';
 
-import { useEditor, EditorContent, type Editor } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor, type Content } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
 import { MenuBar, type MenuBarExtra } from './menu-bar';
@@ -170,8 +170,8 @@ export interface TiptapHandle {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-    value?: any;
-    onChange: (value: any) => void;
+    value?: Content;
+    onChange: (value: Content) => void;
     mode?: 'default' | 'document';
     menuBarStickyTop?: string;
     menuBarExtras?: MenuBarExtra[];
@@ -257,7 +257,6 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
             ed.chain().updateFooterContent(html, '').run();
             onFooterChange?.(html);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [onHeaderChange, onFooterChange]);
 
     // ── Stable click callbacks (double-click detection) ───────────────────────
@@ -342,7 +341,6 @@ const Tiptap = forwardRef<TiptapHandle, Props>(({
                 : []),
             ];
         },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         [variableGroups, aiVariableKeys, isDocument],
     );
 

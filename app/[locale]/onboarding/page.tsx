@@ -68,7 +68,6 @@ export default async function OnboardingPage(props: {
 
       <div className="mb-8 space-y-1">
         {STEP_LIST.map((step, i) => {
-          const Icon = step.icon;
           return (
             <div
               key={step.label}
