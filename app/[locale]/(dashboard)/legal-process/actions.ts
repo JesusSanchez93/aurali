@@ -494,37 +494,17 @@ export async function getLegalProcessDetail(legalProcessId: string) {
     throw new Error('Proceso legal no encontrado');
   }
 
-  const { data: clientData } = await supabase
-    .from('legal_process_clients')
-    .select('*')
-    .eq('legal_process_id', legalProcessId)
-    .single();
-
-  if (clientData) {
-    if (clientData.document_front_image && !clientData.document_front_image.startsWith('http')) {
-      const { data: frontData, error: frontError } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(clientData.document_front_image, 3600);
-      if (frontData) clientData.document_front_image = frontData.signedUrl;
-      else console.error('createSignedUrl failed for document_front_image', frontError);
-    }
-
-    if (clientData.document_back_image && !clientData.document_back_image.startsWith('http')) {
-      const { data: backData, error: backError } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(clientData.document_back_image, 3600);
-      if (backData) clientData.document_back_image = backData.signedUrl;
-      else console.error('createSignedUrl failed for document_back_image', backError);
-    }
-  }
-
-  const { data: bankingData } = await supabase
-    .from('legal_process_banks')
-    .select('*')
-    .eq('legal_process_id', legalProcessId)
-    .single();
-
-  const [{ data: feeData }, { data: paymentsData }] = await Promise.all([
+  const [{ data: clientData }, { data: bankingData }, { data: feeData }, { data: paymentsData }] = await Promise.all([
+    supabase
+      .from('legal_process_clients')
+      .select('*')
+      .eq('legal_process_id', legalProcessId)
+      .single(),
+    supabase
+      .from('legal_process_banks')
+      .select('*')
+      .eq('legal_process_id', legalProcessId)
+      .single(),
     supabase
       .from('legal_process_fees')
       .select('id, total_amount, currency, notes')
@@ -536,6 +516,26 @@ export async function getLegalProcessDetail(legalProcessId: string) {
       .eq('legal_process_id', legalProcessId)
       .order('payment_date', { ascending: true }),
   ]);
+
+  if (clientData) {
+    const [frontResult, backResult] = await Promise.all([
+      clientData.document_front_image && !clientData.document_front_image.startsWith('http')
+        ? supabase.storage.from('documents').createSignedUrl(clientData.document_front_image, 3600)
+        : null,
+      clientData.document_back_image && !clientData.document_back_image.startsWith('http')
+        ? supabase.storage.from('documents').createSignedUrl(clientData.document_back_image, 3600)
+        : null,
+    ]);
+
+    if (frontResult) {
+      if (frontResult.data) clientData.document_front_image = frontResult.data.signedUrl;
+      else console.error('createSignedUrl failed for document_front_image', frontResult.error);
+    }
+    if (backResult) {
+      if (backResult.data) clientData.document_back_image = backResult.data.signedUrl;
+      else console.error('createSignedUrl failed for document_back_image', backResult.error);
+    }
+  }
 
   let formSchema: FormSchema | null = null;
   let formResponses: Record<string, Record<string, unknown>> = {};
@@ -582,23 +582,24 @@ export async function getLegalProcessDetail(legalProcessId: string) {
   // vienen de generated_documents ni de document_signature_items. Reemplazan
   // al flujo de firma vía portal manual: el abogado los aprueba/rechaza acá
   // mismo (ver approveEmailAttachmentAction/rejectEmailAttachmentAction).
-  const { data: emailAttachmentRows } = await supabase
-    .from('legal_process_email_attachments')
-    .select('id, filename, file_url, content_type, received_at, status, rejection_reason, matched_document_id, notified_at')
-    .eq('legal_process_id', legalProcessId)
-    .order('received_at', { ascending: false });
-
   // Documentos originalmente enviados al cliente (generate_document, no
   // preview) — el nombre del archivo que el cliente adjunta al responder
   // puede no coincidir con el original (lo renombra, lo escanea de nuevo,
   // etc.), así que el abogado elige a mano cuál de estos representa cada
   // adjunto recibido (ver setEmailAttachmentMatchAction).
-  const { data: sentDocumentRows } = await supabase
-    .from('generated_documents')
-    .select('id, document_name')
-    .eq('legal_process_id', legalProcessId)
-    .eq('is_preview', false)
-    .order('created_at', { ascending: true });
+  const [{ data: emailAttachmentRows }, { data: sentDocumentRows }] = await Promise.all([
+    supabase
+      .from('legal_process_email_attachments')
+      .select('id, filename, file_url, content_type, received_at, status, rejection_reason, matched_document_id, notified_at')
+      .eq('legal_process_id', legalProcessId)
+      .order('received_at', { ascending: false }),
+    supabase
+      .from('generated_documents')
+      .select('id, document_name')
+      .eq('legal_process_id', legalProcessId)
+      .eq('is_preview', false)
+      .order('created_at', { ascending: true }),
+  ]);
 
   return {
     process: legalProcess,
@@ -973,16 +974,17 @@ export async function updateLegalProcessStatus(legalProcessId: string, newStatus
     throw new Error('Unauthorized');
   }
 
-  const { data: process } = await supabase
-    .from('legal_processes')
-    .select('status, organization_id')
-    .eq('id', legalProcessId)
-    .single();
-
-  const { error } = await supabase
-    .from('legal_processes')
-    .update({ status: newStatus })
-    .eq('id', legalProcessId);
+  const [{ data: process }, { error }] = await Promise.all([
+    supabase
+      .from('legal_processes')
+      .select('status, organization_id')
+      .eq('id', legalProcessId)
+      .single(),
+    supabase
+      .from('legal_processes')
+      .update({ status: newStatus })
+      .eq('id', legalProcessId),
+  ]);
 
   if (error) {
     throw new Error(error.message);

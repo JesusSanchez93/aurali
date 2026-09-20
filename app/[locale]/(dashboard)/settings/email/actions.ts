@@ -233,8 +233,7 @@ export async function sendSmtpTestEmail(to: string): Promise<{ success: boolean;
 
 /** Disconnects whichever provider is currently active — always falls back to Aurali. */
 export async function disconnectEmailConnection(): Promise<void> {
-  const { orgId } = await getOrgContext();
-  const supabase = await createClient({ admin: true });
+  const [{ orgId }, supabase] = await Promise.all([getOrgContext(), createClient({ admin: true })]);
 
   const { error } = await supabase
     .from('email_connections')

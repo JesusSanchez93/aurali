@@ -32,14 +32,15 @@ export async function getDashboardStats() {
     const withOrg = (table: 'clients' | 'legal_processes') =>
         orgId ? base(table).eq('organization_id', orgId) : base(table);
 
-    const { count: totalClients } = await withOrg('clients');
-
-    const { count: totalProcesses } = await withOrg('legal_processes');
-
     const completedQuery = orgId
         ? base('legal_processes').eq('organization_id', orgId).eq('status', 'finished')
         : base('legal_processes').eq('status', 'finished');
-    const { count: completedProcesses } = await completedQuery;
+
+    const [{ count: totalClients }, { count: totalProcesses }, { count: completedProcesses }] = await Promise.all([
+        withOrg('clients'),
+        withOrg('legal_processes'),
+        completedQuery,
+    ]);
 
     return {
         totalClients: totalClients || 0,

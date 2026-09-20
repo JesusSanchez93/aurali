@@ -9,8 +9,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 export default async function EmailSettingsPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  const connection = await getEmailConnection();
+  const [{ locale }, connection] = await Promise.all([params, getEmailConnection()]);
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">

@@ -17,8 +17,7 @@ export default async function WorkflowEditorPage({ params }: Props) {
     redirect('/settings/workflows')
   }
 
-  const { id } = await params
-  const supabase = await createClient()
+  const [{ id }, supabase] = await Promise.all([params, createClient()])
 
   const { data: template } = await (supabase as any) // eslint-disable-line @typescript-eslint/no-explicit-any
     .from('workflow_templates')

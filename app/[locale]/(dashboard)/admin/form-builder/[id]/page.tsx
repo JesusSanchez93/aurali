@@ -15,8 +15,7 @@ export default async function AdminFormBuilderPage({ params }: Props) {
   // `id` es el `code` del formulario (identidad estable a través de sus
   // versiones draft/publish) — no el workflow_template_id, ya que un mismo
   // flujo puede tener varios formularios.
-  const { id: code } = await params
-  const supabase = await createClient()
+  const [{ id: code }, supabase] = await Promise.all([params, createClient()])
 
   const [pageData, catalogOptions, workflowTemplateOptions] = await Promise.all([
     getOrCreateDraftByCode(code),

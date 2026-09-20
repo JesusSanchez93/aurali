@@ -17,9 +17,7 @@ export default async function ProcessCompleteLayout({
   params,
   children,
 }: Props) {
-  const { id } = await params;
-
-  const supabase = await createClient();
+  const [{ id }, supabase] = await Promise.all([params, createClient()]);
 
   const { data: process, error } = await supabase
     .from('legal_processes')

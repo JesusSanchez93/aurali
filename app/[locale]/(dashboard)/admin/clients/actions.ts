@@ -95,8 +95,7 @@ export async function getClientOrganizations(userId: string): Promise<ClientOrgR
 }
 
 export async function enterOrganizationAction(orgId: string) {
-  const supabase = await createClient()
-  const profile = await requireSuperAdmin()
+  const [supabase, profile] = await Promise.all([createClient(), requireSuperAdmin()])
 
   await supabase
     .from('profiles')
@@ -196,8 +195,7 @@ export async function rejectOrganizationAction(orgId: string) {
 }
 
 export async function exitOrganizationAction() {
-  const supabase = await createClient()
-  const profile = await requireSuperAdmin()
+  const [supabase, profile] = await Promise.all([createClient(), requireSuperAdmin()])
 
   await supabase
     .from('profiles')

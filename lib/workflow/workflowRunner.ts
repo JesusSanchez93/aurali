@@ -56,11 +56,11 @@ export async function startWorkflow(
 
   const supabase = await createClient({ admin: true });
 
-  // 1. Load the legal process
-  const legalProcess = await fetchLegalProcess(legalProcessId, supabase);
-
-  // 2. Load the full graph (nodes + edges) for this template
-  const { nodes, edges } = await fetchGraph(templateId, supabase);
+  // 1. Load the legal process, 2. Load the full graph (nodes + edges) for this template
+  const [legalProcess, { nodes, edges }] = await Promise.all([
+    fetchLegalProcess(legalProcessId, supabase),
+    fetchGraph(templateId, supabase),
+  ]);
 
   if (nodes.length === 0) {
     throw new Error(`El template ${templateId} no tiene nodos definidos`);
@@ -148,9 +148,11 @@ export async function resumeWorkflow(
   }
 
   // 2. Load graph + process
-  const { nodes, edges } = await fetchGraph(run.template_id, supabase);
-  const legalProcess = await fetchLegalProcess(run.legal_process_id, supabase);
-  const clientData = await fetchClientData(run.legal_process_id, supabase);
+  const [{ nodes, edges }, legalProcess, clientData] = await Promise.all([
+    fetchGraph(run.template_id, supabase),
+    fetchLegalProcess(run.legal_process_id, supabase),
+    fetchClientData(run.legal_process_id, supabase),
+  ]);
 
   // 3. Close the currently-open step_run (the one that was waiting)
   await db
@@ -248,9 +250,11 @@ export async function executeDocumentWithTemplates(
     .eq('node_id', run.current_node_id)
     .eq('status', 'running');
 
-  const { nodes, edges } = await fetchGraph(run.template_id, supabase);
-  const legalProcess = await fetchLegalProcess(run.legal_process_id, supabase);
-  const clientData = await fetchClientData(run.legal_process_id, supabase);
+  const [{ nodes, edges }, legalProcess, clientData] = await Promise.all([
+    fetchGraph(run.template_id, supabase),
+    fetchLegalProcess(run.legal_process_id, supabase),
+    fetchClientData(run.legal_process_id, supabase),
+  ]);
 
   const currentNode = nodes.find((n) => n.node_id === run.current_node_id);
   if (!currentNode) throw new Error(`Nodo "${run.current_node_id}" no encontrado en el template`);
@@ -310,8 +314,10 @@ export async function executeEmailWithAttachments(
     .eq('node_id', waitingNodeId)
     .eq('status', 'running');
 
-  const legalProcess = await fetchLegalProcess(run.legal_process_id, supabase);
-  const clientData = await fetchClientData(run.legal_process_id, supabase);
+  const [legalProcess, clientData] = await Promise.all([
+    fetchLegalProcess(run.legal_process_id, supabase),
+    fetchClientData(run.legal_process_id, supabase),
+  ]);
 
   const currentNode = nodes.find((n) => n.node_id === waitingNodeId);
   if (!currentNode) throw new Error(`Nodo "${waitingNodeId}" no encontrado en el template`);
@@ -378,9 +384,11 @@ export async function retryWorkflow(workflowRunId: string): Promise<void> {
     .eq('node_id', run.current_node_id)
     .eq('status', 'failed');
 
-  const { nodes, edges } = await fetchGraph(run.template_id, supabase);
-  const legalProcess = await fetchLegalProcess(run.legal_process_id, supabase);
-  const clientData = await fetchClientData(run.legal_process_id, supabase);
+  const [{ nodes, edges }, legalProcess, clientData] = await Promise.all([
+    fetchGraph(run.template_id, supabase),
+    fetchLegalProcess(run.legal_process_id, supabase),
+    fetchClientData(run.legal_process_id, supabase),
+  ]);
 
   // Audit: workflow retried (legalProcess now available)
   void db.from('audit_logs').insert({

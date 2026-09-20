@@ -26,16 +26,17 @@ export async function sendOrgEmail(
     messageId?: string;
   },
 ): Promise<SendEmailResult> {
-  const html = await render(
-    React.createElement(WorkflowEmail, {
-      bodyHtml: params.bodyHtml,
-      ctaUrl: params.ctaUrl,
-      ctaLabel: params.ctaLabel,
-      subject: params.subject,
-    }),
-  );
-
-  const service = await getEmailServiceForOrg(organizationId);
+  const [html, service] = await Promise.all([
+    render(
+      React.createElement(WorkflowEmail, {
+        bodyHtml: params.bodyHtml,
+        ctaUrl: params.ctaUrl,
+        ctaLabel: params.ctaLabel,
+        subject: params.subject,
+      }),
+    ),
+    getEmailServiceForOrg(organizationId),
+  ]);
   return service.send({
     to: params.to,
     subject: params.subject,

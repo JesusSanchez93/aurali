@@ -11,8 +11,7 @@ interface Props {
 export default async function AdminWorkflowBuilderPage({ params }: Props) {
   await requireSuperAdmin()
 
-  const { id } = await params
-  const supabase = await createClient()
+  const [{ id }, supabase] = await Promise.all([params, createClient()])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: template } = await (supabase as any)

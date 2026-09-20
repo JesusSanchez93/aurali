@@ -14,8 +14,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ documentId: string }> },
 ) {
-  const { documentId } = await params;
-  const supabase = await createClient();
+  const [{ documentId }, supabase] = await Promise.all([params, createClient()]);
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

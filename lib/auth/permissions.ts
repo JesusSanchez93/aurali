@@ -57,8 +57,7 @@ export async function requireSuperAdmin(): Promise<SessionProfile> {
  * SUPERADMIN bypasses this check.
  */
 export async function requireOrgAccess(orgId: string): Promise<SessionProfile> {
-  const supabase = await createClient()
-  const profile = await requireAuth()
+  const [supabase, profile] = await Promise.all([createClient(), requireAuth()])
 
   if (profile.system_role === 'SUPERADMIN') return profile
 
@@ -79,8 +78,7 @@ export async function requireOrgAccess(orgId: string): Promise<SessionProfile> {
  * SUPERADMIN bypasses this check.
  */
 export async function requireOrgAdmin(orgId: string): Promise<SessionProfile> {
-  const supabase = await createClient()
-  const profile = await requireAuth()
+  const [supabase, profile] = await Promise.all([createClient(), requireAuth()])
 
   if (profile.system_role === 'SUPERADMIN') return profile
 

@@ -7,9 +7,7 @@ interface Props {
 }
 
 export default async function ProcessCompletePage({ params }: Props) {
-  const { id } = await params;
-
-  const supabase = await createClient();
+  const [{ id }, supabase] = await Promise.all([params, createClient()]);
   const { data: process } = await supabase
     .from('legal_processes')
     .select('form_schema_id')

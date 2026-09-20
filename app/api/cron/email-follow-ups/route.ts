@@ -133,8 +133,10 @@ async function processFollowUp(followUp: EmailFollowUpRow, supabase: SupabaseCli
   const reserved = await reserveNextReminder(followUp, supabase);
   if (!reserved) return 'skipped';
 
-  const legalProcess = await fetchLegalProcess(followUp.legal_process_id, supabase);
-  const clientData = await fetchClientData(followUp.legal_process_id, supabase);
+  const [legalProcess, clientData] = await Promise.all([
+    fetchLegalProcess(followUp.legal_process_id, supabase),
+    fetchClientData(followUp.legal_process_id, supabase),
+  ]);
   const context: ExecutionContext = { workflowRun: run, legalProcess, previousOutput: {}, clientData };
 
   const subject = substituteVars(cfg.reminder_subject || cfg.subject || '(Recordatorio)', context);

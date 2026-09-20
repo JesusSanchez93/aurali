@@ -35,9 +35,11 @@ const STEP_LIST = [
 export default async function OnboardingPage(props: {
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await props.params;
-  const { profile } = await getSessionProfile();
-  const t = await getTranslations('onboarding.home');
+  const [{ locale }, { profile }, t] = await Promise.all([
+    props.params,
+    getSessionProfile(),
+    getTranslations('onboarding.home'),
+  ]);
 
   switch (profile?.onboarding_status) {
     case 'step1_completed':

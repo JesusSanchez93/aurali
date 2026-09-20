@@ -24,9 +24,7 @@ const LEGACY_STEPS_MAP: Record<string, () => JSX.Element> = {
 };
 
 export default async function ProcessCompleteStepPage({ params }: Props) {
-  const { id, step } = await params;
-
-  const supabase = await createClient();
+  const [{ id, step }, supabase] = await Promise.all([params, createClient()]);
   const { data: process } = await supabase
     .from('legal_processes')
     .select('form_schema_id, organization_id')

@@ -25,16 +25,17 @@ export async function notifyPendingSignupAction(userId: string) {
 
   if (!profile?.current_organization_id) return;
 
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('name, legal_representative_name')
-    .eq('id', profile.current_organization_id)
-    .single();
-
   // RLS on `profiles` only lets a user read their own row; a fresh signup is
   // not a member of anything yet, so listing SUPERADMIN emails needs the
   // service-role client to bypass RLS.
-  const adminSupabase = await createClient({ admin: true });
+  const [{ data: org }, adminSupabase] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('name, legal_representative_name')
+      .eq('id', profile.current_organization_id)
+      .single(),
+    createClient({ admin: true }),
+  ]);
   const { data: superadmins } = await adminSupabase
     .from('profiles')
     .select('email')

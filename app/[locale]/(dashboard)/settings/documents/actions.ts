@@ -8,8 +8,7 @@ import { revalidatePath } from 'next/cache';
 type DB = any;
 
 async function getOrgContext() {
-  const supabase = await createClient();
-  const profile = await requireAuth();
+  const [supabase, profile] = await Promise.all([createClient(), requireAuth()]);
   const orgId = profile.current_organization_id;
   if (!orgId) throw new Error('No organization');
   await requireOrgAdmin(orgId);

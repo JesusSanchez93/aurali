@@ -15,8 +15,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ templateId: string }> },
 ) {
-  const { templateId } = await params;
-  const supabase = await createClient();
+  const [{ templateId }, supabase] = await Promise.all([params, createClient()]);
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
