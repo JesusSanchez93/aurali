@@ -188,8 +188,8 @@ export default function FinancialsSection({ data }: { data: Financials }) {
                                             paddingAngle={2}
                                             dataKey="count"
                                         >
-                                            {pieMethods.map((entry, i) => (
-                                                <Cell key={i} fill={entry.fill} />
+                                            {pieMethods.map((entry) => (
+                                                <Cell key={entry.name} fill={entry.fill} />
                                             ))}
                                         </Pie>
                                         <Tooltip content={<MethodTooltip currency={currency} />} />

@@ -193,8 +193,8 @@ export default function AnalyticsSection({ data }: { data: DashboardAnalytics })
                                         paddingAngle={2}
                                         dataKey="count"
                                     >
-                                        {pieStat.map((entry, i) => (
-                                            <Cell key={i} fill={entry.fill} />
+                                        {pieStat.map((entry) => (
+                                            <Cell key={entry.name} fill={entry.fill} />
                                         ))}
                                     </Pie>
                                     <Tooltip content={<PieTooltip />} />

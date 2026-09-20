@@ -763,8 +763,8 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                         <div role="presentation" onClick={(e) => e.stopPropagation()}>
                             <Carousel setApi={setCarouselApi}>
                                 <CarouselContent>
-                                    {slides.map((slide, i) => (
-                                        <CarouselItem key={i}>
+                                    {slides.map((slide) => (
+                                        <CarouselItem key={slide.src}>
                                             <div className="w-full max-w-[900px] px-4 pointer-events-auto relative overflow-hidden rounded-xl mx-auto">
                                                 <div
                                                     className="absolute inset-0 scale-110 blur-2xl opacity-60"
