@@ -36,15 +36,27 @@ export async function processGmailHistoryForOrg(
     .eq('status', 'connected')
     .maybeSingle() as { data: { google_watch_history_id: string | null } | null };
 
-  if (!connection) return { resolved: 0 };
+  if (!connection) {
+    logger.info('Sin conexión de Gmail activa para esta organización — nada que procesar', { organizationId });
+    return { resolved: 0 };
+  }
 
   const tokens = await getValidGoogleAccessToken(organizationId);
-  if (!tokens) return { resolved: 0 };
+  if (!tokens) {
+    logger.warn('No se pudo obtener/renovar el access token de Google — revisa la conexión en Ajustes → Correo', { organizationId });
+    return { resolved: 0 };
+  }
 
   // Sin baseline todavía (watch nunca corrió para esta organización) — no hay
   // nada que diferenciar; el cron de renovación lo arrancará.
-  if (!connection.google_watch_history_id) return { resolved: 0 };
+  if (!connection.google_watch_history_id) {
+    logger.info('google_watch_history_id ausente — el watch nunca se registró para esta organización, esperando al cron de renovación', {
+      organizationId,
+    });
+    return { resolved: 0 };
+  }
 
+  logger.info('Consultando delta de Gmail history', { organizationId, sinceHistoryId: connection.google_watch_history_id });
   const delta = await fetchGmailHistoryAdditions(tokens.accessToken, connection.google_watch_history_id);
 
   if (!delta) {
@@ -57,6 +69,8 @@ export async function processGmailHistoryForOrg(
     await startOrRenewGmailWatch(organizationId);
     return { resolved: 0 };
   }
+
+  logger.info('Delta de Gmail obtenido', { organizationId, additions: delta.additions.length, newHistoryId: delta.historyId });
 
   if (delta.additions.length === 0) {
     await db
@@ -77,13 +91,38 @@ export async function processGmailHistoryForOrg(
     .eq('status', 'pending')
     .in('google_thread_id', threadIds) as { data: FollowUpRow[] | null };
 
+  logger.info('email_follow_ups pendientes que coinciden con los threads del delta', {
+    organizationId,
+    threadIds,
+    pendingMatched: pending?.length ?? 0,
+  });
+
   let resolved = 0;
   for (const followUp of pending ?? []) {
     const addition = delta.additions.find((a) => a.threadId === followUp.google_thread_id);
-    if (!addition) continue;
+    if (!addition) {
+      logger.warn('No se encontró un addition del delta para este follow-up pendiente (no debería pasar, ya se filtró por threadIds)', {
+        followUpId: followUp.id,
+        googleThreadId: followUp.google_thread_id,
+      });
+      continue;
+    }
 
     const message = await fetchGmailMessageParsed(tokens.accessToken, addition.messageId);
-    if (!message) continue;
+    if (!message) {
+      logger.warn('No se pudo obtener/parsear el mensaje de Gmail para este addition', {
+        followUpId: followUp.id,
+        messageId: addition.messageId,
+      });
+      continue;
+    }
+
+    logger.info('Mensaje de Gmail obtenido, procesando como respuesta', {
+      followUpId: followUp.id,
+      legalProcessId: followUp.legal_process_id,
+      messageId: addition.messageId,
+      attachmentsInMessage: message.attachments.length,
+    });
 
     const result = await resolveEmailReply(supabase, followUp, {
       from: message.from,
@@ -91,7 +130,15 @@ export async function processGmailHistoryForOrg(
       text: message.text,
       attachments: message.attachments,
     });
-    if (result) resolved++;
+
+    if (result?.resolved) {
+      resolved++;
+    } else {
+      logger.info('Follow-up procesado pero aún no resuelto (sigue esperando documentos/aprobación, o no traía adjuntos requeridos)', {
+        followUpId: followUp.id,
+        persistedAttachments: result?.attachmentIds.length ?? 0,
+      });
+    }
   }
 
   await db
@@ -101,5 +148,6 @@ export async function processGmailHistoryForOrg(
     .eq('provider', 'google')
     .eq('status', 'connected');
 
+  logger.info('processGmailHistoryForOrg completado', { organizationId, pendingMatched: pending?.length ?? 0, resolved });
   return { resolved };
 }

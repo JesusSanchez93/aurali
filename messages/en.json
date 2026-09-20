@@ -379,6 +379,13 @@
         "client_image_deleted": "Client deleted an uploaded image",
         "client_form_section_submitted": "Client submitted a form section",
         "client_process_completed": "Client completed the form",
+        "wait_email_reply_started": "Waiting for client reply",
+        "client_email_reply_received": "Client reply received",
+        "client_email_reply_documents_complete": "Documents complete — workflow continued",
+        "email_attachment_approved": "Document approved",
+        "email_attachment_rejected": "Document rejected",
+        "email_attachment_matched": "Document matched",
+        "email_attachments_rejection_notified": "Client notified of rejected documents",
         "default": "Event"
       },
       "node_types": {
@@ -402,7 +409,13 @@
         "from_node": "From: {value}",
         "node": "Node: {value}",
         "manual": "(manual)",
-        "finished_at": "Finished: {date}"
+        "finished_at": "Finished: {date}",
+        "from": "From: {value}",
+        "attachments_progress": "{approved}/{required} documents approved",
+        "still_waiting": "still waiting",
+        "rejection_reason": "Reason: {value}",
+        "requires_attachments": "requires attachments",
+        "deadline": "due: {date}"
       }
     },
     "document_previews": {

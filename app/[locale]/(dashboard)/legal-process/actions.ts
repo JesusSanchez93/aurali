@@ -15,7 +15,7 @@ import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 import { fetchLatestGmailThreadReply } from '@/lib/email/gmail/gmailInboxClient';
 import { getValidGoogleAccessToken } from '@/lib/email/providers/googleEmailService';
-import { resolveEmailReply } from '@/lib/workflow/emailReplyResolution';
+import { resolveEmailReply, tryResolvePendingReplyOnApproval } from '@/lib/workflow/emailReplyResolution';
 
 type LocalizedString = {
   es?: string;
@@ -687,13 +687,25 @@ export async function approveEmailAttachmentAction(attachmentId: string, legalPr
     .update({ status: 'approved', reviewed_by: user.id, reviewed_at: new Date().toISOString(), rejection_reason: null })
     .eq('id', attachmentId);
 
+  // El nodo wait_email_reply solo avanza cuando el número de documentos
+  // aprobados alcanza el número de documentos requeridos por el proceso —
+  // esta aprobación puede ser justo la que completa el conteo.
+  const { resolved, status } = await tryResolvePendingReplyOnApproval(supabase, legalProcessId);
+
   await supabase.from('audit_logs').insert({
     organization_id: attachment.organization_id,
     user_id: user.id,
     action: 'email_attachment_approved',
     entity: 'legal_process',
     entity_id: legalProcessId,
-    metadata: { attachment_id: attachmentId, filename: attachment.filename },
+    metadata: {
+      attachment_id: attachmentId,
+      filename: attachment.filename,
+      required_documents: status.required,
+      approved_documents: status.approved,
+      documents_complete: status.complete,
+      workflow_resumed: resolved,
+    },
   });
 
   revalidatePath('/legal-process');

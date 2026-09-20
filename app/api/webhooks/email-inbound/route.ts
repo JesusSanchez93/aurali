@@ -134,6 +134,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, matched: false });
   }
 
+  logger.info('Respuesta de Resend Inbound recibida, delegando a resolveEmailReply', {
+    followUpId: followUp.id,
+    legalProcessId: followUp.legal_process_id,
+    attachmentsInPayload: payload.attachments.length,
+  });
+
   const result = await resolveEmailReply(supabase, followUp, {
     from: payload.from,
     subject: payload.subject,
@@ -142,8 +148,20 @@ export async function POST(request: Request) {
   });
 
   if (!result) {
+    logger.info('requires_attachments activo y sin adjuntos — sigue esperando', { followUpId: followUp.id });
     return NextResponse.json({ ok: true, matched: true, waiting: true });
   }
 
-  return NextResponse.json({ ok: true, matched: true, attachments: result.attachmentIds.length });
+  logger.info('resolveEmailReply completado', {
+    followUpId: followUp.id,
+    attachments: result.attachmentIds.length,
+    resolved: result.resolved,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    matched: true,
+    attachments: result.attachmentIds.length,
+    resolved: result.resolved,
+  });
 }

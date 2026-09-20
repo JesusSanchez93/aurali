@@ -84,6 +84,10 @@ export async function GET(request: Request) {
         // Se desconfiguró el IMAP después de crear la espera — no hay nada
         // que hacer salvo esperar a que venza (deadline_at), igual que si
         // nunca hubiera respondido.
+        logger.warn('IMAP desconfigurado para esta organización — follow-ups pendientes quedan sin revisar hasta que se reconfigure', {
+          organizationId,
+          pendingCount: followUps.length,
+        });
         continue;
       }
 
@@ -95,11 +99,24 @@ export async function GET(request: Request) {
       const client = await createImapClient(credentials);
       try {
         const messages = await fetchMessagesSince(client, new Date(oldestCreatedAt));
+        logger.info('Mensajes IMAP obtenidos desde el follow-up más antiguo', {
+          organizationId,
+          pendingFollowUps: followUps.length,
+          messagesFetched: messages.length,
+          since: oldestCreatedAt,
+        });
 
         for (const followUp of followUps) {
           const trackingId = buildTrackingMessageId(followUp.reply_token);
           const match = messages.find((m) => m.referenceIds.includes(trackingId));
           if (!match) continue;
+
+          logger.info('Mensaje IMAP coincide con un follow-up pendiente por Message-ID, procesando como respuesta', {
+            followUpId: followUp.id,
+            legalProcessId: followUp.legal_process_id,
+            trackingId,
+            attachmentsInMessage: match.attachments.length,
+          });
 
           const result = await resolveEmailReply(supabase, followUp, {
             from: match.from,
@@ -107,7 +124,15 @@ export async function GET(request: Request) {
             text: match.text,
             attachments: match.attachments,
           });
-          if (result) resolved++;
+
+          if (result?.resolved) {
+            resolved++;
+          } else {
+            logger.info('Follow-up procesado pero aún no resuelto (sigue esperando documentos/aprobación)', {
+              followUpId: followUp.id,
+              persistedAttachments: result?.attachmentIds.length ?? 0,
+            });
+          }
         }
       } finally {
         await client.logout();

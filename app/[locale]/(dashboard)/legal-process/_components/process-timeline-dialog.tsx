@@ -32,6 +32,11 @@ import {
   Archive,
   XCircle,
   SendHorizonal,
+  MailCheck,
+  Hourglass,
+  FileCheck2,
+  FileX2,
+  Link2,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import {
@@ -73,6 +78,13 @@ const AUDIT_CONFIG: Record<string, ActionConfig> = {
   document_preview_updated:   { icon: <FilePlus2 className="h-3 w-3" />,      dot: 'bg-teal-400' },
   payment_confirmed:          { icon: <CreditCard className="h-3 w-3" />,     dot: 'bg-green-600' },
   workflow_notification:      { icon: <Bell className="h-3 w-3" />,           dot: 'bg-yellow-500' },
+  wait_email_reply_started:              { icon: <Hourglass className="h-3 w-3" />,    dot: 'bg-amber-400' },
+  client_email_reply_received:           { icon: <MailCheck className="h-3 w-3" />,    dot: 'bg-sky-500' },
+  client_email_reply_documents_complete: { icon: <CheckCircle2 className="h-3 w-3" />, dot: 'bg-green-500' },
+  email_attachment_approved:             { icon: <FileCheck2 className="h-3 w-3" />,   dot: 'bg-green-500' },
+  email_attachment_rejected:             { icon: <FileX2 className="h-3 w-3" />,       dot: 'bg-red-500' },
+  email_attachment_matched:              { icon: <Link2 className="h-3 w-3" />,        dot: 'bg-violet-400' },
+  email_attachments_rejection_notified:  { icon: <Mail className="h-3 w-3" />,         dot: 'bg-orange-400' },
 };
 
 const DEFAULT_AUDIT_CONFIG: ActionConfig = {
@@ -160,6 +172,50 @@ function formatAuditMeta(entry: AuditLogEntry, t: TFn, tS: TStatusFn): string | 
         m.retried_from_node ? t('meta.node', { value: String(m.retried_from_node) }) : null,
         m.source === 'manual' ? t('meta.manual') : null,
       ].filter(Boolean).join(' ') || null;
+    case 'wait_email_reply_started':
+      return [
+        m.to_email ? t('meta.to', { value: String(m.to_email) }) : null,
+        m.requires_attachments ? t('meta.requires_attachments') : null,
+      ].filter(Boolean).join(' · ') || null;
+    case 'client_email_reply_received': {
+      const required = m.required_documents != null ? Number(m.required_documents) : null;
+      const approved = m.approved_documents != null ? Number(m.approved_documents) : null;
+      return [
+        m.from ? t('meta.from', { value: String(m.from) }) : null,
+        m.attachment_count && Number(m.attachment_count) > 0
+          ? t('meta.attachments', { count: Number(m.attachment_count) })
+          : null,
+        required != null && approved != null
+          ? `${t('meta.attachments_progress', { approved, required })}${m.documents_complete ? '' : ` (${t('meta.still_waiting')})`}`
+          : null,
+      ].filter(Boolean).join(' · ') || null;
+    }
+    case 'client_email_reply_documents_complete': {
+      const required = m.required != null ? Number(m.required) : null;
+      const approved = m.approved != null ? Number(m.approved) : null;
+      return required != null && approved != null
+        ? t('meta.attachments_progress', { approved, required })
+        : null;
+    }
+    case 'email_attachment_approved': {
+      const required = m.required_documents != null ? Number(m.required_documents) : null;
+      const approved = m.approved_documents != null ? Number(m.approved_documents) : null;
+      return [
+        m.filename ? String(m.filename) : null,
+        required != null && approved != null
+          ? `${t('meta.attachments_progress', { approved, required })}${m.workflow_resumed ? '' : ` (${t('meta.still_waiting')})`}`
+          : null,
+      ].filter(Boolean).join(' · ') || null;
+    }
+    case 'email_attachment_rejected':
+      return [
+        m.filename ? String(m.filename) : null,
+        m.reason ? t('meta.rejection_reason', { value: String(m.reason) }) : null,
+      ].filter(Boolean).join(' · ') || null;
+    case 'email_attachment_matched':
+      return m.filename ? String(m.filename) : null;
+    case 'email_attachments_rejection_notified':
+      return m.to ? t('meta.to', { value: String(m.to) }) : null;
     default:
       return null;
   }
