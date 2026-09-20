@@ -75,7 +75,7 @@ export function FileUpload({
                 <div className="space-y-2">
                     {valuesArray.map((val, index) => (
                         <div
-                            key={index}
+                            key={val.name || val.file?.name || index}
                             className="flex items-center justify-between p-3 border rounded-md bg-muted/50"
                         >
                             <div className="flex items-center space-x-3 overflow-hidden">

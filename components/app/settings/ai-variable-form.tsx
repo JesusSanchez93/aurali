@@ -41,7 +41,10 @@ export function AiVariableForm({ open, onOpenChange, variable }: Props) {
   const [keyManuallyEdited, setKeyManuallyEdited] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [description, setDescription] = useState('');
-  const [examples, setExamples] = useState<string[]>([]);
+  // { id, text } en vez de string[] — solo para tener una key estable en la
+  // lista editable (ver render abajo); id se genera acá y nunca se persiste,
+  // se aplana a string[] al guardar (cleanExamples).
+  const [examples, setExamples] = useState<{ id: string; text: string }[]>([]);
 
   // Reset form when sheet opens/closes or variable changes
   useEffect(() => {
@@ -51,7 +54,7 @@ export function AiVariableForm({ open, onOpenChange, variable }: Props) {
       setKeyManuallyEdited(!!variable);
       setPrompt(variable?.prompt ?? '');
       setDescription(variable?.description ?? '');
-      setExamples(variable?.examples ?? []);
+      setExamples((variable?.examples ?? []).map((text) => ({ id: crypto.randomUUID(), text })));
     }
   }, [open, variable]);
 
@@ -87,7 +90,7 @@ export function AiVariableForm({ open, onOpenChange, variable }: Props) {
 
     startTransition(async () => {
       try {
-        const cleanExamples = examples.map((e) => e.trim()).filter(Boolean);
+        const cleanExamples = examples.map((e) => e.text.trim()).filter(Boolean);
         if (variable) {
           await updateAiVariable(variable.id, { name, key, prompt, description, examples: cleanExamples });
         } else {
@@ -195,13 +198,13 @@ export function AiVariableForm({ open, onOpenChange, variable }: Props) {
               <p className="mt-0.5 text-xs text-muted-foreground">{t('examples_description')}</p>
             </div>
             {examples.map((ex, i) => (
-              <div key={i} className="flex items-start gap-2">
+              <div key={ex.id} className="flex items-start gap-2">
                 <span className="mt-2.5 text-xs font-mono text-muted-foreground w-5 shrink-0 text-right">{i + 1}.</span>
                 <Textarea
-                  value={ex}
+                  value={ex.text}
                   onChange={(e) => {
                     const next = [...examples];
-                    next[i] = e.target.value;
+                    next[i] = { ...next[i], text: e.target.value };
                     setExamples(next);
                   }}
                   placeholder={t('example_placeholder')}
@@ -223,7 +226,7 @@ export function AiVariableForm({ open, onOpenChange, variable }: Props) {
               variant="outline"
               size="sm"
               className="gap-1.5"
-              onClick={() => setExamples([...examples, ''])}
+              onClick={() => setExamples([...examples, { id: crypto.randomUUID(), text: '' }])}
             >
               <Plus className="h-3.5 w-3.5" />
               {t('add_example')}

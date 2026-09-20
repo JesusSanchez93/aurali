@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, Circle, Plus, Trash2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Sheet from '@/components/common/sheet';
@@ -91,15 +91,27 @@ export function FieldConfigPanel({
     (customKey || FORM_VARIABLE_OPTIONS.some((o) => o.key === field.key)) &&
     field.label.trim().length > 0;
 
+  // Keys estables para la lista de opciones — field.options no trae un id
+  // propio (FormFieldOption solo tiene value/label, y value puede quedar
+  // vacío o repetido mientras se edita), así que sin esto React reutiliza el
+  // nodo DOM equivocado al borrar una opción del medio y el foco/cursor salta
+  // a otro input. Se mantiene en lockstep manual con add/update/remove.
+  const optionIdsRef = useRef<string[]>((initialField.options ?? []).map(() => crypto.randomUUID()));
+
   const updateOption = (index: number, patch: Partial<FormFieldOption>) => {
     const options = [...(field.options ?? [])];
     options[index] = { ...options[index], ...patch };
     setField({ ...field, options });
   };
 
-  const addOption = () => setField({ ...field, options: [...(field.options ?? []), { value: '', label: '' }] });
-  const removeOption = (index: number) =>
+  const addOption = () => {
+    optionIdsRef.current = [...optionIdsRef.current, crypto.randomUUID()];
+    setField({ ...field, options: [...(field.options ?? []), { value: '', label: '' }] });
+  };
+  const removeOption = (index: number) => {
+    optionIdsRef.current = optionIdsRef.current.filter((_, i) => i !== index);
     setField({ ...field, options: (field.options ?? []).filter((_, i) => i !== index) });
+  };
 
   /** Al cambiar el tipo se limpia la configuración específica del tipo
    *  anterior (opciones, origen de catálogo, restricciones de archivo) para
@@ -307,7 +319,7 @@ export function FieldConfigPanel({
               ) : (
                 <div className="space-y-2">
                   {(field.options ?? []).map((opt, i) => (
-                    <div key={i} className="flex gap-2">
+                    <div key={optionIdsRef.current[i] ?? i} className="flex gap-2">
                       <Input
                         value={opt.label}
                         onChange={(e) => updateOption(i, { label: e.target.value, value: opt.value || slugify(e.target.value) })}
