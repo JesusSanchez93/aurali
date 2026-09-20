@@ -21,7 +21,7 @@ export interface EmailTheme {
   logoUrl?: string;
 }
 
-const DEFAULT_THEME: EmailTheme = {
+export const DEFAULT_THEME: EmailTheme = {
   primaryColor: '#1E1B4B',
   accentColor: '#7C3AED',
   ctaColor: '#7C3AED',

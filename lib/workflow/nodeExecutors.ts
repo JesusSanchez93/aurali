@@ -33,6 +33,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { TextStyleKit } from '@tiptap/extension-text-style';
 import TextAlign from '@tiptap/extension-text-align';
 import { buildSignatureInstructionsHtml } from '@/lib/email/signatureRequestEmail';
+import { DEFAULT_THEME } from '@/emails/WorkflowEmail';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 import type { SendEmailResult } from '@/lib/email/types';
@@ -222,6 +223,72 @@ export function resolveBodyHtml(body: unknown): string {
   } catch {
     return '';
   }
+}
+
+// ─── Inline form-URL button ────────────────────────────────────────────────────
+
+const FORM_URL_STANDALONE_PARAGRAPH =
+  /<p[^>]*>\s*(?:<a[^>]*>\s*)?\{\{?form_url(?::[a-z0-9]+)?\}?\}\s*(?:<\/a>\s*)?<\/p>/gi;
+const FORM_URL_IN_ANCHOR = /<a[^>]*>\s*\{\{?form_url(?::[a-z0-9]+)?\}?\}\s*<\/a>/gi;
+const FORM_URL_TOKEN = /\{\{?form_url(?::[a-z0-9]+)?\}?\}/gi;
+const EMPTY_PARAGRAPH = /<p[^>]*>(\s|&nbsp;)*<\/p>/g;
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function buttonMarkup(url: string, label: string): string {
+  const style =
+    'font-weight:600;padding:12px 24px;border-radius:8px;font-size:14px;' +
+    `text-decoration:none;display:inline-block;background-color:${DEFAULT_THEME.ctaColor};color:${DEFAULT_THEME.ctaTextColor};`;
+  return `<a href="${escapeHtml(url)}" target="_blank" style="${style}">${escapeHtml(label)}</a>`;
+}
+
+/**
+ * Replaces the {FORM_URL} / {FORM_URL:codigo} placeholder with the actual
+ * button, exactly where the lawyer positioned it in the template, instead of
+ * always appending the button after all the body text — a template that
+ * places the link mid-body (e.g. before a closing note) would otherwise have
+ * the button render at the very end, out of the order shown in the editor.
+ *
+ * Falls back to returning `ctaUrl` unchanged (caller renders it as a trailing
+ * button) when the template doesn't contain the placeholder at all, so older
+ * templates without it keep working exactly as before.
+ */
+export function inlineFormButton(
+  rawBodyHtml: string,
+  ctaUrl: string | undefined,
+  ctaLabel: string,
+): { bodyHtml: string; fallbackCtaUrl?: string } {
+  if (!ctaUrl) {
+    const bodyHtml = rawBodyHtml
+      .replace(FORM_URL_IN_ANCHOR, '')
+      .replace(FORM_URL_TOKEN, '')
+      .replace(EMPTY_PARAGRAPH, '');
+    return { bodyHtml };
+  }
+
+  let replaced = false;
+  const blockButton = `<p style="margin:20px 0;">${buttonMarkup(ctaUrl, ctaLabel)}</p>`;
+  let bodyHtml = rawBodyHtml.replace(FORM_URL_STANDALONE_PARAGRAPH, () => {
+    replaced = true;
+    return blockButton;
+  });
+
+  if (!replaced) {
+    const inlineButton = buttonMarkup(ctaUrl, ctaLabel);
+    bodyHtml = bodyHtml
+      .replace(FORM_URL_IN_ANCHOR, () => { replaced = true; return inlineButton; })
+      .replace(FORM_URL_TOKEN, () => { replaced = true; return inlineButton; });
+  }
+
+  bodyHtml = bodyHtml.replace(EMPTY_PARAGRAPH, '');
+
+  return replaced ? { bodyHtml } : { bodyHtml, fallbackCtaUrl: ctaUrl };
 }
 
 // ─── Email helper ──────────────────────────────────────────────────────────────
@@ -606,16 +673,12 @@ async function executeSendEmail(
   const rawFormUrl = (context.legalProcess as unknown as Record<string, unknown>).form_url as string | undefined;
   const formUrl = context.legalProcess.status === 'draft' ? rawFormUrl : undefined;
 
-  // Strip the form_url placeholder BEFORE substituteVars so the raw URL never gets
-  // injected into the body — it's shown only as the CTA button below. Templates may
-  // use either the legacy {{form_url}} token, {FORM_URL}, or {FORM_URL:codigo}
-  // (case-insensitive, single or double braces), and TipTap may wrap it in <a>.
-  const cleanedTemplate = rawBodyHtml
-    .replace(/<a[^>]*>\s*\{\{?form_url(?::[a-z0-9]+)?\}?\}\s*<\/a>/gi, '')
-    .replace(/\{\{?form_url(?::[a-z0-9]+)?\}?\}/gi, '')
-    .replace(/<p>(\s|&nbsp;)*<\/p>/g, '');
-
-  const bodyHtml = substituteVars(cleanedTemplate, context);
+  // Replace the {{form_url}} / {FORM_URL} / {FORM_URL:codigo} placeholder
+  // with the actual button exactly where the lawyer positioned it in the
+  // template — falls back to a trailing button (via fallbackCtaUrl) only
+  // when the template doesn't contain the placeholder at all.
+  const { bodyHtml: templateWithButton, fallbackCtaUrl } = inlineFormButton(rawBodyHtml, formUrl, 'Completar formulario');
+  const bodyHtml = substituteVars(templateWithButton, context);
 
   // Build PDF attachments — pause for lawyer to select documents when attach_enabled
   const attachments: EmailAttachment[] = [];
@@ -664,7 +727,7 @@ async function executeSendEmail(
     subject,
     bodyHtml,
     attachments.length ? attachments : undefined,
-    formUrl,
+    fallbackCtaUrl,
     undefined,
     undefined,
     captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,

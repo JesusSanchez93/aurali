@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
 import { startWorkflow, resumeWorkflow, retryWorkflow, executeDocumentWithTemplates, executeEmailWithAttachments } from '@/lib/workflow/workflowRunner';
 import { autoAdvanceWorkflow } from '@/lib/workflow/autoAdvance';
-import { buildDocumentTemplateData } from '@/lib/workflow/nodeExecutors';
+import { buildDocumentTemplateData, resolveBodyHtml, substituteVars, inlineFormButton } from '@/lib/workflow/nodeExecutors';
+import type { ExecutionContext } from '@/lib/workflow/types';
 import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
 import { approveGeneratedDocument } from '@/lib/onlyoffice/approveDocument';
 import type { FormSchema } from '@/lib/forms/types';
@@ -1756,12 +1757,13 @@ export async function resendDraftEmail(legalProcessId: string): Promise<void> {
 
   const { data: lp } = await supabase
     .from('legal_processes')
-    .select('status, organization_id, email')
+    .select('status, organization_id, email, lawyer_id, document_type, document_number, workflow_run_id')
     .eq('id', legalProcessId)
     .single();
 
   if (!lp) throw new Error('Proceso no encontrado');
   if (lp.status !== 'draft') throw new Error('Solo se puede reenviar el email en procesos en borrador');
+  if (!lp.organization_id) throw new Error('El proceso legal no tiene organization_id');
 
   // Generate a fresh token, reset used flag, and extend expiry to 72 h from now
   const newToken = randomUUID();
@@ -1778,26 +1780,84 @@ export async function resendDraftEmail(legalProcessId: string): Promise<void> {
   // Get client email (prefer legal_process_clients record, fall back to lp.email)
   const { data: clientRecord } = await supabase
     .from('legal_process_clients')
-    .select('email, first_name')
+    .select('email, first_name, last_name')
     .eq('legal_process_id', legalProcessId)
     .maybeSingle();
 
   const toEmail = clientRecord?.email ?? lp.email;
   if (!toEmail) throw new Error('No se encontró un email de destinatario');
 
-  const firstName = clientRecord?.first_name ?? '';
-  const greeting = firstName ? `Hola, ${firstName}` : 'Hola';
+  // Reuse the org's configured "Enviar formulario al cliente" node (the same
+  // template a lawyer edits in Configuración → Flujos de Trabajo) instead of
+  // a hardcoded copy, so template edits apply to resends too. Falls back to
+  // the old hardcoded copy if the node/template can't be resolved.
+  let subject = 'Tu proceso legal está listo para iniciarse';
+  let bodyHtml = '<p>Hola,</p><p>Te recordamos que tienes un proceso legal pendiente de iniciar. Por favor ingresa al siguiente enlace para completar tu información y dar inicio a tu proceso.</p>';
+  let ctaUrl: string | undefined = formUrl;
 
-  const bodyHtml = `<p>${greeting},</p><p>Te recordamos que tienes un proceso legal pendiente de iniciar. Por favor ingresa al siguiente enlace para completar tu información y dar inicio a tu proceso.</p>`;
+  if (lp.workflow_run_id) {
+    const { data: run } = await supabase
+      .from('workflow_runs')
+      .select('template_id')
+      .eq('id', lp.workflow_run_id)
+      .single();
 
-  if (!lp.organization_id) throw new Error('El proceso legal no tiene organization_id');
+    if (run?.template_id) {
+      const { data: emailNode } = await supabase
+        .from('workflow_nodes')
+        .select('config')
+        .eq('template_id', run.template_id)
+        .eq('type', 'send_email')
+        .contains('config', { email_template: 'client_form_email' })
+        .maybeSingle();
 
-  const { sendOrgEmail } = await import('@/lib/email/sendOrgEmail');
+      const cfg = emailNode?.config as { subject?: string; body?: unknown } | undefined;
+      if (cfg?.body) {
+        const rawBodyHtml = resolveBodyHtml(cfg.body);
+        const { bodyHtml: templateWithButton, fallbackCtaUrl } = inlineFormButton(rawBodyHtml, formUrl, 'Completar formulario →');
+        ctaUrl = fallbackCtaUrl;
+
+        const context: ExecutionContext = {
+          workflowRun: {
+            id: lp.workflow_run_id,
+            template_id: run.template_id,
+            legal_process_id: legalProcessId,
+            current_node_id: null,
+            status: 'running',
+            created_at: new Date().toISOString(),
+            completed_at: null,
+          },
+          legalProcess: {
+            id: legalProcessId,
+            organization_id: lp.organization_id,
+            lawyer_id: lp.lawyer_id,
+            email: lp.email,
+            status: lp.status,
+            workflow_run_id: lp.workflow_run_id,
+            document_type: lp.document_type,
+            document_number: lp.document_number,
+            access_token: token,
+            form_url: formUrl,
+          },
+          previousOutput: {},
+          clientData: {
+            email: clientRecord?.email ?? '',
+            first_name: clientRecord?.first_name ?? '',
+            last_name: clientRecord?.last_name ?? '',
+          },
+        };
+
+        bodyHtml = substituteVars(templateWithButton, context);
+        if (cfg.subject) subject = substituteVars(cfg.subject, context);
+      }
+    }
+  }
+
   await sendOrgEmail(lp.organization_id, {
     to: toEmail,
-    subject: 'Tu proceso legal está listo para iniciarse',
+    subject,
     bodyHtml,
-    ctaUrl: formUrl,
+    ctaUrl,
     ctaLabel: 'Completar formulario →',
   });
 
