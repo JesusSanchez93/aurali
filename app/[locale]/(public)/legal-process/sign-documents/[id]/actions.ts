@@ -5,9 +5,11 @@ import { createClient } from '@/lib/supabase/server';
 import { logClientAction } from '@/lib/audit/logClientAction';
 import { generateOtpCode, hashOtpCode, verifyOtpCode } from '@/lib/auth/otp';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
+import { assertValidUploadFile } from '@/lib/server/validate-upload';
 
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+const MAX_SIGNED_DOCUMENT_BYTES = 15 * 1024 * 1024;
 
 type SignatureRequestRow = {
   id: string;
@@ -215,6 +217,17 @@ export async function uploadSignedDocumentsAction(
   });
   if (itemsWithFile.length === 0) {
     return { success: false, error: 'Selecciona al menos un documento para subir' };
+  }
+
+  // Validate every file before uploading any of them — reject the whole
+  // batch on the first invalid file so nothing is partially persisted.
+  for (const item of itemsWithFile) {
+    const file = formData.get(`file_${item.id}`) as File;
+    try {
+      assertValidUploadFile(file, { extensions: ['.pdf'], maxBytes: MAX_SIGNED_DOCUMENT_BYTES });
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : 'Archivo inválido' };
+    }
   }
 
   for (const item of itemsWithFile) {

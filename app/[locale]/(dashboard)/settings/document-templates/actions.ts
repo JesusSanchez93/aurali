@@ -3,8 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import { randomUUID } from 'crypto';
 import { getOrgAndUser } from '@/lib/server/get-org-user';
+import { assertValidUploadFile } from '@/lib/server/validate-upload';
 
 const DOCX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const MAX_DOCX_BYTES = 15 * 1024 * 1024;
 
 export async function getTemplates() {
     const { supabase, organizationId } = await getOrgAndUser();
@@ -42,6 +44,9 @@ export async function getTemplate(id: string) {
 export async function createTemplateWithDocx(name: string, file: File): Promise<{ id: string }> {
     const { supabase, organizationId } = await getOrgAndUser();
 
+    if (!name?.trim()) throw new Error('El nombre de la plantilla es requerido');
+    assertValidUploadFile(file, { extensions: ['.docx'], maxBytes: MAX_DOCX_BYTES });
+
     const { data: created, error: insertErr } = await supabase
         .from('legal_templates')
         .insert({ name, organization_id: organizationId, docx_document_key: randomUUID() })
@@ -74,6 +79,9 @@ export async function createTemplateWithDocx(name: string, file: File): Promise<
 export async function uploadTemplateDocx(templateId: string, file: File): Promise<void> {
     const { supabase, organizationId } = await getOrgAndUser();
 
+    if (!templateId?.trim()) throw new Error('templateId es requerido');
+    assertValidUploadFile(file, { extensions: ['.docx'], maxBytes: MAX_DOCX_BYTES });
+
     const storagePath = `${organizationId}/templates/${templateId}.docx`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -96,6 +104,9 @@ export async function uploadTemplateDocx(templateId: string, file: File): Promis
 export async function renameTemplate(id: string, name: string): Promise<void> {
     const { supabase, organizationId } = await getOrgAndUser();
 
+    if (!id?.trim()) throw new Error('id es requerido');
+    if (!name?.trim()) throw new Error('El nombre de la plantilla es requerido');
+
     const { error } = await supabase
         .from('legal_templates')
         .update({ name })
@@ -108,6 +119,8 @@ export async function renameTemplate(id: string, name: string): Promise<void> {
 
 export async function deleteTemplate(id: string) {
     const { supabase, organizationId } = await getOrgAndUser();
+
+    if (!id?.trim()) throw new Error('id es requerido');
 
     const { error } = await supabase
         .from('legal_templates')
