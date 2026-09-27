@@ -66,7 +66,7 @@ export async function processGmailHistoryForOrg(
     // llegaron durante ese hueco quedan sin procesar (caso extremo: requiere
     // que el cron de renovación diaria haya fallado varios días seguidos).
     logger.error('historyId fuera de ventana — re-sincronizando desde cero', undefined, { organizationId });
-    await startOrRenewGmailWatch(organizationId);
+    await startOrRenewGmailWatch(organizationId, { resetBaseline: true });
     return { resolved: 0 };
   }
 
@@ -98,9 +98,17 @@ export async function processGmailHistoryForOrg(
   });
 
   let resolved = 0;
+  // Si algún mensaje no se pudo descargar, NO se avanza el historyId: el
+  // siguiente aviso (o el barrido diario) vuelve a pedir ese mismo delta y lo
+  // reintenta. resolveEmailReply no duplica adjuntos ya guardados.
+  let hadFetchFailure = false;
+
   for (const followUp of pending ?? []) {
-    const addition = delta.additions.find((a) => a.threadId === followUp.google_thread_id);
-    if (!addition) {
+    // Todos los mensajes nuevos de este hilo, en orden de llegada — el
+    // cliente puede mandar varias respuestas dentro del mismo delta (p. ej.
+    // "ahí van" y luego otro correo con los adjuntos).
+    const threadAdditions = delta.additions.filter((a) => a.threadId === followUp.google_thread_id);
+    if (threadAdditions.length === 0) {
       logger.warn('No se encontró un addition del delta para este follow-up pendiente (no debería pasar, ya se filtró por threadIds)', {
         followUpId: followUp.id,
         googleThreadId: followUp.google_thread_id,
@@ -108,37 +116,46 @@ export async function processGmailHistoryForOrg(
       continue;
     }
 
-    const message = await fetchGmailMessageParsed(tokens.accessToken, addition.messageId);
-    if (!message) {
-      logger.warn('No se pudo obtener/parsear el mensaje de Gmail para este addition', {
+    for (const addition of threadAdditions) {
+      const message = await fetchGmailMessageParsed(tokens.accessToken, addition.messageId);
+      if (!message) {
+        hadFetchFailure = true;
+        logger.warn('No se pudo obtener/parsear el mensaje de Gmail para este addition — no se avanza el historyId, se reintentará', {
+          followUpId: followUp.id,
+          messageId: addition.messageId,
+        });
+        continue;
+      }
+
+      logger.info('Mensaje de Gmail obtenido, procesando como respuesta', {
         followUpId: followUp.id,
+        legalProcessId: followUp.legal_process_id,
         messageId: addition.messageId,
+        attachmentsInMessage: message.attachments.length,
       });
-      continue;
-    }
 
-    logger.info('Mensaje de Gmail obtenido, procesando como respuesta', {
-      followUpId: followUp.id,
-      legalProcessId: followUp.legal_process_id,
-      messageId: addition.messageId,
-      attachmentsInMessage: message.attachments.length,
-    });
+      const result = await resolveEmailReply(supabase, followUp, {
+        from: message.from,
+        subject: message.subject,
+        text: message.text,
+        attachments: message.attachments,
+      });
 
-    const result = await resolveEmailReply(supabase, followUp, {
-      from: message.from,
-      subject: message.subject,
-      text: message.text,
-      attachments: message.attachments,
-    });
+      if (result?.resolved) {
+        resolved++;
+        break; // follow-up ya resuelto — los mensajes restantes del hilo no aplican
+      }
 
-    if (result?.resolved) {
-      resolved++;
-    } else {
       logger.info('Follow-up procesado pero aún no resuelto (sigue esperando documentos/aprobación, o no traía adjuntos requeridos)', {
         followUpId: followUp.id,
         persistedAttachments: result?.attachmentIds.length ?? 0,
       });
     }
+  }
+
+  if (hadFetchFailure) {
+    logger.warn('historyId NO avanzado por fallos al descargar mensajes — se reintentará en el próximo aviso o barrido', { organizationId });
+    return { resolved };
   }
 
   await db

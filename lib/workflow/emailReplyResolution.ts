@@ -20,6 +20,27 @@ export interface InboundReply {
   attachments: { filename: string; contentType: string | null; content: Buffer }[];
 }
 
+/**
+ * Supabase Storage rechaza claves con acentos, espacios, corchetes, etc.
+ * ("Invalid key"), lo que descartaba adjuntos como "Cédula (1).pdf" sin
+ * avisar. Se sanea solo el nombre usado en la ruta; el original se conserva
+ * en la columna `filename`.
+ */
+export function toStorageSafeFilename(filename: string): string {
+  const dot = filename.lastIndexOf('.');
+  const base = dot > 0 ? filename.slice(0, dot) : filename;
+  const ext = dot > 0 ? filename.slice(dot + 1) : '';
+  const clean = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  const safeBase = clean(base) || 'adjunto';
+  const safeExt = clean(ext);
+  return safeExt ? `${safeBase}.${safeExt}` : safeBase;
+}
+
 export interface AttachmentCompletionStatus {
   /** Documentos enviados al cliente que requieren una copia de vuelta (generated_documents, is_preview=false). */
   required: number;
@@ -205,8 +226,24 @@ export async function resolveEmailReply(
 
   // ── Sube los adjuntos a Storage y los asocia al proceso ───────────────────
   const attachmentIds: string[] = [];
+
+  // Un reintento del mismo mensaje (historyId no avanzado, Pub/Sub duplicado)
+  // no debe duplicar adjuntos ya guardados para este follow-up.
+  const { data: existing } = await db
+    .from('legal_process_email_attachments')
+    .select('filename, size_bytes')
+    .eq('email_follow_up_id', followUp.id) as { data: { filename: string; size_bytes: number | null }[] | null };
+  const alreadySaved = new Set((existing ?? []).map((e) => `${e.filename}:${e.size_bytes}`));
+
   for (const att of reply.attachments) {
-    const storagePath = `${followUp.organization_id}/${followUp.legal_process_id}/email-replies/${Date.now()}-${att.filename}`;
+    if (alreadySaved.has(`${att.filename}:${att.content.length}`)) {
+      logger.info('Adjunto ya guardado para este follow-up — se omite (reintento)', {
+        followUpId: followUp.id,
+        filename: att.filename,
+      });
+      continue;
+    }
+    const storagePath = `${followUp.organization_id}/${followUp.legal_process_id}/email-replies/${Date.now()}-${toStorageSafeFilename(att.filename)}`;
     const { error: uploadErr } = await supabase.storage
       .from('documents')
       .upload(storagePath, att.content, { contentType: att.contentType ?? undefined, upsert: true });

@@ -131,7 +131,7 @@ export async function GET(
     // 1x/día y reintenta) en vez de tumbar la conexión ya guardada.
     if (provider === 'google') {
       try {
-        await startOrRenewGmailWatch(parsed.orgId);
+        await startOrRenewGmailWatch(parsed.orgId, { resetBaseline: true });
       } catch (err) {
         logger.error('No se pudo registrar el watch de Gmail tras conectar', err, { organizationId: parsed.orgId });
       }

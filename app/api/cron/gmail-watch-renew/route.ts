@@ -59,11 +59,14 @@ export async function GET(request: Request) {
 
   for (const conn of connections ?? []) {
     try {
-      const watch = await startOrRenewGmailWatch(conn.organization_id);
-      if (watch) renewed++;
-
+      // Primero el delta pendiente y DESPUÉS renovar el watch: renovar guarda
+      // un historyId nuevo como baseline, así que hacerlo antes descartaba
+      // cualquier respuesta que el webhook no hubiera alcanzado a procesar.
       const result = await processGmailHistoryForOrg(supabase, conn.organization_id);
       resolved += result.resolved;
+
+      const watch = await startOrRenewGmailWatch(conn.organization_id);
+      if (watch) renewed++;
     } catch (err) {
       failed++;
       logger.error('Error renovando/resincronizando Gmail para una organización', err, { organizationId: conn.organization_id });
