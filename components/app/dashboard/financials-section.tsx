@@ -12,11 +12,8 @@ type Financials = DashboardAnalytics['financials'];
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 function formatCurrency(value: number, currency: string) {
-    return new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency,
-        maximumFractionDigits: 0,
-    }).format(value);
+    const amount = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(value);
+    return `$${amount} ${currency}`;
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -38,7 +35,7 @@ function AreaTooltip({ active, payload, label, currency }: {
     return (
         <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-sm">
             <p className="font-medium text-foreground">{label}</p>
-            <p className="text-muted-foreground">{formatCurrency(payload[0].value, currency)}</p>
+            <p className="font-mono tabular-nums text-muted-foreground">{formatCurrency(payload[0].value, currency)}</p>
         </div>
     );
 }
@@ -52,7 +49,7 @@ function MethodTooltip({ active, payload, currency }: {
         <div className="rounded-lg border bg-background px-3 py-2 shadow-md text-sm">
             <p className="font-medium">{METHOD_LABELS[item.name] ?? item.name}</p>
             <p className="text-muted-foreground">{item.value} pago{item.value !== 1 ? 's' : ''}</p>
-            <p className="text-muted-foreground">{formatCurrency(item.payload.amount, currency)}</p>
+            <p className="font-mono tabular-nums text-muted-foreground">{formatCurrency(item.payload.amount, currency)}</p>
         </div>
     );
 }
@@ -64,6 +61,10 @@ function FinKpi({
     label: string; value: string; desc?: string;
     icon: React.ElementType; accent?: string;
 }) {
+    // Currency code (last token) is rendered smaller so long amounts fit small screens.
+    const split = value.lastIndexOf(' ');
+    const amount = split > 0 ? value.slice(0, split) : value;
+    const code = split > 0 ? value.slice(split + 1) : '';
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -73,7 +74,10 @@ function FinKpi({
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold tracking-tight">{value}</div>
+                <div className="min-w-0 break-words font-mono text-lg tabular-nums tracking-tight sm:text-xl 2xl:text-2xl">
+                    {amount}
+                    {code && <span className="ml-1 text-xs text-muted-foreground sm:text-sm">{code}</span>}
+                </div>
                 {desc && <p className="mt-1 text-xs text-muted-foreground">{desc}</p>}
             </CardContent>
         </Card>
@@ -154,7 +158,7 @@ export default function FinancialsSection({ data }: { data: Financials }) {
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
                                     <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                                    <YAxis tick={{ fontSize: 11, fontFamily: 'ui-monospace, monospace' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                                     <Tooltip content={<AreaTooltip currency={currency} />} />
                                     <Area
                                         type="monotone"
