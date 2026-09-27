@@ -502,7 +502,7 @@ function TemplateDropzone({
                             </a>
                         )
                     }
-                    className="border-2 border-border p-3"
+                    className={cn('border-2 border-border p-3', front && 'brightness-90')}
                     style={{
                         // Con un documento ya vinculado, la base se queda fija en
                         // 0%/20% (el estado "cerca") — el ir y venir 10%/10% solo
@@ -664,7 +664,7 @@ export function EmailAttachmentMatcher({
                         >
                             <CarouselContent>
                                 {sentDocuments.map((doc) => (
-                                    <CarouselItem key={doc.id} className="basis-1/2">
+                                    <CarouselItem key={doc.id} className="basis-full sm:basis-1/2">
                                         <TemplateDropzone
                                             document={doc}
                                             matched={attachments.filter(
