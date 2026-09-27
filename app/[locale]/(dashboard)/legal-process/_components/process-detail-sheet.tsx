@@ -21,9 +21,9 @@ import {
     setEmailAttachmentMatchAction,
     notifyRejectedEmailAttachmentsAction,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WorkflowActionButton } from '@/app/[locale]/(dashboard)/legal-process/_components/workflow-action-button';
 import { DocumentPreviews } from '@/app/[locale]/(dashboard)/legal-process/_components/document-previews';
+import { EmailAttachmentMatcher } from '@/app/[locale]/(dashboard)/legal-process/_components/email-attachment-matcher';
 import { FollowUpStatus } from '@/app/[locale]/(dashboard)/legal-process/_components/follow-up-status';
 import { DynamicResponseViewer } from '@/components/common/dynamic-form/DynamicResponseViewer';
 import type { FormSchema } from '@/lib/forms/types';
@@ -34,8 +34,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AlertTriangle, Archive, Check, CheckCircle2, Clock, Eye, MoreHorizontal, Paperclip, RotateCcw, X, XCircle } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { AlertTriangle, Archive, CheckCircle2, MoreHorizontal, RotateCcw, X, XCircle } from 'lucide-react';
 import { ProcessPaymentsSection } from '@/app/[locale]/(dashboard)/legal-process/_components/process-payments-section';
 import { useTranslations } from 'next-intl';
 import {
@@ -58,15 +57,6 @@ interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
-
-// Misma convención neutral/verde/rojo usada en el resto de pills de estado
-// del detalle del proceso (ver signature-review.tsx, ahora reemplazado por
-// esta sección para el flujo de respuesta por correo).
-const ATTACHMENT_STATUS_STYLE: Record<string, { icon: React.ElementType; className: string }> = {
-    pending: { icon: Clock, className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200' },
-    approved: { icon: Check, className: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' },
-    rejected: { icon: X, className: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' },
-};
 
 function Field({ label, value }: { label: string; value?: string | boolean | null }) {
     const t = useTranslations('common');
@@ -121,7 +111,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
             id: string; filename: string; file_url: string | null; content_type: string | null; received_at: string;
             status: string; rejection_reason: string | null; matched_document_id: string | null; notified_at: string | null;
         }[];
-        sentDocuments: { id: string; document_name: string | null }[];
+        sentDocuments: { id: string; document_name: string | null; file_url: string | null; created_at: string }[];
     } | null>(null);
 
     const [notifyingRejected, setNotifyingRejected] = useState(false);
@@ -138,6 +128,21 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
             })
             .catch(console.error)
             .finally(() => setLoading(false));
+    };
+
+    // Igual que loadData, pero sin tocar `loading` — ese estado reemplaza TODO
+    // el cuerpo del panel por un spinner (ver body={loading ? <Spinner/> : ...}
+    // más abajo), lo que se veía como si "se refrescara todo" al aprobar,
+    // rechazar o vincular/desvincular un adjunto por DnD. Estas acciones son
+    // frecuentes y solo cambian un dato puntual — el contenido actual se queda
+    // en pantalla mientras llega el dato fresco, y recién ahí se reemplaza.
+    const refreshDataSilently = (id: string) => {
+        getLegalProcessDetail(id)
+            .then((d) => {
+                setData(d);
+                setRefreshKey((k) => k + 1);
+            })
+            .catch(console.error);
     };
 
     useEffect(() => {
@@ -200,7 +205,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         try {
             await approveEmailAttachmentAction(attachmentId, processId);
             toast.success(processT('email_attachments.approve_success'));
-            loadData(processId);
+            refreshDataSilently(processId);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : processT('email_attachments.action_error'));
         } finally {
@@ -214,7 +219,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         try {
             await rejectEmailAttachmentAction(rejectingAttachmentId, processId, reason || undefined);
             toast.success(processT('email_attachments.reject_success'));
-            loadData(processId);
+            refreshDataSilently(processId);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : processT('email_attachments.action_error'));
         } finally {
@@ -223,13 +228,38 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
         }
     };
 
+    // DnD optimista: se asume éxito y se mueve la hoja de inmediato (sin
+    // esperar la respuesta del servidor ni un refetch completo, que era lo
+    // que causaba el salto visual entre soltar y ver el cambio reflejado). Si
+    // el server action falla, se revierte al estado anterior — la hoja vuelve
+    // a la bandeja — y se muestra el error.
     const handleMatchAttachment = async (attachmentId: string, documentId: string | null) => {
         if (!processId) return;
+        let previousMatch: string | null = null;
+        setData((d) => {
+            if (!d) return d;
+            previousMatch = d.emailAttachments.find((a) => a.id === attachmentId)?.matched_document_id ?? null;
+            return {
+                ...d,
+                emailAttachments: d.emailAttachments.map((a) =>
+                    a.id === attachmentId ? { ...a, matched_document_id: documentId } : a,
+                ),
+            };
+        });
         setMatchingAttachmentId(attachmentId);
         try {
             await setEmailAttachmentMatchAction(attachmentId, processId, documentId);
-            loadData(processId);
         } catch (err) {
+            setData((d) =>
+                d
+                    ? {
+                          ...d,
+                          emailAttachments: d.emailAttachments.map((a) =>
+                              a.id === attachmentId ? { ...a, matched_document_id: previousMatch } : a,
+                          ),
+                      }
+                    : d,
+            );
             toast.error(err instanceof Error ? err.message : processT('email_attachments.action_error'));
         } finally {
             setMatchingAttachmentId(null);
@@ -546,26 +576,26 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                 />
                             )}
 
-                            {processId && (
-                                <DocumentPreviews
-                                    legalProcessId={processId}
-                                    refreshKey={refreshKey}
-                                    readOnly
-                                />
-                            )}
+                            {/* La sección "Documentos finales" de solo lectura (DocumentPreviews
+                                readOnly) queda reemplazada por la de abajo — EmailAttachmentMatcher
+                                ya muestra esos mismos generated_documents (is_preview=false) como
+                                base, con su propio "Ver" y el conteo. */}
 
                             {/* Documentos recibidos por correo (nodo wait_email_reply) — el
                                 abogado los aprueba o rechaza acá; reemplaza al flujo de firma
-                                vía portal manual (SignatureReview, en desuso). */}
-                            {data.emailAttachments.length > 0 && (() => {
+                                vía portal manual (SignatureReview, en desuso). Se muestra también
+                                cuando aún no hay respuestas del cliente (emailAttachments vacío),
+                                porque EmailAttachmentMatcher ya trae la grilla de "Documentos
+                                finales" (generated_documents), que debe verse apenas existan,
+                                sin esperar a la primera respuesta por correo. */}
+                            {(data.emailAttachments.length > 0 || data.sentDocuments.length > 0) && (() => {
                                 const pendingNotify = data.emailAttachments.filter((a) => a.status === 'rejected' && !a.notified_at);
                                 return (
-                                <TooltipProvider delayDuration={200}>
+                                <>
                                     <Separator />
                                     <div>
-                                        <div className="mb-3 flex items-center justify-between gap-2">
-                                            <h4 className="text-sm font-semibold">{processT('email_attachments.title')}</h4>
-                                            {pendingNotify.length > 0 && (
+                                        {pendingNotify.length > 0 && (
+                                            <div className="mb-3 flex justify-end">
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
@@ -574,118 +604,17 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                                 >
                                                     {processT('email_attachments.btn_notify', { count: pendingNotify.length })}
                                                 </Button>
-                                            )}
-                                        </div>
-                                        <div className="space-y-2">
-                                            {data.emailAttachments.map((att) => {
-                                                const isActioning = actioningAttachmentId === att.id;
-                                                const statusStyle = ATTACHMENT_STATUS_STYLE[att.status] ?? ATTACHMENT_STATUS_STYLE.pending;
-                                                const StatusIcon = statusStyle.icon;
-
-                                                return (
-                                                    <div key={att.id} className="rounded-md border px-3 py-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                                            <span className="min-w-0 flex-1 truncate text-sm" title={att.filename}>{att.filename}</span>
-                                                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusStyle.className}`}>
-                                                                <StatusIcon className="h-2.5 w-2.5" />
-                                                                {processT(`email_attachments.status.${att.status}`)}
-                                                            </span>
-                                                            <span className="shrink-0 text-xs text-muted-foreground">
-                                                                {new Date(att.received_at).toLocaleDateString('es-CO')}
-                                                            </span>
-                                                            <div className="flex shrink-0 items-center gap-1">
-                                                                {att.file_url && (
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger asChild>
-                                                                            <Button size="icon" variant="ghost" className="h-7 w-7" asChild>
-                                                                                <a href={att.file_url} target="_blank" rel="noreferrer" aria-label={processT('email_attachments.btn_view')}>
-                                                                                    <Eye className="h-3.5 w-3.5" />
-                                                                                </a>
-                                                                            </Button>
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent>{processT('email_attachments.btn_view')}</TooltipContent>
-                                                                    </Tooltip>
-                                                                )}
-                                                                {att.status === 'pending' && (
-                                                                    <>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <Button
-                                                                                    size="icon"
-                                                                                    variant="ghost"
-                                                                                    className="h-7 w-7 text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-950/40"
-                                                                                    disabled={isActioning}
-                                                                                    onClick={() => handleApproveAttachment(att.id)}
-                                                                                    aria-label={processT('email_attachments.btn_approve')}
-                                                                                >
-                                                                                    <Check className="h-3.5 w-3.5" />
-                                                                                </Button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent>{processT('email_attachments.btn_approve')}</TooltipContent>
-                                                                        </Tooltip>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <Button
-                                                                                    size="icon"
-                                                                                    variant="ghost"
-                                                                                    className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                                                    disabled={isActioning}
-                                                                                    onClick={() => setRejectingAttachmentId(att.id)}
-                                                                                    aria-label={processT('email_attachments.btn_reject')}
-                                                                                >
-                                                                                    <X className="h-3.5 w-3.5" />
-                                                                                </Button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent>{processT('email_attachments.btn_reject')}</TooltipContent>
-                                                                        </Tooltip>
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-
-                                                        {data.sentDocuments.length > 0 && (
-                                                            <div className="mt-2 flex items-center gap-2">
-                                                                <span className="shrink-0 text-xs text-muted-foreground">
-                                                                    {processT('email_attachments.matched_document_label')}
-                                                                </span>
-                                                                <Select
-                                                                    value={att.matched_document_id ?? undefined}
-                                                                    disabled={matchingAttachmentId === att.id}
-                                                                    onValueChange={(value) => handleMatchAttachment(att.id, value)}
-                                                                >
-                                                                    <SelectTrigger className="h-7 flex-1 text-xs">
-                                                                        <SelectValue placeholder={processT('email_attachments.matched_document_placeholder')} />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {data.sentDocuments.map((doc) => (
-                                                                            <SelectItem key={doc.id} value={doc.id}>
-                                                                                {doc.document_name ?? doc.id}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                        )}
-
-                                                        {att.status === 'rejected' && att.rejection_reason && (
-                                                            <div className="mt-2 flex items-start gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 dark:border-red-800/40 dark:bg-red-950/30">
-                                                                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-red-600 dark:text-red-400" />
-                                                                <p className="text-[11px] leading-snug text-red-700 dark:text-red-300">
-                                                                    <span className="font-medium">{processT('email_attachments.rejection_reason_label')}:</span> {att.rejection_reason}
-                                                                </p>
-                                                            </div>
-                                                        )}
-
-                                                        {att.status === 'rejected' && att.notified_at && (
-                                                            <p className="mt-1.5 text-[11px] text-muted-foreground">
-                                                                {processT('email_attachments.notified_label', { date: new Date(att.notified_at).toLocaleDateString('es-CO') })}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                            </div>
+                                        )}
+                                        <EmailAttachmentMatcher
+                                            attachments={data.emailAttachments}
+                                            sentDocuments={data.sentDocuments}
+                                            matchingAttachmentId={matchingAttachmentId}
+                                            actioningAttachmentId={actioningAttachmentId}
+                                            onMatch={handleMatchAttachment}
+                                            onApprove={handleApproveAttachment}
+                                            onReject={setRejectingAttachmentId}
+                                        />
                                     </div>
 
                                     <ActionReasonDialog
@@ -699,7 +628,7 @@ export default function ProcessDetailSheet({ processId, open, onOpenChange }: Pr
                                         confirmLabel={processT('email_attachments.reject_dialog.confirm')}
                                         variant="destructive"
                                     />
-                                </TooltipProvider>
+                                </>
                                 );
                             })()}
 

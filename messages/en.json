@@ -497,6 +497,14 @@
         "reason_label": "Reason (optional)",
         "reason_placeholder": "Describe what the client needs to fix...",
         "confirm": "Reject"
+      },
+      "matcher": {
+        "tray_title": "Documents received by email",
+        "templates_title": "Final documents",
+        "empty_hint": "Drag the matching document here",
+        "unlink": "Remove link",
+        "tray_empty": "All documents are already linked",
+        "count": "{count} {count, plural, one {document} other {documents}}"
       }
     }
   },
