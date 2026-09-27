@@ -106,14 +106,14 @@ export function ActiveWorkflowsManager({ activeTemplates, availableToActivate, t
   }
 
   return (
-    <div className="space-y-4 px-6 py-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{title}</h1>
+    <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-semibold sm:text-2xl">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
         {availableToActivate.length > 0 && (
-          <Button variant="outline" onClick={() => setAddOpen(true)}>
+          <Button variant="outline" className="w-full shrink-0 sm:w-auto" onClick={() => setAddOpen(true)}>
             <Plus className="mr-1.5 h-4 w-4" />
             Agregar tipo de proceso
           </Button>
