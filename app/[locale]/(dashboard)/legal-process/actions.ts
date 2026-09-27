@@ -591,15 +591,45 @@ export async function getLegalProcessDetail(legalProcessId: string) {
   const [{ data: emailAttachmentRows }, { data: sentDocumentRows }] = await Promise.all([
     supabase
       .from('legal_process_email_attachments')
-      .select('id, filename, file_url, content_type, received_at, status, rejection_reason, matched_document_id, notified_at')
+      .select('id, filename, file_url, storage_path, content_type, received_at, status, rejection_reason, matched_document_id, notified_at')
       .eq('legal_process_id', legalProcessId)
       .order('received_at', { ascending: false }),
     supabase
       .from('generated_documents')
-      .select('id, document_name')
+      .select('id, document_name, file_url, storage_path, created_at')
       .eq('legal_process_id', legalProcessId)
       .eq('is_preview', false)
       .order('created_at', { ascending: true }),
+  ]);
+
+  // El file_url guardado en ambas tablas es una signed URL de UNA sola vez, al
+  // subir/generar el archivo (ver generateOnlyOfficeDocument.ts y
+  // emailReplyResolution.ts) — expira a los 7 días y, pasado ese tiempo, ni el
+  // botón "Ver" ni la miniatura de PdfThumbnail funcionan (ambos usan el mismo
+  // valor vencido). Se regenera acá, fresca, en cada carga del panel.
+  const SIGNED_URL_TTL = 60 * 60; // 1h — de sobra para una sesión de visualización
+
+  type EmailAttachmentRow = {
+    id: string; filename: string; file_url: string | null; storage_path: string | null; content_type: string | null; received_at: string;
+    status: string; rejection_reason: string | null; matched_document_id: string | null; notified_at: string | null;
+  };
+  type SentDocumentRow = { id: string; document_name: string | null; file_url: string | null; storage_path: string | null; created_at: string };
+
+  const [refreshedEmailAttachments, refreshedSentDocuments] = await Promise.all([
+    Promise.all(
+      ((emailAttachmentRows ?? []) as EmailAttachmentRow[]).map(async (row) => {
+        if (!row.storage_path) return row;
+        const { data: signed } = await supabase.storage.from('documents').createSignedUrl(row.storage_path, SIGNED_URL_TTL);
+        return { ...row, file_url: signed?.signedUrl ?? row.file_url };
+      }),
+    ),
+    Promise.all(
+      ((sentDocumentRows ?? []) as SentDocumentRow[]).map(async (row) => {
+        if (!row.storage_path) return row;
+        const { data: signed } = await supabase.storage.from('documents').createSignedUrl(row.storage_path, SIGNED_URL_TTL);
+        return { ...row, file_url: signed?.signedUrl ?? row.file_url };
+      }),
+    ),
   ]);
 
   return {
@@ -610,11 +640,11 @@ export async function getLegalProcessDetail(legalProcessId: string) {
     payments: (paymentsData ?? []) as { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string }[],
     formSchema,
     formResponses,
-    emailAttachments: (emailAttachmentRows ?? []) as {
+    emailAttachments: refreshedEmailAttachments as {
       id: string; filename: string; file_url: string | null; content_type: string | null; received_at: string;
       status: string; rejection_reason: string | null; matched_document_id: string | null; notified_at: string | null;
     }[],
-    sentDocuments: (sentDocumentRows ?? []) as { id: string; document_name: string | null }[],
+    sentDocuments: refreshedSentDocuments as { id: string; document_name: string | null; file_url: string | null; created_at: string }[],
   };
 }
 
@@ -708,7 +738,13 @@ export async function approveEmailAttachmentAction(attachmentId: string, legalPr
     },
   });
 
-  revalidatePath('/legal-process');
+  // Solo cuando la aprobación reanuda el workflow (resolved=true) puede
+  // haber cambiado algo visible en la lista de procesos (p. ej. su status) —
+  // en el caso normal (aprobación parcial, todavía esperando más documentos)
+  // no hay nada que invalidar ahí. El panel de detalle ya refresca su propia
+  // data con loadData(); revalidar aquí sin necesidad solo provoca que toda
+  // la página de /legal-process se vuelva a renderizar detrás del panel.
+  if (resolved) revalidatePath('/legal-process');
 }
 
 export async function rejectEmailAttachmentAction(
@@ -746,7 +782,9 @@ export async function rejectEmailAttachmentAction(
     metadata: { attachment_id: attachmentId, filename: attachment.filename, reason: reason || null },
   });
 
-  revalidatePath('/legal-process');
+  // Rechazar un adjunto no cambia nada visible en la lista de /legal-process
+  // (esa tabla no se selecciona ahí) — el panel de detalle ya refresca su
+  // propia data con loadData(). No hay nada que revalidar.
 }
 
 /**
@@ -786,7 +824,10 @@ export async function setEmailAttachmentMatchAction(
     metadata: { attachment_id: attachmentId, filename: attachment.filename, matched_document_id: documentId },
   });
 
-  revalidatePath('/legal-process');
+  // Vincular/desvincular un adjunto por DnD no cambia nada visible en la
+  // lista de /legal-process — el panel de detalle ya refresca su propia data
+  // con loadData(). Revalidar aquí en cada soltada solo provoca que toda esa
+  // página se vuelva a renderizar detrás del panel.
 }
 
 /**
@@ -897,7 +938,8 @@ export async function notifyRejectedEmailAttachmentsAction(legalProcessId: strin
     metadata: { attachment_ids: notifiedIds, email_follow_up_id: newFollowUp.id, to: toEmail },
   });
 
-  revalidatePath('/legal-process');
+  // Notificar al cliente tampoco cambia nada visible en la lista de
+  // /legal-process — el panel de detalle ya refresca su propia data.
 }
 
 /** Sustituye, en las respuestas de un formulario dinámico, los paths de Storage

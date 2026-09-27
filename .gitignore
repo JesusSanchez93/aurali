@@ -46,6 +46,7 @@ next-env.d.ts
 .claude/settings.json
 .claude/settings.local.json
 .claude/CLAUDE.md
+.claude/launch.json
 .mcp.json
 skills-lock.json
 .agents/

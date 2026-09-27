@@ -497,6 +497,14 @@
         "reason_label": "Motivo (opcional)",
         "reason_placeholder": "Describe qué debe corregir el cliente...",
         "confirm": "Rechazar"
+      },
+      "matcher": {
+        "tray_title": "Documentos recibidos por correo",
+        "templates_title": "Documentos finales",
+        "empty_hint": "Arrastra aquí el documento correspondiente",
+        "unlink": "Quitar vínculo",
+        "tray_empty": "Todos los documentos ya están vinculados",
+        "count": "{count} {count, plural, one {documento} other {documentos}}"
       }
     }
   },
