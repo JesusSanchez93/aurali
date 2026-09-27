@@ -106,13 +106,13 @@ export default async function WorkflowsPage() {
   // run several tipos de proceso legal (workflow_templates) in parallel.
   const { data: assignments } = await db
     .from('organization_workflows')
-    .select('workflow_template_id, workflow_templates(id, name, description, is_legacy_form)')
+    .select('workflow_template_id, workflow_templates(id, name, description, is_legacy_form, icon_svg, gradient_color, gradient_color_to)')
     .eq('organization_id', orgId)
     .eq('is_active', true)
 
   const activeTemplates = (assignments ?? [])
-    .map((a: { workflow_templates: { id: string; name: string; description: string | null; is_legacy_form: boolean } | null }) => a.workflow_templates)
-    .filter((wf: unknown): wf is { id: string; name: string; description: string | null; is_legacy_form: boolean } => Boolean(wf))
+    .map((a: { workflow_templates: { id: string; name: string; description: string | null; is_legacy_form: boolean; icon_svg: string | null; gradient_color: string | null; gradient_color_to: string | null } | null }) => a.workflow_templates)
+    .filter((wf: unknown): wf is { id: string; name: string; description: string | null; is_legacy_form: boolean; icon_svg: string | null; gradient_color: string | null; gradient_color_to: string | null } => Boolean(wf))
 
   if (activeTemplates.length === 0) {
     const workflows = await getAvailableWorkflows()

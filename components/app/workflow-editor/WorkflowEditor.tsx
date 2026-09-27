@@ -42,6 +42,8 @@ interface WorkflowEditorProps {
   onSave?: (templateId: string, nodes: WorkflowNode[], edges: WorkflowEdge[]) => Promise<void>;
   /** URL for the back-arrow button. Defaults to /settings/workflows. */
   backHref?: string;
+  /** Extra classes for the top bar (e.g. hide it at some breakpoints). */
+  headerClassName?: string;
   /**
    * When provided in readOnly mode, clicking an editable node (send_email,
    * send_documents) opens a limited dialog to edit subject + body.
@@ -61,6 +63,7 @@ function WorkflowEditorInner({
   readOnly = false,
   onSave,
   backHref = '/settings/workflows',
+  headerClassName,
   onNodeEdit,
 }: WorkflowEditorProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(initialNodes);
@@ -211,7 +214,7 @@ function WorkflowEditorInner({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Top bar */}
-      <header className="flex shrink-0 items-center justify-between border-b bg-card px-4 py-2">
+      <header className={cn('flex shrink-0 items-center justify-between border-b bg-card px-4 py-2', headerClassName)}>
         <div className="flex items-center gap-3">
           {!readOnly && (
             <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
