@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
-import { buildSignatureInstructionsHtml } from '@/lib/email/signatureRequestEmail';
+import type { EmailAttachment } from '@/lib/email/types';
 import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
 
 export type SignatureItemView = {
@@ -306,22 +306,35 @@ async function resendSignaturePortalEmail(
   // to the same defaults executeSendDocuments itself would have used.
   const emailSubject = existingRequest.email_subject ?? 'Debe firmar sus documentos legales';
   const emailIntroHtml = existingRequest.email_intro_html
-    ?? `<p>Tiene ${items.length} documento(s) legales que requieren su firma.</p>`;
+    ?? `<p>Tiene ${items.length} documento(s) legales.</p>`;
 
-  // Reproduces the exact email originally sent — same subject, same intro
-  // text, same instructions/document list layout, same (still-valid) link.
-  const signUrl = `${process.env.NEXT_PUBLIC_APP_URL}/legal-process/sign-documents/validate-token?token=${existingRequest.access_token}`;
-  const bodyHtml = buildSignatureInstructionsHtml(
-    emailIntroHtml,
-    items.map((i) => ({ document_name: i.document_name, file_url: i.original_file_url ?? '' })),
-  );
+  // El portal de firma con OTP (sign-documents/validate-token) ya no se usa
+  // — el cliente responde por correo (wait_email_reply +
+  // EmailAttachmentMatcher en el dashboard). El reenvío manda el cuerpo tal
+  // cual, con los documentos pendientes como adjuntos reales, sin
+  // instrucciones de portal ni botón de firma.
+  const attachments = (
+    await Promise.all(
+      items.map(async (item) => {
+        if (!item.original_file_url) return null;
+        try {
+          const res = await fetch(item.original_file_url);
+          if (!res.ok) return null;
+          const content: EmailAttachment['content'] = Buffer.from(await res.arrayBuffer());
+          const baseName = item.document_name?.replace(/\.(docx|pdf)$/i, '') ?? 'documento';
+          return { filename: `${baseName}.pdf`, content };
+        } catch {
+          return null;
+        }
+      }),
+    )
+  ).filter((a): a is EmailAttachment => a !== null);
 
   await sendOrgEmail(existingRequest.organization_id, {
     to: existingRequest.client_email,
     subject: emailSubject,
-    bodyHtml,
-    ctaUrl: signUrl,
-    ctaLabel: 'Firmar documentos →',
+    bodyHtml: emailIntroHtml,
+    attachments: attachments.length ? attachments : undefined,
   });
 
   await supabase.from('audit_logs').insert({
