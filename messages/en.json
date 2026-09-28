@@ -64,7 +64,9 @@
       "click_to_upload_image": "Click to upload",
       "can_upload_more": "You can upload {count} more file{pluralShort}",
       "confirm_crop": "Confirm crop",
-      "document_fallback": "Document"
+      "document_fallback": "Document",
+      "drop_to_upload_image": "Drop the image to upload",
+      "drop_to_upload": "Drop the document to upload"
     },
     "theme": {
       "light": "Light",
@@ -504,8 +506,16 @@
         "empty_hint": "Drag the matching document here",
         "unlink": "Remove link",
         "tray_empty": "All documents are already linked",
-        "count": "{count} {count, plural, one {document} other {documents}}"
+        "count": "{count} {count, plural, one {document} other {documents}}",
+        "already_matched": "This document already has an attachment linked. Unlink it first to associate a different one.",
+        "not_approved": "Only approved documents can be linked. Approve it first."
       }
+    },
+    "edit_email": {
+      "trigger": "Edit email",
+      "dialog_title": "Edit client email",
+      "field_label": "Email address",
+      "success": "Email updated"
     }
   },
   "clients": {

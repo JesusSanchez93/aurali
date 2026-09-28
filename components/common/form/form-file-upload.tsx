@@ -84,33 +84,65 @@ export function FormFileUpload<T extends FieldValues>(props: Props<T>): JSX.Elem
             <FormField
                 control={control}
                 name={name}
-                render={({ field, fieldState }) => (
-                    <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                            {label}
-                            {required && <span className="ml-0.5 text-red-500">*</span>}
-                        </FormLabel>
+                render={({ field, fieldState }) => {
+                    // El valor "de verdad" en RHF/Zod (ver buildZodSchema.ts,
+                    // formDataCodec.ts) es File nuevo o string (path ya subido,
+                    // al recargar un avance parcial) — nunca el wrapper
+                    // {file, name} que FileUpload usa solo para su propio
+                    // render. Mismo patrón de conversión que FormImageUpload,
+                    // generalizado para el caso multi-archivo.
+                    const rawValue = field.value as File | string | (File | string)[] | null | undefined;
 
-                        <FormControl>
-                            <FileUpload
-                                required={required}
-                                disabled={disabled}
-                                value={field.value as FileUploadValue | FileUploadValue[] | undefined}
-                                onChange={(val) => field.onChange(val)}
-                                onDeleteClick={onDeleteClick}
-                                accept={accept}
-                                multiple={multiple}
-                                maxFiles={maxFiles}
-                            />
-                        </FormControl>
+                    const toDisplayValue = (v: File | string): FileUploadValue => ({
+                        file: v instanceof File ? v : null,
+                        name: v instanceof File ? v.name : v,
+                    });
 
-                        {description && (
-                            <FormDescription>{description}</FormDescription>
-                        )}
+                    const displayValue: FileUploadValue | FileUploadValue[] | undefined =
+                        rawValue == null
+                            ? undefined
+                            : Array.isArray(rawValue)
+                                ? rawValue.map(toDisplayValue)
+                                : toDisplayValue(rawValue);
 
-                        {fieldState.error && <FormMessage />}
-                    </FormItem>
-                )}
+                    const toRawValue = (v: FileUploadValue): File | string => v.file ?? v.name ?? '';
+
+                    const handleChange = (val?: FileUploadValue | FileUploadValue[]) => {
+                        if (val === undefined) {
+                            field.onChange(undefined);
+                            return;
+                        }
+                        field.onChange(Array.isArray(val) ? val.map(toRawValue) : toRawValue(val));
+                    };
+
+                    return (
+                        <FormItem>
+                            <FormLabel className="text-sm font-medium">
+                                {label}
+                                {required && <span className="ml-0.5 text-red-500">*</span>}
+                            </FormLabel>
+
+                            <FormControl>
+                                <FileUpload
+                                    required={required}
+                                    disabled={disabled}
+                                    value={displayValue}
+                                    onChange={handleChange}
+                                    onDeleteClick={onDeleteClick}
+                                    accept={accept}
+                                    multiple={multiple}
+                                    maxFiles={maxFiles}
+                                />
+                            </FormControl>
+
+                            {description && (
+                                <FormDescription>{description}</FormDescription>
+                            )}
+
+                            {fieldState.error && <FormMessage />}
+                        </FormItem>
+                    );
+                }}
             />
         </div>
     );

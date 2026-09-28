@@ -2,8 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { FileText, Trash2, UploadCloud } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 
 export interface FileUploadValue {
     file: File | null;
@@ -32,11 +33,11 @@ export function FileUpload({
     maxFiles = 3,
 }: Props) {
     const inputRef = useRef<HTMLInputElement>(null);
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
 
     const valuesArray = Array.isArray(value) ? value : value ? [value] : [];
 
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
+    const loadFiles = (files: File[]) => {
         if (!files.length) return;
 
         if (multiple) {
@@ -46,10 +47,20 @@ export function FileUpload({
         } else {
             onChange({ file: files[0], name: files[0].name });
         }
+    };
 
+    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        loadFiles(Array.from(e.target.files || []));
         if (inputRef.current) {
             inputRef.current.value = ''; // Reset input
         }
+    };
+
+    const onDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+        e.preventDefault();
+        setIsDraggingOver(false);
+        if (disabled) return;
+        loadFiles(Array.from(e.dataTransfer.files || []));
     };
 
     const handleDelete = (index: number) => {
@@ -116,10 +127,21 @@ export function FileUpload({
                         type="button"
                         onClick={() => inputRef.current?.click()}
                         disabled={disabled}
-                        className="group flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 py-8 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            if (!disabled) setIsDraggingOver(true);
+                        }}
+                        onDragLeave={() => setIsDraggingOver(false)}
+                        onDrop={onDrop}
+                        className={cn(
+                            'group flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed bg-muted/30 py-8 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50',
+                            isDraggingOver ? 'border-primary bg-primary/5 text-primary' : 'border-border',
+                        )}
                     >
                         <UploadCloud className="h-6 w-6 text-muted-foreground/70 transition-colors group-hover:text-primary" />
-                        <span className="text-sm font-medium">{t('click_to_upload')}</span>
+                        <span className="text-sm font-medium">
+                            {isDraggingOver ? t('drop_to_upload') : t('click_to_upload')}
+                        </span>
                         <span className="text-xs text-muted-foreground">
                             {accept.replace(/\./g, '').toUpperCase()} {multiple ? t('can_upload_more', { count: remainingCount, pluralShort: remainingCount === 1 ? '' : 's' }) : ''}
                         </span>

@@ -64,7 +64,9 @@
       "click_to_upload_image": "Haz clic para subir",
       "can_upload_more": "Puedes subir {count} archivo{pluralShort} más",
       "confirm_crop": "Confirmar recorte",
-      "document_fallback": "Documento"
+      "document_fallback": "Documento",
+      "drop_to_upload_image": "Suelta la imagen para subir",
+      "drop_to_upload": "Suelta el documento para subir"
     },
     "theme": {
       "light": "Claro",
@@ -504,8 +506,16 @@
         "empty_hint": "Arrastra aquí el documento correspondiente",
         "unlink": "Quitar vínculo",
         "tray_empty": "Todos los documentos ya están vinculados",
-        "count": "{count} {count, plural, one {documento} other {documentos}}"
+        "count": "{count} {count, plural, one {documento} other {documentos}}",
+        "already_matched": "Este documento ya tiene un adjunto vinculado. Desvincúlalo primero para asociar otro.",
+        "not_approved": "Solo se pueden vincular documentos ya aprobados. Apruébalo primero."
       }
+    },
+    "edit_email": {
+      "trigger": "Editar correo",
+      "dialog_title": "Editar correo del cliente",
+      "field_label": "Correo electrónico",
+      "success": "Correo actualizado"
     }
   },
   "clients": {

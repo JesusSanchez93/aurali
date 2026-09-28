@@ -64,14 +64,29 @@ export function ImageUpload({ required = false, disabled = false, value, onChang
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  const loadFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => setImageSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    loadFile(file);
+    // Permite volver a soltar/seleccionar el mismo archivo después de borrarlo.
+    e.target.value = '';
+  };
 
-    const reader = new FileReader();
-    reader.onload = () => setImageSrc(reader.result as string);
-    reader.readAsDataURL(file);
+  const onDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (disabled) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) loadFile(file);
   };
 
   const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
@@ -118,10 +133,20 @@ export function ImageUpload({ required = false, disabled = false, value, onChang
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={disabled}
-            className="flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white text-gray-500 transition hover:border-gray-400 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-300"
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!disabled) setIsDraggingOver(true);
+            }}
+            onDragLeave={() => setIsDraggingOver(false)}
+            onDrop={onDrop}
+            className={`flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed bg-white text-gray-500 transition hover:border-gray-400 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-300 ${
+              isDraggingOver
+                ? 'border-primary bg-primary/5 text-primary dark:border-primary'
+                : 'border-gray-300 dark:border-slate-600'
+            }`}
             style={{ aspectRatio: 1.55 / 1 }}
           >
-            <span className="text-sm">{t('click_to_upload_image')}</span>
+            <span className="text-sm">{isDraggingOver ? t('drop_to_upload_image') : t('click_to_upload_image')}</span>
             <span className="text-xs text-gray-400 dark:text-slate-500">PNG, JPG, JPEG</span>
           </button>
         </div>
