@@ -35,6 +35,9 @@ import { DEFAULT_THEME } from '@/emails/WorkflowEmail';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 import type { SendEmailResult } from '@/lib/email/types';
+import { signFormResponsePath } from '@/lib/forms/resolveFormResponseFileUrls';
+import { resolveFieldOptions } from '@/lib/forms/catalogOptions';
+import type { FormSchema } from '@/lib/forms/types';
 import type {
   WorkflowNodeRow,
   WorkflowEdgeRow,
@@ -719,6 +722,97 @@ function executeManualAction(node: WorkflowNodeRow, _context: ExecutionContext):
 
 // ─── generate_document helpers ────────────────────────────────────────────────
 
+const GROUP_TYPE_FIELD_KEY = /^[A-Z][A-Z0-9]*__[A-Z0-9_]+$/;
+
+function stringifyFormFieldValue(value: unknown): string {
+  if (value == null) return '';
+  if (Array.isArray(value)) {
+    return value
+      .map((v) => (typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v)))
+      .join(', ');
+  }
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+/**
+ * Lee legal_process_form_responses (lo que el DFB guardó) y lo fusiona en
+ * templateData — ver el comentario en buildDocumentTemplateData que llama a
+ * esto para el porqué. Muta `templateData` in place.
+ */
+async function mergeDynamicFormResponses(
+  db: SupabaseClient & Record<string, unknown>,
+  legalProcessId: string,
+  organizationId: string | null,
+  templateData: Record<string, string>,
+): Promise<void> {
+  const { data: responses } = await db
+    .from('legal_process_form_responses')
+    .select('section_key, data, form_schema_id')
+    .eq('legal_process_id', legalProcessId) as {
+      data: { section_key: string; data: Record<string, unknown>; form_schema_id: string | null }[] | null;
+    };
+
+  if (!responses || responses.length === 0) return;
+
+  const schemaIds = [...new Set(responses.map((r) => r.form_schema_id).filter((id): id is string => Boolean(id)))];
+  const schemasById = new Map<string, FormSchema>();
+  if (schemaIds.length > 0) {
+    const { data: schemaRows } = await db
+      .from('legal_process_form_schemas')
+      .select('id, schema')
+      .in('id', schemaIds) as { data: { id: string; schema: FormSchema }[] | null };
+    for (const row of schemaRows ?? []) schemasById.set(row.id, row.schema);
+  }
+
+  for (const response of responses) {
+    const schema = response.form_schema_id ? schemasById.get(response.form_schema_id) : undefined;
+    const section = schema?.sections.find((s) => s.key === response.section_key);
+    // select/radio/checkbox_group con optionsSource guardan el id/code del
+    // catálogo (banks/documents), no la etiqueta — se resuelve acá para no
+    // meter un UUID crudo en el documento (mismo criterio que el formulario
+    // público, ver resolveSectionOptions en actions.ts).
+    const resolvedFields = section && organizationId
+      ? await resolveFieldOptions(section.fields, db, organizationId)
+      : section?.fields;
+
+    for (const [fieldKey, rawValue] of Object.entries(response.data ?? {})) {
+      if (rawValue == null || rawValue === '') continue;
+
+      const fieldDef = resolvedFields?.find((f) => f.key === fieldKey);
+      const isFile = fieldDef?.type === 'file_upload' || fieldDef?.type === 'image_upload';
+      const catalogOptions = fieldDef?.optionsSource ? fieldDef.options : undefined;
+
+      let value: string;
+      if (isFile && typeof rawValue === 'string') {
+        value = await signFormResponsePath(db, rawValue);
+      } else if (isFile && Array.isArray(rawValue)) {
+        const signed = await Promise.all(
+          rawValue.map((v) => (typeof v === 'string' ? signFormResponsePath(db, v) : v)),
+        );
+        value = stringifyFormFieldValue(signed);
+      } else if (catalogOptions) {
+        const labelFor = (v: unknown) =>
+          catalogOptions.find((o) => o.value === v)?.label ?? stringifyFormFieldValue(v);
+        value = Array.isArray(rawValue)
+          ? rawValue.map(labelFor).join(', ')
+          : labelFor(rawValue);
+      } else {
+        value = stringifyFormFieldValue(rawValue);
+      }
+      if (!value) continue;
+
+      // Convención del DFB: "CLIENT__FIRST_NAME" -> token "{CLIENT.FIRST_NAME}"
+      if (GROUP_TYPE_FIELD_KEY.test(fieldKey)) {
+        templateData[fieldKey.replace('__', '.')] = value;
+      }
+      // Fallback: cualquier campo, tenga o no la convención de arriba, queda
+      // también disponible en mayúsculas como token de un solo segmento.
+      templateData[fieldKey.toUpperCase()] = value;
+    }
+  }
+}
+
 /**
  * Fetches all data needed to build the template variable map for a legal process,
  * without requiring an ExecutionContext. Used by autoAdvance when generating PDFs
@@ -925,6 +1019,27 @@ export async function buildDocumentTemplateData(
     'ORG_REP.DOCUMENT_NUMBER': orgRepData?.document_number ?? '',
     'ORG_REP.EMAIL': orgRepData?.email ?? '',
   };
+
+  // ── Formulario dinámico (legal_process_form_responses) ───────────────────
+  // Hasta ahora templateData solo salía de tablas legado (legal_process_clients/
+  // legal_process_banks), que un adapter de domainSync (ver
+  // lib/forms/domainSync/) tiene que sincronizar manualmente desde el DFB —
+  // opt-in por schema y frágil (dos formularios "iguales" pueden nombrar sus
+  // campos distinto). Acá se leen directo las respuestas guardadas y se
+  // fusionan en templateData, así CUALQUIER campo dinámico queda disponible
+  // sin depender de ese sync:
+  //   - Un campo con key "GROUP__TYPE" (convención del DFB — ver
+  //     FORM_VARIABLE_OPTIONS en lib/forms/documentVariableKeys.ts) resuelve
+  //     el mismo token "{GROUP.TYPE}" que ya usan las plantillas.
+  //   - Cualquier otro campo (key libre, ej. "producto_financiero_afectado")
+  //     también queda disponible en mayúsculas como token de un solo segmento
+  //     ("{PRODUCTO_FINANCIERO_AFECTADO}"), aunque no siga la convención.
+  //   - file_upload/image_upload se resuelven a una URL firmada (el valor
+  //     guardado es siempre el path crudo del bucket "documents").
+  // Se fusiona DESPUÉS de las tablas legado a propósito: la respuesta del
+  // formulario es lo que el cliente realmente escribió, más reciente y
+  // completo que cualquier sync parcial.
+  await mergeDynamicFormResponses(db, legalProcessId, legalProcess.organization_id, templateData);
 
   return { templateData, organizationId: legalProcess.organization_id };
 }
