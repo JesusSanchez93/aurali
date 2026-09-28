@@ -11,6 +11,7 @@ import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
 import { approveGeneratedDocument } from '@/lib/onlyoffice/approveDocument';
 import type { FormSchema } from '@/lib/forms/types';
 import { resolveSectionOptions } from '@/lib/forms/catalogOptions';
+import { resolveFormResponseFileUrls } from '@/lib/forms/resolveFormResponseFileUrls';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
 import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 import { fetchLatestGmailThreadReply } from '@/lib/email/gmail/gmailInboxClient';
@@ -948,42 +949,6 @@ export async function notifyRejectedEmailAttachmentsAction(legalProcessId: strin
 
   // Notificar al cliente tampoco cambia nada visible en la lista de
   // /legal-process — el panel de detalle ya refresca su propia data.
-}
-
-/** Sustituye, en las respuestas de un formulario dinámico, los paths de Storage
- *  de campos file_upload/image_upload por URLs firmadas — mismo patrón que se
- *  usa para document_front_image/document_back_image del flujo legado. */
-async function resolveFormResponseFileUrls(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  schema: FormSchema,
-  responses: Record<string, Record<string, unknown>>,
-) {
-  const signPath = async (path: string): Promise<string> => {
-    if (path.startsWith('http')) return path;
-    const { data, error } = await supabase.storage.from('documents').createSignedUrl(path, 3600);
-    if (error || !data) {
-      console.error('createSignedUrl failed for form response file', path, error);
-      return path;
-    }
-    return data.signedUrl;
-  };
-
-  for (const section of schema.sections) {
-    const data = responses[section.key];
-    if (!data) continue;
-
-    for (const field of section.fields) {
-      if (field.type !== 'file_upload' && field.type !== 'image_upload') continue;
-      const value = data[field.key];
-      if (!value) continue;
-
-      if (Array.isArray(value)) {
-        data[field.key] = await Promise.all(value.map((p) => (typeof p === 'string' ? signPath(p) : p)));
-      } else if (typeof value === 'string') {
-        data[field.key] = await signPath(value);
-      }
-    }
-  }
 }
 
 /**
