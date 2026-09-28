@@ -4,18 +4,27 @@ import { AppNavBar } from '@/components/dashboard/app-navbar';
 import { SuperAdminBanner } from '@/components/dashboard/superadmin-banner';
 import { CSSProperties, ReactNode } from 'react';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
+import { userAgent } from 'next/server';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import ProfileProvider from '@/components/providers/profile-provider';
 import { WorkflowGuideModal } from '@/components/app/dashboard/workflow-guide-modal';
 import { SidebarSwipeHandler } from '@/components/dashboard/sidebar-swipe-handler';
 import { DashboardLoadingState } from '@/components/dashboard/dashboard-loading-state';
+import { MobileHintProvider } from '@/hooks/use-mobile';
 
 interface Props {
   children: ReactNode;
 }
 
 export default async function DashboardLayout({ children }: Props) {
-  const { profile } = await getSessionProfile();
+  const [{ profile }, requestHeaders] = await Promise.all([
+    getSessionProfile(),
+    headers(),
+  ]);
+  // Pista server-side para useIsMobile — evita el parpadeo del sidebar al
+  // entrar en el dashboard desde un celular (ver hooks/use-mobile.tsx).
+  const isMobileUA = userAgent({ headers: requestHeaders }).device.type === 'mobile';
 
   if (!profile?.id) return <DashboardLoadingState />;
 
@@ -28,6 +37,7 @@ export default async function DashboardLayout({ children }: Props) {
   }
 
   return (
+    <MobileHintProvider isMobile={isMobileUA}>
     <div className="flex h-svh flex-col bg-muted">
       <SidebarProvider
         style={
@@ -61,5 +71,6 @@ export default async function DashboardLayout({ children }: Props) {
         </ProfileProvider>
       </SidebarProvider>
     </div>
+    </MobileHintProvider>
   );
 }
