@@ -37,7 +37,7 @@ function formatValue(field: FormFieldSchema, value: unknown): ReactNode {
 
     case 'image_upload':
       return (
-        <a href={String(value)} target="_blank" rel="noreferrer" className="block w-full max-w-[200px]">
+        <a href={String(value)} target="_blank" rel="noreferrer" className="block w-full">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={String(value)} alt={field.label} className="w-full rounded-md border object-cover hover:opacity-80 transition-opacity" />
         </a>

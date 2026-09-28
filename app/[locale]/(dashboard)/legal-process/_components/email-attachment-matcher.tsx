@@ -31,8 +31,11 @@ import {
     CarouselItem,
     CarouselNext,
     CarouselPrevious,
+    useCarousel,
 } from '@/components/ui/carousel';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 
 type EmailAttachment = {
     id: string;
@@ -324,7 +327,12 @@ function Sheet({
     );
 }
 
-/** Nombre + fecha del documento — pie de foto fuera de la tarjeta, no encima. */
+/**
+ * Nombre + fecha del documento — pie de foto fuera de la tarjeta, no encima.
+ * El título va en una sola línea (`truncate`), lo que ya de por sí alinea
+ * la altura entre tarjetas sin medir nada por JS; el nombre completo queda
+ * disponible en un tooltip al pasar el mouse (y en el `title` nativo).
+ */
 function SheetCaption({
     name,
     date,
@@ -336,14 +344,35 @@ function SheetCaption({
 }) {
     return (
         <div className={cn('space-y-0.5 text-left', className)}>
-            <p
-                className="line-clamp-2 text-xs font-medium leading-tight text-foreground"
-                title={name}
-            >
-                {name}
-            </p>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <p
+                        className="truncate text-xs font-medium leading-tight text-foreground"
+                        title={name}
+                    >
+                        {name}
+                    </p>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[240px] break-words">
+                    {name}
+                </TooltipContent>
+            </Tooltip>
             {date && <p className="text-[10px] text-muted-foreground">{date}</p>}
         </div>
+    );
+}
+
+/** Oculta ambas flechas cuando ninguna tiene a dónde ir (todos los
+ *  documentos finales caben sin scroll) — mostrarlas deshabilitadas ahí no
+ *  aporta nada. */
+function CarouselArrows() {
+    const { canScrollPrev, canScrollNext } = useCarousel();
+    if (!canScrollPrev && !canScrollNext) return null;
+    return (
+        <>
+            <CarouselPrevious className="-left-4" />
+            <CarouselNext className="-right-4" />
+        </>
     );
 }
 
@@ -602,18 +631,18 @@ export function EmailAttachmentMatcher({
         useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     );
 
-    // "Documentos finales" debe verse apenas existan, sin esperar la primera
-    // respuesta del cliente — solo la bandeja/DnD de abajo necesita adjuntos
-    // recibidos para tener sentido (ver el guard sobre attachments.length más
-    // abajo, en el JSX).
-    if (sentDocuments.length === 0) return null;
-
     // Al vincularse con una plantilla, la hoja pasa a mostrarse apilada sobre
     // ella (ver TemplateDropzone) y sale de la bandeja — "quitar el vínculo"
     // (botón × sobre la plantilla) es lo que la devuelve acá.
     const unmatchedAttachments = attachments.filter(
         (a) => !a.matched_document_id,
     );
+
+    // "Documentos finales" debe verse apenas existan, sin esperar la primera
+    // respuesta del cliente — solo la bandeja/DnD de abajo necesita adjuntos
+    // recibidos para tener sentido (ver el guard sobre attachments.length más
+    // abajo, en el JSX).
+    if (sentDocuments.length === 0) return null;
 
     const activeAttachment = activeId
         ? (attachments.find((a) => `${ATTACHMENT_PREFIX}${a.id}` === activeId) ??
@@ -630,10 +659,32 @@ export function EmailAttachmentMatcher({
         if (!over) return;
         const attachmentId = String(active.id).replace(ATTACHMENT_PREFIX, '');
         const documentId = String(over.id).replace(DOCUMENT_PREFIX, '');
+
+        // Solo un adjunto ya APROBADO por el abogado puede vincularse a un
+        // documento final — uno "por revisar" o "rechazado" todavía no
+        // representa lo que se pidió.
+        const attachment = attachments.find((a) => a.id === attachmentId);
+        if (attachment && attachment.status !== 'approved') {
+            toast.error(t('matcher.not_approved'));
+            return;
+        }
+
+        // Un documento final solo acepta UN adjunto vinculado a la vez — si ya
+        // tiene uno, hay que desvincularlo primero (botón × sobre la plantilla)
+        // antes de soltar otro ahí.
+        const alreadyMatched = attachments.some(
+            (a) => a.matched_document_id === documentId,
+        );
+        if (alreadyMatched) {
+            toast.error(t('matcher.already_matched'));
+            return;
+        }
+
         onMatch(attachmentId, documentId);
     }
 
     return (
+        <TooltipProvider delayDuration={200}>
         <DndContext
             sensors={sensors}
             onDragStart={handleDragStart}
@@ -681,8 +732,7 @@ export function EmailAttachmentMatcher({
                                 ))}
                             </CarouselContent>
                         </div>
-                        <CarouselPrevious className="-left-4" />
-                        <CarouselNext className="-right-4" />
+                        <CarouselArrows />
                     </Carousel>
                 </div>
 
@@ -728,5 +778,6 @@ export function EmailAttachmentMatcher({
                 )}
             </DragOverlay>
         </DndContext>
+        </TooltipProvider>
     );
 }

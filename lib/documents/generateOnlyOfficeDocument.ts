@@ -59,7 +59,14 @@ interface LegalTemplateRow {
 }
 
 function toSlug(s: string): string {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    // " - " ya es un separador de palabras explícito en el nombre de la
+    // plantilla — colapsa a "-" en vez de "_-_" antes de la regla general de
+    // abajo, que sí convierte cualquier otro espacio/símbolo en "_".
+    .replace(/\s*-\s*/g, '-')
+    .replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
 export async function generateDocument(
@@ -160,6 +167,11 @@ export async function generateDocument(
   // ── 6. mode === 'final' — convert straight to PDF ─────────────────────────
   report(5, 'Convirtiendo a PDF');
 
+  // El .docx sustituido es solo un paso intermedio — el artefacto final que
+  // ve el abogado/cliente es siempre un PDF, así que el nombre mostrado debe
+  // terminar en .pdf desde el registro inicial (no solo el archivo).
+  const finalDocumentName = documentName.replace(/\.docx$/i, '.pdf');
+
   // Insert the row first so it has a stable id the /documents/[id]/file route
   // can serve from, then convert and update it in place.
   const { data: docRecord, error: insertErr } = await supabase
@@ -167,7 +179,7 @@ export async function generateDocument(
     .insert({
       legal_process_id: legalProcessId,
       template_id: templateId,
-      document_name: documentName,
+      document_name: finalDocumentName,
       docx_storage_path: docxStoragePath,
       document_key: documentKey,
       is_preview: false,
@@ -187,12 +199,11 @@ export async function generateDocument(
   const pdfBuffer = await convertDocxToPdf({
     fileUrl,
     key: documentKey,
-    title: documentName.replace(/\.docx$/i, '.pdf'),
+    title: finalDocumentName,
   });
 
   report(6, 'Guardando PDF final');
-  const safeFileName = documentName.replace(/\.docx$/i, '');
-  const storagePath = `${orgId}/${legalProcessId}/${Date.now()}-${safeFileName}.pdf`;
+  const storagePath = `${orgId}/${legalProcessId}/${Date.now()}-${finalDocumentName}`;
 
   const { error: pdfUploadErr } = await supabase.storage
     .from('documents')
@@ -219,7 +230,7 @@ export async function generateDocument(
 
   return {
     documentId,
-    documentName,
+    documentName: finalDocumentName,
     templateId,
     fileUrl: fileUrlFinal,
     storagePath,
