@@ -22,6 +22,58 @@ export async function getFormSchema(formSchemaId: string): Promise<FormSchema> {
   return (data?.schema as FormSchema | undefined) ?? EMPTY_SCHEMA;
 }
 
+// Convención de key usada por el form-builder para los campos que reflejan
+// datos del cliente que el abogado ya cargó al crear el proceso
+// (createLegalProcessDraft, en (dashboard)/legal-process/actions.ts) —
+// mismo prefijo GROUP__TYPE que las variables {GROUP.TYPE} de plantillas de
+// documentos, pero un mapeo aparte: acá el destino es una columna de
+// legal_process_clients, no un token dentro de un .docx.
+const CLIENT_PREFILL_FIELD_MAP: Record<
+  string,
+  'document_id' | 'document_number' | 'first_name' | 'last_name' | 'email' | 'phone' | 'address'
+> = {
+  CLIENT__DOCUMENT_TYPE: 'document_id',
+  CLIENT__DOCUMENT_NUMBER: 'document_number',
+  CLIENT__FIRST_NAME: 'first_name',
+  CLIENT__LAST_NAME: 'last_name',
+  CLIENT__EMAIL: 'email',
+  CLIENT__PHONE: 'phone',
+  CLIENT__ADDRESS: 'address',
+};
+
+/**
+ * Precarga, para los campos de una sección que sigan la convención CLIENT__*
+ * de arriba, lo que el abogado ya cargó al crear el proceso (o lo que se
+ * haya editado después desde el dashboard) — solo se usa cuando la sección
+ * todavía NO tiene una respuesta guardada del cliente (ver su único caller,
+ * page.tsx): una vez que el cliente edita y avanza, su propia respuesta
+ * manda, nunca se vuelve a pisar con esto.
+ */
+export async function getClientPrefillValues(
+  legalProcessId: string,
+  fieldKeys: string[],
+): Promise<Record<string, unknown>> {
+  const relevantKeys = fieldKeys.filter((key) => key in CLIENT_PREFILL_FIELD_MAP);
+  if (relevantKeys.length === 0) return {};
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('legal_process_clients')
+    .select('document_id, document_number, first_name, last_name, email, phone, address')
+    .eq('legal_process_id', legalProcessId)
+    .maybeSingle();
+
+  if (!data) return {};
+
+  const prefill: Record<string, unknown> = {};
+  for (const key of relevantKeys) {
+    const column = CLIENT_PREFILL_FIELD_MAP[key];
+    const value = data[column as keyof typeof data];
+    if (value) prefill[key] = value;
+  }
+  return prefill;
+}
+
 export async function getFormResponse(
   legalProcessId: string,
   sectionKey: string,
@@ -160,10 +212,11 @@ export async function submitSectionAction(
 
   // Última sección: marcar completado, reanudar el workflow y resolver
   // follow-ups pendientes — mismo patrón que updateInfoAboutEventsAction
-  // (flujo legado) en actions.ts.
+  // (flujo legado) en actions.ts. access_token_used se marca recién ACÁ, al
+  // terminar de verdad — no al abrir el enlace (ver confirmClientFormAccess).
   const { error: updateProcessError } = await supabase
     .from('legal_processes')
-    .update({ status: 'completed' })
+    .update({ status: 'completed', access_token_used: true })
     .eq('id', legalProcessId);
 
   if (updateProcessError) {

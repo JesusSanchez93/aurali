@@ -9,12 +9,19 @@ import { validateDocumentImages } from '@/lib/anthropic/validateDocument';
 import { logClientAction } from '@/lib/audit/logClientAction';
 
 /**
- * Marca el enlace de acceso como usado — separado del GET de
+ * Registra que el cliente abrió el formulario — separado del GET de
  * app/api/legal-process/client-side/validate-token/route.ts porque ese GET
  * puede dispararlo un escáner de enlaces de correo corporativo antes de que
  * el cliente real abra el mensaje. Esta acción solo corre client-side (ver
  * LegalProcessClientSideProvider), donde un escáner que no ejecuta JS nunca
  * llega a llamarla.
+ *
+ * NO marca access_token_used=true: el enlace es de un solo uso hasta que el
+ * cliente TERMINA el formulario (ver submitSectionAction/
+ * updateInfoAboutEventsAction, que sí lo marcan al llegar a status
+ * 'completed'), no al simple hecho de abrirlo — el cliente puede cerrar la
+ * pestaña a medias y volver más tarde a seguir donde quedó, mientras el
+ * enlace no haya expirado (ver ACCESS_TOKEN_TTL_MS).
  */
 export async function confirmClientFormAccess(): Promise<void> {
     const cookieStore = await cookies();
@@ -24,13 +31,12 @@ export async function confirmClientFormAccess(): Promise<void> {
     const supabase = await createClient();
     const { data: process } = await supabase
         .from('legal_processes')
-        .select('id, access_token_used')
+        .select('id')
         .eq('access_token', token)
         .maybeSingle();
 
-    if (!process || process.access_token_used) return;
+    if (!process) return;
 
-    await supabase.from('legal_processes').update({ access_token_used: true }).eq('id', process.id);
     await logClientAction({ legalProcessId: process.id, action: 'client_form_link_opened' });
 }
 
@@ -695,7 +701,7 @@ export async function updateInfoAboutEventsAction(
 
             const { error: updateProcessError } = await supabase
             .from('legal_processes')
-            .update({ status: 'completed' })
+            .update({ status: 'completed', access_token_used: true })
             .eq('id', legalProcessId);
 
         if (updateProcessError) {
@@ -713,7 +719,7 @@ export async function updateInfoAboutEventsAction(
 
         const { error: updateProcessError } = await supabase
             .from('legal_processes')
-            .update({ status: 'completed' })
+            .update({ status: 'completed', access_token_used: true })
             .eq('id', legalProcessId);
 
         if (updateProcessError) {

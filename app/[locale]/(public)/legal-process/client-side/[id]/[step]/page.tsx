@@ -6,7 +6,7 @@ import BankingInformationForm from "./_components/BankingInformationForm";
 import InfoAboutEventsForm from "./_components/InfoAboutEventsForm";
 import SuccessForm from "./_components/SuccessForm";
 import { DynamicStepForm } from "./_components/DynamicStepForm";
-import { getFormResponse, getFormSchema } from "./dynamic-actions";
+import { getClientPrefillValues, getFormResponse, getFormSchema } from "./dynamic-actions";
 import { resolveSectionOptions } from "@/lib/forms/catalogOptions";
 
 interface Props {
@@ -57,11 +57,19 @@ export default async function ProcessCompleteStepPage({ params }: Props) {
   const sectionIndex = sections.indexOf(section);
   const previousSectionKey = sectionIndex > 0 ? sections[sectionIndex - 1].key : undefined;
 
+  // Sin respuesta guardada todavía (primera vez que el cliente llega a esta
+  // sección): precarga lo que el abogado ya cargó al crear el proceso, para
+  // los campos CLIENT__* de esta sección en particular. Una vez que el
+  // cliente guarda su propia respuesta, esto ya no se vuelve a consultar —
+  // existingResponse manda siempre que exista.
+  const defaultValues = existingResponse
+    ?? await getClientPrefillValues(id, resolvedSection.fields.map((f) => f.key));
+
   return (
     <DynamicStepForm
       formSchemaId={process.form_schema_id}
       section={resolvedSection}
-      defaultValues={existingResponse}
+      defaultValues={defaultValues}
       previousSectionKey={previousSectionKey}
     />
   );

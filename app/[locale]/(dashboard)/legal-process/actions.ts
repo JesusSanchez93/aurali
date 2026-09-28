@@ -22,6 +22,14 @@ type LocalizedString = {
   en?: string;
 };
 
+// Vigencia del enlace público del formulario del cliente (legal_processes.
+// access_token) desde que se genera/renueva. El enlace deja de servir antes
+// de este plazo solo si el cliente TERMINA el formulario (access_token_used
+// se marca ahí, no al simple abrir — ver confirmClientFormAccess en
+// (public)/legal-process/client-side/[id]/[step]/actions.ts). Fijo por ahora;
+// candidato a moverse a un ajuste por organización más adelante.
+const CLIENT_FORM_ACCESS_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 días
+
 function revalidateLegalProcessPaths() {
   revalidatePath('/legal-process');
   revalidatePath('/es/legal-process');
@@ -400,7 +408,7 @@ export async function createLegalProcessDraft(values: {
         lawyer_id: values.assigned_to,
         assigned_to: values.assigned_to,
         access_token: publicToken,
-        access_token_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString(), // 72 hours
+        access_token_expires_at: new Date(Date.now() + CLIENT_FORM_ACCESS_TOKEN_TTL_MS).toISOString(),
         created_by: user.id,
         form_schema_id: publishedSchema?.id ?? null,
       } as never)
@@ -1802,8 +1810,57 @@ export async function getProcessFeeAndPayments(legalProcessId: string): Promise<
 
 /**
  * Resends the initial invitation email to the client for a draft process.
- * Refreshes the access token expiry (72 h from now) and sends the form URL.
+ * Refreshes the access token expiry (CLIENT_FORM_ACCESS_TOKEN_TTL_MS from now) and sends the form URL.
  */
+/**
+ * Corrige el correo del cliente en un proceso todavía en borrador — para
+ * cuando el abogado lo escribió mal al crear el proceso y el cliente nunca
+ * llega a recibir la invitación. Solo permitido en 'draft': una vez que el
+ * proceso avanzó, el correo queda fijado a lo que el propio cliente ya usó
+ * para responder (cambiarlo después rompería el rastreo de la conversación).
+ */
+export async function updateDraftClientEmail(legalProcessId: string, newEmail: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const normalizedEmail = newEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    throw new Error('Correo inválido');
+  }
+
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('status, organization_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!lp) throw new Error('Proceso no encontrado');
+  if (lp.status !== 'draft') throw new Error('Solo se puede editar el correo en procesos en borrador');
+
+  const { error: clientError } = await supabase
+    .from('legal_process_clients')
+    .update({ email: normalizedEmail })
+    .eq('legal_process_id', legalProcessId);
+  if (clientError) throw new Error(clientError.message);
+
+  // legal_processes.email es un campo de respaldo (no siempre se llena al
+  // crear el proceso) — se actualiza igual por consistencia, sin bloquear
+  // si falla algo puntual ahí.
+  await supabase.from('legal_processes').update({ email: normalizedEmail } as never).eq('id', legalProcessId);
+
+  void supabase.from('audit_logs').insert({
+    organization_id: lp.organization_id,
+    user_id: user.id,
+    action: 'client_email_corrected',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { new_email: normalizedEmail },
+  });
+
+  revalidateLegalProcessPaths();
+}
+
 export async function resendDraftEmail(legalProcessId: string): Promise<void> {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -1819,9 +1876,9 @@ export async function resendDraftEmail(legalProcessId: string): Promise<void> {
   if (lp.status !== 'draft') throw new Error('Solo se puede reenviar el email en procesos en borrador');
   if (!lp.organization_id) throw new Error('El proceso legal no tiene organization_id');
 
-  // Generate a fresh token, reset used flag, and extend expiry to 72 h from now
+  // Generate a fresh token, reset used flag, and extend expiry (CLIENT_FORM_ACCESS_TOKEN_TTL_MS from now)
   const newToken = randomUUID();
-  const newExpiry = new Date(Date.now() + 1000 * 60 * 60 * 72).toISOString();
+  const newExpiry = new Date(Date.now() + CLIENT_FORM_ACCESS_TOKEN_TTL_MS).toISOString();
   await supabase
     .from('legal_processes')
     .update({ access_token: newToken, access_token_used: false, access_token_expires_at: newExpiry } as never)

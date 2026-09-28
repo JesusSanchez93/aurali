@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import { toast } from '@/lib/toast';
-import { Mail, Phone, CalendarDays, Loader2, MoreHorizontal, Archive, XCircle, RotateCcw, SendHorizonal } from 'lucide-react';
+import { Mail, Phone, CalendarDays, Loader2, MoreHorizontal, Archive, XCircle, RotateCcw, SendHorizonal, Pencil } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { ActionReasonDialog } from '@/components/common/action-reason-dialog';
 import ProcessDetailSheet from '@/app/[locale]/(dashboard)/legal-process/_components/process-detail-sheet';
@@ -25,6 +34,7 @@ import {
   declineLegalProcess,
   revertArchivedProcess,
   resendDraftEmail,
+  updateDraftClientEmail,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
 
 type LegalProcess = Database['public']['Tables']['legal_processes']['Row'];
@@ -133,6 +143,8 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
   const [archiveConfirming, setArchiveConfirming] = useState(false);
   const [declineConfirming, setDeclineConfirming] = useState(false);
   const [revertConfirming, setRevertConfirming] = useState(false);
+  const [editEmailOpen, setEditEmailOpen] = useState(false);
+  const [editEmailValue, setEditEmailValue] = useState('');
   const [actioning, setActioning] = useState(false);
 
   const status = process.status ?? 'draft';
@@ -174,6 +186,25 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
       t('decline.success'),
       t('decline.success_description'),
     );
+
+  const openEditEmail = () => {
+    setEditEmailValue(process.client?.email ?? '');
+    setEditEmailOpen(true);
+  };
+
+  const handleSaveEmail = async () => {
+    setActioning(true);
+    try {
+      await updateDraftClientEmail(process.id, editEmailValue);
+      toast.success(t('edit_email.success'));
+      setEditEmailOpen(false);
+      onRefresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : commonT('error'));
+    } finally {
+      setActioning(false);
+    }
+  };
 
   return (
     <>
@@ -274,6 +305,13 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
                       {isDraft && (
                         <>
                           <DropdownMenuItem
+                            onClick={openEditEmail}
+                            className="gap-2"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            {t('edit_email.trigger')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => runAction(
                               () => resendDraftEmail(process.id),
                               t('resend_email.success'),
@@ -333,6 +371,32 @@ function ProcessCard({ process, index, onSelect, isLoading, onRefresh }: {
         cancelLabel={t('decline.cancel_button')}
         variant="destructive"
       />
+      <Dialog open={editEmailOpen} onOpenChange={setEditEmailOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('edit_email.dialog_title')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor={`edit-email-${process.id}`}>{t('edit_email.field_label')}</Label>
+            <Input
+              id={`edit-email-${process.id}`}
+              type="email"
+              value={editEmailValue}
+              onChange={(e) => setEditEmailValue(e.target.value)}
+              placeholder="cliente@correo.com"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditEmailOpen(false)} disabled={actioning}>
+              {commonT('cancel')}
+            </Button>
+            <Button type="button" onClick={handleSaveEmail} disabled={actioning || !editEmailValue.trim()}>
+              {actioning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {commonT('save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         isOpen={revertConfirming}
         onClose={() => setRevertConfirming(false)}
