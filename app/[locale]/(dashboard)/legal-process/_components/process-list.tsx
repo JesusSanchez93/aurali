@@ -115,7 +115,7 @@ export default function ProcessList({ data }: ProcessListProps) {
 
 const HOVER = 'hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/30';
 
-const STATUS_STYLE: Record<string, { gradient: string; hover: string; badge: string }> = {
+export const STATUS_STYLE: Record<string, { gradient: string; hover: string; badge: string }> = {
   draft:               { gradient: 'rgba(148,163,184,0.18)',  hover: HOVER, badge: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200' },
   pending_client_data: { gradient: 'rgba(251,191,36,0.18)',   hover: HOVER, badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200' },
   completed:           { gradient: 'rgba(59,130,246,0.18)',   hover: HOVER, badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200' },

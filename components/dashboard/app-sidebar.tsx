@@ -3,7 +3,7 @@
 import {
   Home, Scale, Settings, Users, ShieldCheck, BookOpen,
   Sparkles, Building2, ChevronRight, Workflow, IdCard, FileText,
-  ShieldAlert, Mail,
+  ShieldAlert, Mail, Kanban,
 } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -54,6 +54,7 @@ const SETTINGS_SUB = [
 export const userItems: NavItem[] = [
   { titleKey: 'analytics', url: '/analytics',     icon: Home  },
   { titleKey: 'processes', url: '/legal-process', icon: Scale },
+  { titleKey: 'board',     url: '/legal-process/board', icon: Kanban },
   { titleKey: 'clients',   url: '/clients',       icon: Users },
   { titleKey: 'settings',  url: '/settings',      icon: Settings, sub: SETTINGS_SUB },
 ];
@@ -61,6 +62,7 @@ export const userItems: NavItem[] = [
 export const adminUserItems: NavItem[] = [
   { titleKey: 'analytics',   url: '/analytics',     icon: Home       },
   { titleKey: 'processes',   url: '/legal-process', icon: Scale      },
+  { titleKey: 'board',       url: '/legal-process/board', icon: Kanban},
   { titleKey: 'clients',     url: '/clients',       icon: Users      },
   { titleKey: 'users',       url: '/settings/users',icon: Users      },
   { titleKey: 'admin_audit', url: '/audit',         icon: ShieldAlert},

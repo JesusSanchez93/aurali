@@ -57,7 +57,8 @@
       "document_types": "Tipos de Documento",
       "ai_variables": "Variables IA",
       "formats": "Plantillas de Documentos",
-      "email_settings": "Correo electrónico"
+      "email_settings": "Correo electrónico",
+      "board": "Tablero"
     },
     "upload": {
       "click_to_upload": "Haz clic para subir un documento",
@@ -516,6 +517,37 @@
       "dialog_title": "Editar correo del cliente",
       "field_label": "Correo electrónico",
       "success": "Correo actualizado"
+    },
+    "board": {
+      "title": "Tablero",
+      "description": "Procesos finalizados y su seguimiento manual frente a la entidad financiera — arrastra las tarjetas entre columnas.",
+      "add_column": "Agregar columna",
+      "new_column_placeholder": "Nombre de la columna",
+      "add": "Agregar",
+      "rename": "Renombrar",
+      "delete": "Eliminar",
+      "column_empty": "Sin procesos",
+      "delete_column_confirm_title": "¿Eliminar esta columna?",
+      "delete_column_confirm_description": "Los procesos que tenga se moverán a la columna \"Finalizados\".",
+      "delete_column_success": "Columna eliminada",
+      "delete_column_error": "No se pudo eliminar la columna",
+      "create_column_error": "No se pudo crear la columna",
+      "rename_column_error": "No se pudo renombrar la columna",
+      "move_error": "No se pudo mover el proceso",
+      "card_dialog": {
+        "loading": "Cargando proceso…",
+        "load_error": "No se pudo cargar el proceso",
+        "description_empty": "Sin información capturada todavía.",
+        "documents_title": "Documentos",
+        "comments_title": "Comentarios",
+        "comments_empty": "Todavía no hay comentarios.",
+        "comment_placeholder": "Escribe un comentario…",
+        "comment_send": "Enviar comentario",
+        "comment_error": "No se pudo enviar el comentario",
+        "a11y_description": "Detalle del proceso #{process} y sus comentarios",
+        "switch_to_comments": "Ver comentarios",
+        "switch_to_description": "Ver descripción"
+      }
     }
   },
   "clients": {

@@ -57,7 +57,8 @@
       "document_types": "Document Types",
       "ai_variables": "AI Variables",
       "formats": "Document Templates",
-      "email_settings": "Email"
+      "email_settings": "Email",
+      "board": "Board"
     },
     "upload": {
       "click_to_upload": "Click to upload a document",
@@ -516,6 +517,37 @@
       "dialog_title": "Edit client email",
       "field_label": "Email address",
       "success": "Email updated"
+    },
+    "board": {
+      "title": "Board",
+      "description": "Finished processes and their manual follow-up with the financial entity — drag cards between columns.",
+      "add_column": "Add column",
+      "new_column_placeholder": "Column name",
+      "add": "Add",
+      "rename": "Rename",
+      "delete": "Delete",
+      "column_empty": "No processes",
+      "delete_column_confirm_title": "Delete this column?",
+      "delete_column_confirm_description": "Its processes will move to the \"Finished\" column.",
+      "delete_column_success": "Column deleted",
+      "delete_column_error": "Could not delete the column",
+      "create_column_error": "Could not create the column",
+      "rename_column_error": "Could not rename the column",
+      "move_error": "Could not move the process",
+      "card_dialog": {
+        "loading": "Loading process…",
+        "load_error": "Could not load the process",
+        "description_empty": "No information captured yet.",
+        "documents_title": "Documents",
+        "comments_title": "Comments",
+        "comments_empty": "No comments yet.",
+        "comment_placeholder": "Write a comment…",
+        "comment_send": "Send comment",
+        "comment_error": "Could not post the comment",
+        "a11y_description": "Detail for process #{process} and its comments",
+        "switch_to_comments": "View comments",
+        "switch_to_description": "View description"
+      }
     }
   },
   "clients": {
