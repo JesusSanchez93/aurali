@@ -154,32 +154,16 @@ export async function resumeWorkflow(
     fetchClientData(run.legal_process_id, supabase),
   ]);
 
-  // 3. Close the currently-open step_run (the one that was waiting)
-  await db
-    .from('workflow_step_runs')
-    .update({
-      status: 'completed',
-      output: input,
-      executed_at: new Date().toISOString(),
-    })
-    .eq('workflow_run_id', workflowRunId)
-    .eq('node_id', run.current_node_id)
-    .eq('status', 'running');
-
-  // Audit: workflow resumed
-  void db.from('audit_logs').insert({
-    organization_id: legalProcess.organization_id,
-    user_id: legalProcess.lawyer_id,
-    action: 'workflow_resumed',
-    entity: 'legal_process',
-    entity_id: run.legal_process_id,
-    metadata: {
-      workflow_run_id: workflowRunId,
-      resumed_from_node: run.current_node_id,
-    },
-  });
-
-  // 4. Find the waiting node from step_runs (robust against fan-out races)
+  // 3. Find the waiting node from step_runs (robust against fan-out races) —
+  //    run.current_node_id puede estar desactualizado en grafos con ramas en
+  //    paralelo (ver runFromNode/Promise.all más abajo): si otra rama avanzó
+  //    current_node_id después de que este nodo empezó a esperar, cerrar por
+  //    current_node_id cierra el step_run EQUIVOCADO — deja el nodo que
+  //    realmente esperaba trabado en 'running' para siempre, y el output de
+  //    esta reanudación (p. ej. los adjuntos de wait_email_reply) queda
+  //    guardado en un nodo que nunca lo pidió. Por eso esta búsqueda va
+  //    antes del cierre, y el cierre usa SU resultado, no current_node_id
+  //    directamente.
   const { data: waitingStep } = await db
     .from('workflow_step_runs')
     .select('node_id')
@@ -191,6 +175,31 @@ export async function resumeWorkflow(
 
   const resumeFromNodeId = waitingStep?.node_id ?? run.current_node_id;
   if (!resumeFromNodeId) throw new Error('No se encontró nodo en espera para reanudar');
+
+  // 4. Close that step_run (the one that was actually waiting)
+  await db
+    .from('workflow_step_runs')
+    .update({
+      status: 'completed',
+      output: input,
+      executed_at: new Date().toISOString(),
+    })
+    .eq('workflow_run_id', workflowRunId)
+    .eq('node_id', resumeFromNodeId)
+    .eq('status', 'running');
+
+  // Audit: workflow resumed
+  void db.from('audit_logs').insert({
+    organization_id: legalProcess.organization_id,
+    user_id: legalProcess.lawyer_id,
+    action: 'workflow_resumed',
+    entity: 'legal_process',
+    entity_id: run.legal_process_id,
+    metadata: {
+      workflow_run_id: workflowRunId,
+      resumed_from_node: resumeFromNodeId,
+    },
+  });
 
   // 5. Resolve the next nodes from the waiting node's outgoing edges
   const context: ExecutionContext = {
