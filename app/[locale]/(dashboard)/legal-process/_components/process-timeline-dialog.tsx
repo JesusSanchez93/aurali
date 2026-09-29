@@ -37,6 +37,8 @@ import {
   FileCheck2,
   FileX2,
   Link2,
+  MessageSquare,
+  Columns3,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import {
@@ -85,6 +87,8 @@ const AUDIT_CONFIG: Record<string, ActionConfig> = {
   email_attachment_rejected:             { icon: <FileX2 className="h-3 w-3" />,       dot: 'bg-red-500' },
   email_attachment_matched:              { icon: <Link2 className="h-3 w-3" />,        dot: 'bg-violet-400' },
   email_attachments_rejection_notified:  { icon: <Mail className="h-3 w-3" />,         dot: 'bg-orange-400' },
+  comment_added:                         { icon: <MessageSquare className="h-3 w-3" />, dot: 'bg-blue-400' },
+  board_card_moved:                      { icon: <Columns3 className="h-3 w-3" />,     dot: 'bg-violet-400' },
 };
 
 const DEFAULT_AUDIT_CONFIG: ActionConfig = {
@@ -216,6 +220,13 @@ function formatAuditMeta(entry: AuditLogEntry, t: TFn, tS: TStatusFn): string | 
       return m.filename ? String(m.filename) : null;
     case 'email_attachments_rejection_notified':
       return m.to ? t('meta.to', { value: String(m.to) }) : null;
+    case 'comment_added':
+      return m.preview ? String(m.preview) : null;
+    case 'board_card_moved':
+      if (!m.to_column) return null;
+      return m.from_column
+        ? `${String(m.from_column)} → ${String(m.to_column)}`
+        : String(m.to_column);
     default:
       return null;
   }

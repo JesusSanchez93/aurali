@@ -63,6 +63,12 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
     }, [t]);
 
     useEffect(() => {
+        // Depender solo de legalProcessId a propósito (no de `load`): `load` es
+        // un useCallback con `t` en sus deps, y `t` (useTranslations) no es
+        // estable entre renders — cualquier re-render de este componente (ej.
+        // el setComments() de handlePostComment al enviar un mensaje) generaba
+        // un `load` nuevo, reenganchaba este efecto y reseteaba mobilePanel a
+        // "description" aunque el usuario siguiera en "comments".
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setMobilePanel('description');
         if (legalProcessId) load(legalProcessId);
@@ -71,7 +77,8 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
             setComments([]);
             setCommentValue('');
         }
-    }, [legalProcessId, load]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [legalProcessId]);
 
     async function handlePostComment() {
         if (!legalProcessId || !commentValue.trim()) return;
@@ -124,7 +131,7 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
                         {/* pb-24 en mobile: el botón flotante ("Historial"/toggle) se
                             superpone sobre el final del contenido al hacer scroll —
                             en md+ no existe (md:hidden), por eso vuelve a pb-5 ahí. */}
-                        <div className="w-1/2 shrink-0 overflow-y-auto p-5 pb-24 md:w-auto md:max-w-md md:flex-1 md:shrink md:border-r md:pb-5">
+                        <div className="w-1/2 min-w-0 shrink-0 overflow-y-auto p-5 pb-24 md:w-auto md:max-w-md md:flex-1 md:shrink md:border-r md:pb-5">
                             <div className="mb-3 flex items-center justify-between gap-2">
                                 <span className="text-xs font-medium text-muted-foreground tabular-nums">
                                     #{String(detail.process_number).padStart(4, '0')}
@@ -177,7 +184,7 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
                                                 {section.fields.map((field, j) => (
                                                     <div key={`${field.label}-${j}`}>
                                                         <dt className="text-[11px] font-medium text-muted-foreground">{field.label}</dt>
-                                                        <dd className="whitespace-pre-wrap text-sm">{field.value}</dd>
+                                                        <dd className="whitespace-pre-wrap break-words text-sm">{field.value}</dd>
                                                     </div>
                                                 ))}
                                             </dl>
@@ -213,7 +220,7 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
                         </div>
 
                         {/* Derecha: comentarios — cualquier abogado de la org puede escribir */}
-                        <div className="flex w-1/2 min-h-0 shrink-0 flex-col md:w-auto md:flex-1 md:shrink">
+                        <div className="flex w-1/2 min-h-0 min-w-0 shrink-0 flex-col md:w-auto md:flex-1 md:shrink">
                             <h4 className="mb-3 flex items-center gap-2 px-5 pt-5 text-sm font-semibold">
                                 <MessageSquare className="h-4 w-4" />
                                 {t('comments_title')}
@@ -223,7 +230,7 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
                                 // pb-16 en mobile: mismo motivo que el panel de
                                 // descripción — el botón flotante tapa el final del
                                 // scroll; en md+ no existe (md:hidden), vuelve a p-3.
-                                className="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-lg bg-muted/50 p-3 pb-16 md:pb-3"
+                                className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto rounded-lg bg-muted/50 p-3 pb-16 md:pb-3"
                                 style={{
                                     backgroundImage:
                                         'radial-gradient(hsl(var(--muted-foreground) / 0.35) 1px, transparent 1px)',
@@ -250,7 +257,7 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
                                                     })}
                                                 </span>
                                             </div>
-                                            <p className="mt-0.5 whitespace-pre-wrap rounded-md bg-background p-2 text-sm shadow-sm">
+                                            <p className="mt-0.5 whitespace-pre-wrap break-words rounded-md bg-background p-2 text-sm shadow-sm">
                                                 {comment.body}
                                             </p>
                                         </div>

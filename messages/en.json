@@ -389,7 +389,9 @@
         "email_attachment_rejected": "Document rejected",
         "email_attachment_matched": "Document matched",
         "email_attachments_rejection_notified": "Client notified of rejected documents",
-        "default": "Event"
+        "default": "Event",
+        "comment_added": "Comment added",
+        "board_card_moved": "Moved on the board"
       },
       "node_types": {
         "start": "Start",
