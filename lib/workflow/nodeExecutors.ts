@@ -431,6 +431,7 @@ async function executeSendEmail(
 ): Promise<NodeResult> {
   const cfg = node.config as {
     to?: string;
+    recipients?: ('client' | 'lawyer' | 'third_party')[];
     subject?: string;
     body?: unknown;
     attach_enabled?: boolean;
@@ -478,11 +479,48 @@ async function executeSendEmail(
     }
   }
 
-  const to = substituteVars(cfg.to ?? '', context).trim();
+  // recipients (checkboxes Cliente/Abogado/Tercero) reemplaza al "to" de
+  // texto libre para nodos configurados desde el editor actual — "to" sigue
+  // funcionando sin cambios para workflows guardados antes de este campo.
+  // "Tercero" no tiene un correo fijo: pausa el nodo (igual que
+  // document_attachment_selection más abajo) hasta que el abogado lo escriba
+  // desde el dashboard — ver executeSendEmailWithThirdPartyEmails en
+  // workflowRunner.ts, que reinyecta third_party_emails en previousOutput y
+  // vuelve a ejecutar este mismo nodo.
+  let to: string;
+  if (Array.isArray(cfg.recipients) && cfg.recipients.length > 0) {
+    const needsThirdParty = cfg.recipients.includes('third_party');
+    const thirdPartyEmails = context.previousOutput?.third_party_emails as string[] | undefined;
+
+    if (needsThirdParty && !thirdPartyEmails) {
+      return { status: 'waiting', output: { waitingFor: 'third_party_email' } };
+    }
+
+    const emails: string[] = [];
+    if (cfg.recipients.includes('client')) {
+      const clientEmail = String(context.clientData.email ?? context.legalProcess.email ?? '').trim();
+      if (clientEmail) emails.push(clientEmail);
+    }
+    if (cfg.recipients.includes('lawyer') && context.legalProcess.lawyer_id) {
+      const { data: lawyer } = await (supabase as SupabaseClient & Record<string, unknown>)
+        .from('profiles')
+        .select('email')
+        .eq('id', context.legalProcess.lawyer_id)
+        .maybeSingle() as { data: { email: string | null } | null };
+      if (lawyer?.email) emails.push(lawyer.email);
+    }
+    if (needsThirdParty && thirdPartyEmails) {
+      emails.push(...thirdPartyEmails.map((e) => e.trim()).filter(Boolean));
+    }
+    to = [...new Set(emails)].join(', ');
+  } else {
+    to = substituteVars(cfg.to ?? '', context).trim();
+  }
+
   const subject = substituteVars(cfg.subject ?? '(Sin asunto)', context);
 
   if (!to) {
-    return { status: 'failed', output: {}, error: 'Campo "to" vacío o sin resolver' };
+    return { status: 'failed', output: {}, error: 'No se pudo resolver ningún destinatario para este correo' };
   }
 
   // requires_document_receipt solía disparar un flujo de portal con

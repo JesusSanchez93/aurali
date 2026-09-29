@@ -8,6 +8,7 @@ import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FormInput } from '@/components/common/form/form-input';
 import { FormTextarea } from '@/components/common/form/form-textarea';
 import { FormSelect } from '@/components/common/form/form-select';
@@ -41,6 +42,23 @@ function safeTiptapToHTML(body: unknown): string {
   }
 }
 
+const RECIPIENT_LABELS: Record<string, string> = {
+  client: 'Cliente',
+  lawyer: 'Abogado',
+  third_party: 'Tercero (se pide al llegar el flujo)',
+};
+
+/** El nodo "Enviar Correo" conectado antes de wait_email_reply puede tener
+ *  `recipients` (nodos nuevos) o el `to` de texto libre legado — se muestra
+ *  cualquiera de los dos que tenga, con recipients traducido a español. */
+function formatRecipientsPreview(config: Record<string, unknown>): string {
+  const recipients = config.recipients;
+  if (Array.isArray(recipients) && recipients.length > 0) {
+    return recipients.map((r) => RECIPIENT_LABELS[String(r)] ?? String(r)).join(', ');
+  }
+  return typeof config.to === 'string' && config.to ? config.to : '—';
+}
+
 type FormValues = Record<string, string>;
 
 function buildRichtextValues(node: WorkflowNode): Record<string, Content> {
@@ -57,6 +75,15 @@ function buildBoolValues(node: WorkflowNode): Record<string, boolean> {
   const switchKeys = cfg.configSchema.filter((f) => f.type === 'switch').map((f) => f.key);
   return Object.fromEntries(
     switchKeys.map((key) => [key, config[key] === true]),
+  );
+}
+
+function buildArrayValues(node: WorkflowNode): Record<string, string[]> {
+  const config = (node.data.config ?? {}) as Record<string, unknown>;
+  const cfg = NODE_TYPES_CONFIG[node.data.type as WorkflowNodeType];
+  const groupKeys = cfg.configSchema.filter((f) => f.type === 'checkbox-group').map((f) => f.key);
+  return Object.fromEntries(
+    groupKeys.map((key) => [key, Array.isArray(config[key]) ? (config[key] as string[]) : []]),
   );
 }
 
@@ -83,12 +110,16 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
   const [boolValues, setBoolValues] = useState<Record<string, boolean>>(
     () => buildBoolValues(node),
   );
+  const [arrayValues, setArrayValues] = useState<Record<string, string[]>>(
+    () => buildArrayValues(node),
+  );
 
   useEffect(() => {
     reset(buildFormDefaults(node));
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRichtextValues(buildRichtextValues(node));
     setBoolValues(buildBoolValues(node));
+    setArrayValues(buildArrayValues(node));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node.id]);
 
@@ -145,6 +176,14 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
 
   const handleSwitchChange = useCallback((key: string, checked: boolean) => {
     setBoolValues((prev) => ({ ...prev, [key]: checked }));
+  }, []);
+
+  const handleArrayToggle = useCallback((key: string, value: string, checked: boolean) => {
+    setArrayValues((prev) => {
+      const current = prev[key] ?? [];
+      const next = checked ? [...current, value] : current.filter((v) => v !== value);
+      return { ...prev, [key]: next };
+    });
   }, []);
 
   const renderFieldControl = (field: ConfigField) => {
@@ -215,6 +254,27 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
             />
           </div>
         );
+      case 'checkbox-group':
+        return (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium">
+              {field.label}
+              {field.required && <span className="ml-1 text-destructive">*</span>}
+            </span>
+            <div className="flex flex-col gap-2 rounded-md border p-2.5">
+              {(field.options ?? []).map((option) => (
+                <label key={option.value} className="flex items-start gap-2 text-xs">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={(arrayValues[field.key] ?? []).includes(option.value)}
+                    onCheckedChange={(checked) => handleArrayToggle(field.key, option.value, checked === true)}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -229,6 +289,7 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
         ...configValues,
         ...richtextValues,
         ...boolValues,
+        ...arrayValues,
       },
     });
     onClose();
@@ -268,7 +329,7 @@ export function NodeConfigPanel({ node, edges = [], allNodes = [], onUpdate, onC
                   </p>
                   <div className="flex flex-col gap-1">
                     <span className="text-xs font-medium text-muted-foreground">{t('previous_node_to')}</span>
-                    <p className="text-sm">{String((previousNode.data.config as Record<string, unknown>)?.to ?? '—')}</p>
+                    <p className="text-sm">{formatRecipientsPreview((previousNode.data.config as Record<string, unknown>) ?? {})}</p>
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-xs font-medium text-muted-foreground">{t('previous_node_subject')}</span>

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
-import { startWorkflow, resumeWorkflow, retryWorkflow, executeDocumentWithTemplates, executeEmailWithAttachments } from '@/lib/workflow/workflowRunner';
+import { startWorkflow, resumeWorkflow, retryWorkflow, executeDocumentWithTemplates, executeEmailWithAttachments, executeSendEmailWithThirdPartyEmails } from '@/lib/workflow/workflowRunner';
 import { autoAdvanceWorkflow } from '@/lib/workflow/autoAdvance';
 import { buildDocumentTemplateData, resolveBodyHtml, substituteVars, inlineFormButton } from '@/lib/workflow/nodeExecutors';
 import type { ExecutionContext } from '@/lib/workflow/types';
@@ -1170,7 +1170,8 @@ export type PendingWorkflowAction =
   | { kind: 'failed';                       workflowRunId: string; nodeTitle: string; error: string | null }
   | { kind: 'document_preview';             workflowRunId: string; nodeTitle: string; previewCount: number }
   | { kind: 'template_selection';           workflowRunId: string; nodeTitle: string }
-  | { kind: 'document_attachment_selection'; workflowRunId: string; nodeTitle: string; availableDocuments: { id: string; name: string }[] };
+  | { kind: 'document_attachment_selection'; workflowRunId: string; nodeTitle: string; availableDocuments: { id: string; name: string }[] }
+  | { kind: 'third_party_email_input';       workflowRunId: string; nodeTitle: string };
 
 export async function getPendingManualAction(
   legalProcessId: string,
@@ -1258,6 +1259,14 @@ export async function getPendingManualAction(
         workflowRunId: run.id,
         nodeTitle:     node.title,
         instructions,
+      };
+    }
+
+    if (node.type === 'send_email' && stepOutput.waitingFor === 'third_party_email') {
+      return {
+        kind:          'third_party_email_input',
+        workflowRunId: run.id,
+        nodeTitle:     node.title,
       };
     }
 
@@ -1370,6 +1379,27 @@ export async function confirmEmailAttachments(
   if (!lp?.workflow_run_id) throw new Error('No hay flujo de trabajo asociado');
 
   await executeEmailWithAttachments(lp.workflow_run_id, documentIds);
+
+  revalidatePath('/legal-process');
+}
+
+export async function confirmThirdPartyEmails(
+  legalProcessId: string,
+  emails: string[],
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (!user || authError) throw new Error('Unauthorized');
+
+  const { data: lp } = await supabase
+    .from('legal_processes')
+    .select('workflow_run_id')
+    .eq('id', legalProcessId)
+    .single();
+
+  if (!lp?.workflow_run_id) throw new Error('No hay flujo de trabajo asociado');
+
+  await executeSendEmailWithThirdPartyEmails(lp.workflow_run_id, emails);
 
   revalidatePath('/legal-process');
 }

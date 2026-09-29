@@ -7,7 +7,8 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { PlayCircle, RotateCcw, FileCheck, FilePlus, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { PlayCircle, RotateCcw, FileCheck, FilePlus, Check, Mail, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { sanitizeHtml } from '@/lib/sanitize-html';
@@ -17,6 +18,7 @@ import {
   approveDocumentPreviews,
   confirmDocumentTemplates,
   confirmEmailAttachments,
+  confirmThirdPartyEmails,
   type PendingWorkflowAction,
 } from '@/app/[locale]/(dashboard)/legal-process/actions';
 import { getTemplates } from '@/app/[locale]/(dashboard)/settings/document-templates/actions';
@@ -82,6 +84,7 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
   // que este índice avanza a un ritmo fijo mientras la llamada real está en
   // vuelo, y salta al final apenas esta resuelve.
   const [generatingIndex, setGeneratingIndex] = useState(-1);
+  const [thirdPartyEmails, setThirdPartyEmails] = useState<string[]>(['']);
 
   const fetchAction = useCallback(() => {
     dispatch({ type: 'FETCH_START' });
@@ -213,6 +216,26 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
       onSuccess();
     } catch (err) {
       toast.dismiss(loadingToast);
+      toast.error('Error al enviar el correo', {
+        description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
+      });
+    } finally {
+      dispatch({ type: 'EXEC_DONE' });
+    }
+  };
+
+  // ── Tercero: el abogado escribe el/los correo(s) y se reanuda send_email ──
+  const handleConfirmThirdPartyEmails = async () => {
+    const emails = thirdPartyEmails.map((e) => e.trim()).filter(Boolean);
+    if (emails.length === 0) return;
+    dispatch({ type: 'EXEC_START' });
+    try {
+      await confirmThirdPartyEmails(legalProcessId, emails);
+      toast.success('Correo enviado', { description: 'El flujo continúa al siguiente paso.' });
+      dispatch({ type: 'SET_CONFIRMING', value: false });
+      setThirdPartyEmails(['']);
+      onSuccess();
+    } catch (err) {
       toast.error('Error al enviar el correo', {
         description: err instanceof Error ? err.message : 'Por favor, intenta de nuevo.',
       });
@@ -360,6 +383,91 @@ export function WorkflowActionButton({ legalProcessId, refreshKey, onSuccess }: 
           confirmLabel="Enviar"
           cancelLabel="Cancelar"
         />
+      </>
+    );
+  }
+
+  // ── Tercero: pide el correo en tiempo real ─────────────────────────────────
+  if (action.kind === 'third_party_email_input') {
+    const validEmails = thirdPartyEmails.map((e) => e.trim()).filter(Boolean);
+    return (
+      <>
+        <Button size="sm" onClick={() => dispatch({ type: 'SET_CONFIRMING', value: true })} disabled={executing}>
+          {executing ? (
+            <Spinner className="mr-2 h-4 w-4" />
+          ) : (
+            <Mail className="mr-2 h-4 w-4" />
+          )}
+          {action.nodeTitle}
+        </Button>
+
+        <Dialog
+          open={confirming}
+          onOpenChange={(open) => {
+            dispatch({ type: 'SET_CONFIRMING', value: open });
+            if (!open) setThirdPartyEmails(['']);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Correo(s) del tercero</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              <p className="text-sm text-muted-foreground">
+                Este paso requiere el correo de uno o varios terceros para poder enviar el mensaje.
+              </p>
+              {thirdPartyEmails.map((email, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    value={email}
+                    disabled={executing}
+                    onChange={(e) => {
+                      const next = [...thirdPartyEmails];
+                      next[index] = e.target.value;
+                      setThirdPartyEmails(next);
+                    }}
+                  />
+                  {thirdPartyEmails.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      disabled={executing}
+                      onClick={() => setThirdPartyEmails(thirdPartyEmails.filter((_, i) => i !== index))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={executing}
+                onClick={() => setThirdPartyEmails([...thirdPartyEmails, ''])}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Agregar otro correo
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => { dispatch({ type: 'SET_CONFIRMING', value: false }); setThirdPartyEmails(['']); }}
+                disabled={executing}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmThirdPartyEmails} disabled={executing || validEmails.length === 0}>
+                {executing ? <Spinner className="mr-2 h-4 w-4" /> : null}
+                Enviar correo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </>
     );
   }

@@ -341,6 +341,77 @@ export async function executeEmailWithAttachments(
   await runFromNode(currentNode, nodes, edges, context, supabase, 0);
 }
 
+/**
+ * Re-ejecuta un nodo send_email que pausó esperando el/los correo(s) de un
+ * destinatario "Tercero" (ver executeSendEmail en nodeExecutors.ts) — mismo
+ * patrón que executeEmailWithAttachments: borra el step_run en espera e
+ * inyecta la respuesta del abogado en previousOutput antes de volver a
+ * correr el nodo (no el siguiente — el nodo mismo necesita reintentarse ya
+ * con los correos resueltos).
+ */
+export async function executeSendEmailWithThirdPartyEmails(
+  workflowRunId: string,
+  emails: string[],
+): Promise<void> {
+  const supabase = await createClient({ admin: true });
+  const db = supabase as unknown as Record<string, unknown> & SupabaseClient;
+
+  const { data: run, error: runErr } = await db
+    .from('workflow_runs')
+    .select('*')
+    .eq('id', workflowRunId)
+    .single() as { data: WorkflowRunRow | null; error: { message: string } | null };
+
+  if (runErr || !run) throw new Error(runErr?.message ?? 'workflow_run no encontrado');
+  if (run.status !== 'running') {
+    throw new Error(`No se puede continuar un workflow con estado "${run.status}"`);
+  }
+  if (!run.current_node_id) {
+    throw new Error('El workflow no tiene un nodo actual');
+  }
+
+  // Fan-out safe, igual que executeEmailWithAttachments: current_node_id
+  // puede apuntar a una rama ya completada mientras el send_email en
+  // cuestión sigue esperando en otra.
+  const { nodes, edges } = await fetchGraph(run.template_id, supabase);
+
+  const { data: runningSteps } = await db
+    .from('workflow_step_runs')
+    .select('node_id')
+    .eq('workflow_run_id', workflowRunId)
+    .eq('status', 'running') as { data: { node_id: string }[] | null };
+
+  const waitingNodeId =
+    runningSteps
+      ?.map((s) => s.node_id)
+      .find((nid) => nodes.find((n) => n.node_id === nid)?.type === 'send_email')
+    ?? run.current_node_id;
+
+  await db
+    .from('workflow_step_runs')
+    .delete()
+    .eq('workflow_run_id', workflowRunId)
+    .eq('node_id', waitingNodeId)
+    .eq('status', 'running');
+
+  const [legalProcess, clientData] = await Promise.all([
+    fetchLegalProcess(run.legal_process_id, supabase),
+    fetchClientData(run.legal_process_id, supabase),
+  ]);
+
+  const currentNode = nodes.find((n) => n.node_id === waitingNodeId);
+  if (!currentNode) throw new Error(`Nodo "${waitingNodeId}" no encontrado en el template`);
+
+  const context: ExecutionContext = {
+    workflowRun: run,
+    legalProcess,
+    previousOutput: { third_party_emails: emails },
+    clientData,
+  };
+
+  await runFromNode(currentNode, nodes, edges, context, supabase, 0);
+}
+
 // -----------------------------------------------------------------------------
 
 export async function cancelWorkflow(workflowRunId: string): Promise<void> {

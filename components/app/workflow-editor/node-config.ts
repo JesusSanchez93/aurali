@@ -11,7 +11,7 @@ export interface DependsOnCondition {
 export interface ConfigField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'richtext' | 'switch' | 'number';
+  type: 'text' | 'textarea' | 'select' | 'richtext' | 'switch' | 'number' | 'checkbox-group';
   options?: { value: string; label: string }[];
   placeholder?: string;
   required?: boolean;
@@ -72,13 +72,27 @@ export const NODE_TYPES_CONFIG: Record<WorkflowNodeType, NodeTypeConfig> = {
     borderClass:  'border-blue-500',
     defaultTitle: 'Enviar Correo',
     defaultConfig: {
-      to: '', subject: '', body: '', attach_enabled: false,
+      // recipients reemplaza a "to" para nodos nuevos — ver executeSendEmail
+      // (lib/workflow/nodeExecutors.ts): si recipients trae algo, se usa esa
+      // lógica; si no, cae al "to" de texto libre legado (workflows viejos
+      // guardados antes de este campo siguen funcionando sin tocarlos).
+      recipients: ['client'], subject: '', body: '', attach_enabled: false,
       requires_document_receipt: false,
       track_follow_up: false, follow_up_value: '24', follow_up_unit: 'hours',
       reminder_count: '1', reminder_subject: '', reminder_body: '',
     },
     configSchema: [
-      { key: 'to',      label: 'Para',    type: 'text',     placeholder: '{PROCESS.EMAIL}', required: true },
+      {
+        key: 'recipients',
+        label: 'Destinatarios',
+        type: 'checkbox-group',
+        required: true,
+        options: [
+          { value: 'client', label: 'Cliente' },
+          { value: 'lawyer', label: 'Abogado' },
+          { value: 'third_party', label: 'Tercero (se pide el correo al llegar el flujo a este paso)' },
+        ],
+      },
       { key: 'subject', label: 'Asunto',  type: 'text',     placeholder: 'Asunto del correo', required: true },
       // {FORM_URL} enlaza al formulario del cliente; {FORM_URL:codigo} referencia
       // explícitamente un formulario dinámico por su código (ver Formulario del
