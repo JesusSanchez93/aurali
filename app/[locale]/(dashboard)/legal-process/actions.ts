@@ -1271,17 +1271,63 @@ export async function getPendingManualAction(
     }
 
     if (node.type === 'send_email' && stepOutput.waitingFor === 'document_attachment_selection') {
-      const { data: docs } = await supabase
-        .from('generated_documents')
-        .select('id, document_name')
-        .eq('legal_process_id', legalProcessId)
-        .eq('is_preview', false) as { data: { id: string; document_name: string }[] | null };
+      // Solo los documentos que generó el (los) nodo(s) generate_document
+      // conectados DIRECTAMENTE antes de este nodo, en esta misma corrida —
+      // antes se traían TODOS los documentos no-preview del proceso legal,
+      // así que un flujo con más de un generate_document (uno por cada
+      // paso) terminaba adjuntando también los de pasos anteriores que no
+      // tenían nada que ver con este correo.
+      const { data: incomingEdges } = await supabase
+        .from('workflow_edges')
+        .select('source_node_id')
+        .eq('template_id', run.template_id)
+        .eq('target_node_id', step.node_id) as { data: { source_node_id: string }[] | null };
+
+      const sourceNodeIds = (incomingEdges ?? []).map((e) => e.source_node_id);
+
+      const { data: sourceNodes } = sourceNodeIds.length > 0
+        ? await supabase
+            .from('workflow_nodes')
+            .select('node_id, type')
+            .eq('template_id', run.template_id)
+            .in('node_id', sourceNodeIds)
+        : { data: [] as { node_id: string; type: string }[] };
+
+      const generateDocumentNodeIds = (sourceNodes ?? [])
+        .filter((n) => n.type === 'generate_document')
+        .map((n) => n.node_id);
+
+      let docs: { id: string; document_name: string | null }[] = [];
+
+      if (generateDocumentNodeIds.length > 0) {
+        const { data: scopedDocs } = await supabase
+          .from('generated_documents')
+          .select('id, document_name')
+          .eq('workflow_run_id', run.id)
+          .eq('is_preview', false)
+          .in('node_id', generateDocumentNodeIds) as { data: { id: string; document_name: string | null }[] | null };
+        docs = scopedDocs ?? [];
+      }
+
+      // Compatibilidad hacia atrás: corridas iniciadas antes de que
+      // generated_documents guardara workflow_run_id/node_id no tienen cómo
+      // filtrarse así — en ese caso se cae al comportamiento anterior (todos
+      // los documentos del proceso) en vez de no ofrecer ninguno.
+      if (docs.length === 0 && generateDocumentNodeIds.length > 0) {
+        const { data: legacyDocs } = await supabase
+          .from('generated_documents')
+          .select('id, document_name')
+          .eq('legal_process_id', legalProcessId)
+          .eq('is_preview', false)
+          .is('workflow_run_id', null) as { data: { id: string; document_name: string | null }[] | null };
+        docs = legacyDocs ?? [];
+      }
 
       return {
         kind:               'document_attachment_selection',
         workflowRunId:      run.id,
         nodeTitle:          node.title,
-        availableDocuments: (docs ?? []).map((d) => ({ id: d.id, name: d.document_name ?? 'Documento sin nombre' })),
+        availableDocuments: docs.map((d) => ({ id: d.id, name: d.document_name ?? 'Documento sin nombre' })),
       };
     }
 

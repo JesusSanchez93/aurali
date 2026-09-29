@@ -1266,6 +1266,8 @@ async function executeGenerateDocument(
           legalProcessId: context.legalProcess.id,
           organizationId: context.legalProcess.organization_id ?? undefined,
           mode: 'preview',
+          workflowRunId: context.workflowRun.id,
+          nodeId: node.node_id,
         });
         previews.push({ id: result.documentId, document_name: result.documentName });
       } catch (err: unknown) {
@@ -1313,6 +1315,8 @@ async function executeGenerateDocument(
         legalProcessId: context.legalProcess.id,
         organizationId: context.legalProcess.organization_id ?? undefined,
         mode: 'final',
+        workflowRunId: context.workflowRun.id,
+        nodeId: node.node_id,
       });
 
       documents.push({

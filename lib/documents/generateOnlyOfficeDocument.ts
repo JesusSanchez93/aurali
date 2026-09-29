@@ -36,6 +36,15 @@ export interface GenerateOnlyOfficeDocumentInput {
   organizationId?: string;
   /** 'preview' stops after producing the substituted .docx; 'final' converts straight to PDF. */
   mode: 'preview' | 'final';
+  /**
+   * De qué corrida/nodo generate_document vino este documento — sin esto,
+   * un nodo "Enviar Correo" con adjuntos no puede distinguir "los
+   * documentos que acaba de generar el paso anterior" de cualquier otro
+   * documento ya generado para el mismo proceso en un paso anterior del
+   * flujo (ver document_attachment_selection en actions.ts).
+   */
+  workflowRunId?: string;
+  nodeId?: string;
   onProgress?: (info: { step: number; total: number; label: string }) => void;
 }
 
@@ -72,7 +81,7 @@ function toSlug(s: string): string {
 export async function generateDocument(
   input: GenerateOnlyOfficeDocumentInput,
 ): Promise<GenerateOnlyOfficeDocumentResult> {
-  const { templateId, data, legalProcessId, organizationId, mode, onProgress } = input;
+  const { templateId, data, legalProcessId, organizationId, mode, onProgress, workflowRunId, nodeId } = input;
   const totalSteps = mode === 'final' ? 6 : 5;
   const report = (step: number, label: string) => onProgress?.({ step, total: totalSteps, label });
 
@@ -147,6 +156,8 @@ export async function generateDocument(
         docx_storage_path: docxStoragePath,
         document_key: documentKey,
         is_preview: true,
+        workflow_run_id: workflowRunId,
+        node_id: nodeId,
       })
       .select('id')
       .single();
@@ -183,6 +194,8 @@ export async function generateDocument(
       docx_storage_path: docxStoragePath,
       document_key: documentKey,
       is_preview: false,
+      workflow_run_id: workflowRunId,
+      node_id: nodeId,
     })
     .select('id')
     .single();

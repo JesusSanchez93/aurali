@@ -906,9 +906,11 @@ export type Database = {
           id: string
           is_preview: boolean
           legal_process_id: string
+          node_id: string | null
           storage_path: string | null
           template_id: string | null
           tiptap_content: Json | null
+          workflow_run_id: string | null
         }
         Insert: {
           created_at?: string
@@ -923,9 +925,11 @@ export type Database = {
           id?: string
           is_preview?: boolean
           legal_process_id: string
+          node_id?: string | null
           storage_path?: string | null
           template_id?: string | null
           tiptap_content?: Json | null
+          workflow_run_id?: string | null
         }
         Update: {
           created_at?: string
@@ -940,9 +944,11 @@ export type Database = {
           id?: string
           is_preview?: boolean
           legal_process_id?: string
+          node_id?: string | null
           storage_path?: string | null
           template_id?: string | null
           tiptap_content?: Json | null
+          workflow_run_id?: string | null
         }
         Relationships: [
           {
@@ -964,6 +970,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "legal_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_workflow_run_id_fkey"
+            columns: ["workflow_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_runs"
             referencedColumns: ["id"]
           },
         ]
