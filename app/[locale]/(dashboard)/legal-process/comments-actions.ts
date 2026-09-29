@@ -95,7 +95,7 @@ export async function addProcessComment(legalProcessId: string, body: string): P
     metadata: { preview: trimmed.slice(0, 120) },
   });
 
-  revalidatePath('/legal-process/board');
+  revalidatePath('/board');
 
   return { ...data, author_name: authorName(profile) };
 }
@@ -106,5 +106,5 @@ export async function deleteProcessComment(commentId: string): Promise<void> {
   const { error } = await supabase.from('legal_process_comments').delete().eq('id', commentId);
   if (error) throw new Error(error.message);
 
-  revalidatePath('/legal-process/board');
+  revalidatePath('/board');
 }

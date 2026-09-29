@@ -121,7 +121,7 @@ async function ensureDefaultColumn(
 }
 
 function revalidateBoard() {
-  revalidatePath('/legal-process/board');
+  revalidatePath('/board');
 }
 
 export async function getBoardData(): Promise<BoardData> {
