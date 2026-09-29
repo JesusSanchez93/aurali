@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     DndContext,
     DragOverlay,
@@ -36,9 +36,11 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { BoardCardDialog } from '@/app/[locale]/(dashboard)/legal-process/_components/board-card-dialog';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { createClient } from '@/lib/supabase/client';
 import {
     createBoardColumn,
     deleteBoardColumn,
+    getBoardData,
     renameBoardColumn,
     reorderBoardColumnCards,
     type BoardCard,
@@ -79,6 +81,52 @@ export function LegalProcessBoard({ initialColumns, initialCards }: Props) {
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     );
+
+    // Realtime: cuando otro abogado mueve una tarjeta de columna, este
+    // tablero se actualiza solo (legal_processes está en la publicación
+    // supabase_realtime — ver migración
+    // 20260929150000_legal_processes_board_realtime.sql; el acceso ya lo
+    // filtra el RLS existente de is_org_member, igual que en
+    // legal_process_comments). reorderBoardColumnCards reescribe la
+    // posición de TODAS las tarjetas de la columna destino en un solo
+    // drag, así que llegan varios UPDATE seguidos — se agrupan con un
+    // debounce corto en vez de recargar el tablero completo una vez por
+    // fila. Se pide getBoardData() entero (no se intenta reconstruir el
+    // estado a mano) porque el payload crudo de postgres_changes no trae
+    // el nombre del cliente (viene de un join), igual que con los
+    // comentarios.
+    useEffect(() => {
+        const supabase = createClient();
+        const debounceRef = { current: null as ReturnType<typeof setTimeout> | null };
+
+        const refetch = () => {
+            getBoardData()
+                .then((data) => {
+                    setColumns(buildColumnState(data.columns, data.cards));
+                    setCardsById(Object.fromEntries(data.cards.map((c) => [c.id, c])));
+                })
+                .catch(() => {});
+        };
+
+        const channel = supabase
+            .channel('legal_processes_board')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'legal_processes' },
+                (payload) => {
+                    const row = payload.new as { board_column_id: string | null } | null;
+                    if (!row?.board_column_id) return;
+                    if (debounceRef.current) clearTimeout(debounceRef.current);
+                    debounceRef.current = setTimeout(refetch, 400);
+                },
+            )
+            .subscribe();
+
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     const columnOf = (cardId: string) => columns.find((c) => c.cardIds.includes(cardId));
 
