@@ -80,6 +80,21 @@ export async function addProcessComment(legalProcessId: string, body: string): P
 
   if (error || !data) throw new Error(error?.message ?? 'No se pudo agregar el comentario');
 
+  // También queda en el Historial del proceso (audit_logs), no solo en el
+  // feed de comentarios — el pedido explícito fue que el Historial registre
+  // la interacción del tablero, comentarios incluidos. Con await, no con
+  // void/fire-and-forget: en un server action la conexión puede cerrarse
+  // antes de que una promesa no esperada termine, y el insert nunca llega
+  // a ejecutarse (confirmado: pasaba justo eso).
+  await supabase.from('audit_logs').insert({
+    organization_id: profile.current_organization_id,
+    user_id: user.id,
+    action: 'comment_added',
+    entity: 'legal_process',
+    entity_id: legalProcessId,
+    metadata: { preview: trimmed.slice(0, 120) },
+  });
+
   revalidatePath('/legal-process/board');
 
   return { ...data, author_name: authorName(profile) };

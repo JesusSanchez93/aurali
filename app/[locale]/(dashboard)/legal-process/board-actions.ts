@@ -87,7 +87,7 @@ async function requireOrgContext() {
 
   if (!profile?.current_organization_id) throw new Error('Organization not found');
 
-  return { supabase, organizationId: profile.current_organization_id };
+  return { supabase, organizationId: profile.current_organization_id, userId: user.id };
 }
 
 /**
@@ -276,7 +276,18 @@ export async function reorderBoardColumnCards(
   columnId: string,
   orderedLegalProcessIds: string[],
 ): Promise<void> {
-  const { supabase } = await requireOrgContext();
+  const { supabase, organizationId, userId } = await requireOrgContext();
+
+  // Se llama tanto para reordenar dentro de la misma columna como para un
+  // cambio real de columna (drag & drop) — solo lo segundo es "actividad"
+  // digna del Historial del proceso, así que se detecta comparando contra
+  // el board_column_id actual antes de sobreescribirlo.
+  const { data: current } = await supabase
+    .from('legal_processes')
+    .select('id, board_column_id')
+    .in('id', orderedLegalProcessIds);
+
+  const moved = (current ?? []).filter((p) => p.board_column_id !== columnId);
 
   await Promise.all(
     orderedLegalProcessIds.map((id, index) =>
@@ -286,6 +297,29 @@ export async function reorderBoardColumnCards(
         .eq('id', id),
     ),
   );
+
+  if (moved.length > 0) {
+    const columnIds = [...new Set([columnId, ...moved.map((p) => p.board_column_id).filter((id): id is string => Boolean(id))])];
+    const { data: columns } = await supabase
+      .from('legal_process_board_columns')
+      .select('id, name')
+      .in('id', columnIds);
+    const nameById = new Map((columns ?? []).map((c) => [c.id, c.name]));
+
+    await supabase.from('audit_logs').insert(
+      moved.map((p) => ({
+        organization_id: organizationId,
+        user_id: userId,
+        action: 'board_card_moved',
+        entity: 'legal_process',
+        entity_id: p.id,
+        metadata: {
+          from_column: p.board_column_id ? (nameById.get(p.board_column_id) ?? null) : null,
+          to_column: nameById.get(columnId) ?? null,
+        },
+      })),
+    );
+  }
 
   revalidateBoard();
 }
@@ -332,11 +366,16 @@ export async function getBoardCardDetail(legalProcessId: string): Promise<BoardC
   if (bank && (bank.bank_name || bank.fraud_incident_summary || bank.last_4_digits)) {
     const bankFields: BoardCardDescriptionField[] = [];
     if (bank.bank_name) bankFields.push({ label: 'Banco', value: bank.bank_name });
-    if (bank.last_4_digits) bankFields.push({ label: 'Últimos 4 dígitos', value: bank.last_4_digits });
-    if (Array.isArray(bank.products) && bank.products.length > 0) {
-      const summary = summarizeLast4Digits(bank.products as unknown as FinancialProductValue[]);
-      if (summary) bankFields.push({ label: 'Productos afectados', value: summary });
-    }
+    // legal_process_banks.last_4_digits es, pese al nombre, el mismo resumen
+    // legible que summarizeLast4Digits(products) ya produce (así lo escribe
+    // financialFraudSync.ts) — mostrar ambos duplicaba la misma frase dos
+    // veces. products es la fuente estructurada; last_4_digits queda solo
+    // como fallback para filas viejas que no tengan products poblado.
+    const productsSummary = Array.isArray(bank.products) && bank.products.length > 0
+      ? summarizeLast4Digits(bank.products as unknown as FinancialProductValue[])
+      : null;
+    const productsValue = productsSummary ?? bank.last_4_digits;
+    if (productsValue) bankFields.push({ label: 'Productos afectados', value: productsValue });
     if (bank.fraud_incident_summary) {
       bankFields.push({ label: 'Descripción de los hechos', value: bank.fraud_incident_summary });
     }

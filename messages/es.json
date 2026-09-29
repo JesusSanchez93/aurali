@@ -389,7 +389,9 @@
         "email_attachment_rejected": "Documento rechazado",
         "email_attachment_matched": "Documento vinculado",
         "email_attachments_rejection_notified": "Cliente notificado de documentos rechazados",
-        "default": "Evento"
+        "default": "Evento",
+        "comment_added": "Comentario agregado",
+        "board_card_moved": "Movida en el tablero"
       },
       "node_types": {
         "start": "Inicio",
