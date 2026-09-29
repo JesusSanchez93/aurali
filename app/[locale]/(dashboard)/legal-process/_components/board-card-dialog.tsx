@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Loader2, Mail, Phone, MapPin, FileText, Send, MessageSquare, Download, Paperclip, ArrowLeftRight } from 'lucide-react';
+import { Loader2, Mail, Phone, MapPin, FileText, Send, MessageSquare, Download, Paperclip, ArrowLeftRight, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import { Link } from '@/i18n/routing';
 import {
     Dialog,
     DialogContent,
@@ -80,6 +82,53 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [legalProcessId]);
 
+    // Realtime: cualquier abogado con la tarjeta abierta ve los comentarios
+    // de los demás sin recargar (legal_process_comments está en la
+    // publicación supabase_realtime — ver migración
+    // 20260929140000_legal_process_comments_realtime.sql). Se vuelve a pedir
+    // la lista completa con getProcessComments en vez de anexar el payload
+    // crudo del INSERT porque este último no trae el nombre del autor (viene
+    // de un join a profiles) — de paso, al ser un reemplazo total del
+    // estado y no un append, el propio comentario recién publicado por este
+    // mismo usuario (que ya se agregó de forma optimista en
+    // handlePostComment) no queda duplicado cuando el evento le hace eco.
+    useEffect(() => {
+        if (!legalProcessId) return;
+        const supabase = createClient();
+        const channel = supabase
+            .channel(`legal_process_comments:${legalProcessId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'legal_process_comments',
+                    filter: `legal_process_id=eq.${legalProcessId}`,
+                },
+                () => {
+                    getProcessComments(legalProcessId).then(setComments).catch(() => {});
+                },
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'DELETE',
+                    schema: 'public',
+                    table: 'legal_process_comments',
+                    filter: `legal_process_id=eq.${legalProcessId}`,
+                },
+                (payload) => {
+                    const deletedId = (payload.old as { id?: string } | null)?.id;
+                    if (deletedId) setComments((prev) => prev.filter((c) => c.id !== deletedId));
+                },
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [legalProcessId]);
+
     async function handlePostComment() {
         if (!legalProcessId || !commentValue.trim()) return;
         setPosting(true);
@@ -133,8 +182,15 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
                             en md+ no existe (md:hidden), por eso vuelve a pb-5 ahí. */}
                         <div className="w-1/2 min-w-0 shrink-0 overflow-y-auto p-5 pb-24 md:w-auto md:max-w-md md:flex-1 md:shrink md:border-r md:pb-5">
                             <div className="mb-3 flex items-center justify-between gap-2">
-                                <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                                <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground tabular-nums">
                                     #{String(detail.process_number).padStart(4, '0')}
+                                    <Link
+                                        href={`/legal-process?id=${detail.id}`}
+                                        className="text-muted-foreground/60 hover:text-foreground"
+                                        title={t('view_process_detail')}
+                                    >
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                    </Link>
                                 </span>
                                 <ProcessTimelineButton legalProcessId={detail.id} clientEmail={detail.client_email} />
                             </div>

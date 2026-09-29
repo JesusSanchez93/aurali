@@ -536,9 +536,11 @@
       "create_column_error": "No se pudo crear la columna",
       "rename_column_error": "No se pudo renombrar la columna",
       "move_error": "No se pudo mover el proceso",
+      "view_process_detail": "Ver detalle del proceso",
       "card_dialog": {
         "loading": "Cargando proceso…",
         "load_error": "No se pudo cargar el proceso",
+        "view_process_detail": "Ver detalle del proceso",
         "description_empty": "Sin información capturada todavía.",
         "documents_title": "Documentos",
         "comments_title": "Comentarios",

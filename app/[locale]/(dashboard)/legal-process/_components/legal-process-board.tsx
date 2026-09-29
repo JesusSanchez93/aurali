@@ -21,7 +21,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTranslations } from 'next-intl';
-import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical, FileText } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, GripVertical, FileText, ExternalLink } from 'lucide-react';
+import { Link } from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -355,7 +356,7 @@ function BoardColumnView({
             >
                 <SortableContext items={cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
                     {cards.map((card) => (
-                        <SortableBoardCard key={card.id} card={card} onOpen={() => onOpenCard(card.id)} />
+                        <SortableBoardCard key={card.id} card={card} t={t} onOpen={() => onOpenCard(card.id)} />
                     ))}
                 </SortableContext>
                 {cards.length === 0 && (
@@ -377,7 +378,15 @@ function BoardColumnView({
     );
 }
 
-function SortableBoardCard({ card, onOpen }: { card: BoardCard; onOpen: () => void }) {
+function SortableBoardCard({
+    card,
+    t,
+    onOpen,
+}: {
+    card: BoardCard;
+    t: ReturnType<typeof useTranslations>;
+    onOpen: () => void;
+}) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: card.id });
 
     const style = {
@@ -387,18 +396,20 @@ function SortableBoardCard({ card, onOpen }: { card: BoardCard; onOpen: () => vo
 
     return (
         <div ref={setNodeRef} style={style} className={cn(isDragging && 'opacity-30')}>
-            <BoardCardView card={card} dragHandleProps={{ ...attributes, ...listeners }} onOpen={onOpen} />
+            <BoardCardView card={card} t={t} dragHandleProps={{ ...attributes, ...listeners }} onOpen={onOpen} />
         </div>
     );
 }
 
 function BoardCardView({
     card,
+    t,
     dragging,
     dragHandleProps,
     onOpen,
 }: {
     card: BoardCard;
+    t?: ReturnType<typeof useTranslations>;
     dragging?: boolean;
     dragHandleProps?: Record<string, unknown>;
     onOpen?: () => void;
@@ -435,6 +446,17 @@ function BoardCardView({
                     </p>
                 )}
             </button>
+            {/* Va al detalle del proceso (misma pantalla que /legal-process, que
+                abre el sheet vía ?id=) — botón aparte del onOpen de arriba para
+                no anidar un <a> dentro del <button> del detalle de la tarjeta. */}
+            <Link
+                href={`/legal-process?id=${card.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="mt-0.5 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+                title={t ? t('view_process_detail') : undefined}
+            >
+                <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
         </div>
     );
 }
