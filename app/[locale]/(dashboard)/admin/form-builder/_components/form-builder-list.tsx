@@ -20,13 +20,27 @@ type Stage = 'idle' | 'actions' | 'confirm-delete' | 'confirm-duplicate'
 
 const stageVariants: Variants = {
   enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0, pointerEvents: 'none' }),
-  center: { x: 0, opacity: 1, pointerEvents: 'auto', transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } },
+  center: {
+    x: 0,
+    opacity: 1,
+    pointerEvents: 'auto',
+    transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1], staggerChildren: 0.04, delayChildren: 0.03 },
+  },
   exit: (dir: number) => ({
     x: dir > 0 ? -24 : 24,
     opacity: 0,
     pointerEvents: 'none',
     transition: { duration: 0.14, ease: 'easeIn' },
   }),
+}
+
+/** Cada botón del panel de acciones hereda el estado de `stageVariants` del
+ *  padre (mismos nombres de variant) — el `staggerChildren` de arriba hace
+ *  que entren uno por uno en vez de todos a la vez. */
+const actionItemVariants: Variants = {
+  enter: { opacity: 0, x: 6 },
+  center: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 6 },
 }
 
 export function FormBuilderList({ groups }: Props) {
@@ -161,7 +175,7 @@ export function FormBuilderList({ groups }: Props) {
           <div
             key={form.schema_id}
             data-form-row={form.schema_id}
-            className="relative flex items-center justify-between gap-4 px-4 py-3"
+            className="relative flex items-center justify-between gap-4 overflow-hidden px-4 py-3"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -178,18 +192,25 @@ export function FormBuilderList({ groups }: Props) {
               <p className="truncate text-xs font-mono text-muted-foreground">{`{FORM_URL:${form.code}}`}</p>
             </div>
 
-            {/* Ancla en flujo normal — el contenido de la card nunca se
-                desplaza; lo flotante de abajo se superpone encima. */}
-            <Button
-              variant="ghost"
-              size="icon"
+            {/* Ancla en flujo normal — se desliza a la derecha y se
+                desvanece mientras el panel flotante está abierto, y vuelve
+                a su lugar al cerrarlo. El contenido de la izquierda nunca
+                se mueve. */}
+            <motion.div
               className="shrink-0"
-              disabled={pendingId === form.code}
-              onClick={() => openActions(form.schema_id)}
-              title="Acciones"
+              animate={{ x: rowStage === 'idle' ? 0 : 12, opacity: rowStage === 'idle' ? 1 : 0 }}
+              transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             >
-              {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <MoreVertical className="h-4 w-4" />}
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={pendingId === form.code || rowStage !== 'idle'}
+                onClick={() => openActions(form.schema_id)}
+                title="Acciones"
+              >
+                {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <MoreVertical className="h-4 w-4" />}
+              </Button>
+            </motion.div>
 
             {/* Panel flotante de acciones — absolute, no reserva espacio ni
                 empuja el contenido; blurea lo que tiene detrás para que no
@@ -204,67 +225,83 @@ export function FormBuilderList({ groups }: Props) {
                   animate="center"
                   exit="exit"
                   className={cn(
-                    'absolute inset-y-0 right-0 z-10 flex items-center gap-1 rounded-l-lg bg-background/80 pl-8 pr-3 shadow-lg backdrop-blur-sm',
+                    'absolute inset-y-0 right-0 z-10 flex items-center gap-1 rounded-l-lg bg-background/80 pl-8 pr-3 backdrop-blur-sm',
                     rowStage === 'confirm-delete' && 'bg-destructive/10',
                     rowStage === 'confirm-duplicate' && 'bg-primary/10',
                   )}
                 >
                   {rowStage === 'actions' && (
                     <>
-                      <Button variant="ghost" size="icon" asChild title="Editar">
-                        <Link href={`/admin/form-builder/${form.code}`}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={goConfirmDuplicate} title="Duplicar">
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={pendingId === form.code}
-                        onClick={() => handleExport(form.code, form.form_name)}
-                        title="Exportar"
-                      >
-                        {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={goConfirmDelete} title="Eliminar">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <motion.div variants={actionItemVariants}>
+                        <Button variant="ghost" size="icon" asChild title="Editar">
+                          <Link href={`/admin/form-builder/${form.code}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </motion.div>
+                      <motion.div variants={actionItemVariants}>
+                        <Button variant="ghost" size="icon" onClick={goConfirmDuplicate} title="Duplicar">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                      <motion.div variants={actionItemVariants}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={pendingId === form.code}
+                          onClick={() => handleExport(form.code, form.form_name)}
+                          title="Exportar"
+                        >
+                          {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                        </Button>
+                      </motion.div>
+                      <motion.div variants={actionItemVariants}>
+                        <Button variant="ghost" size="icon" onClick={goConfirmDelete} title="Eliminar">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </motion.div>
                     </>
                   )}
 
                   {rowStage === 'confirm-duplicate' && (
                     <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={pendingId === form.code}
-                        onClick={() => handleConfirmDuplicate(form.code)}
-                        title="Confirmar"
-                      >
-                        {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4 text-primary" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={goBackToActions} title="Cancelar">
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <motion.div variants={actionItemVariants}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={pendingId === form.code}
+                          onClick={() => handleConfirmDuplicate(form.code)}
+                          title="Confirmar"
+                        >
+                          {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4 text-primary" />}
+                        </Button>
+                      </motion.div>
+                      <motion.div variants={actionItemVariants}>
+                        <Button variant="ghost" size="icon" onClick={goBackToActions} title="Cancelar">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
                     </>
                   )}
 
                   {rowStage === 'confirm-delete' && (
                     <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={pendingId === form.code}
-                        onClick={() => handleConfirmDelete(form.code)}
-                        title="Confirmar"
-                      >
-                        {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4 text-destructive" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={goBackToActions} title="Cancelar">
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <motion.div variants={actionItemVariants}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={pendingId === form.code}
+                          onClick={() => handleConfirmDelete(form.code)}
+                          title="Confirmar"
+                        >
+                          {pendingId === form.code ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4 text-destructive" />}
+                        </Button>
+                      </motion.div>
+                      <motion.div variants={actionItemVariants}>
+                        <Button variant="ghost" size="icon" onClick={goBackToActions} title="Cancelar">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
                     </>
                   )}
                 </motion.div>
