@@ -149,6 +149,55 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'CERTIFICADO_INGRESOS',   label: 'Certificado de Ingresos' },
         ],
     },
+    // Flujo "Derecho Laboral - Despido / Indemnización" — mismo mecanismo que
+    // `accidente`/`banking`: resueltos por mergeDynamicFormResponses, no por
+    // una tabla propia.
+    {
+        key: 'empleador',
+        label: 'Empleador',
+        variables: [
+            { key: 'RAZON_SOCIAL',          label: 'Razón Social del Empleador' },
+            { key: 'NIT',                   label: 'NIT del Empleador' },
+            { key: 'REPRESENTANTE_LEGAL',   label: 'Representante Legal del Empleador' },
+            { key: 'DIRECCION',             label: 'Dirección del Empleador' },
+            { key: 'EMAIL',                 label: 'Correo del Empleador' },
+        ],
+    },
+    {
+        key: 'contrato',
+        label: 'Contrato de Trabajo',
+        variables: [
+            { key: 'TIPO',                  label: 'Tipo de Contrato' },
+            { key: 'CARGO',                 label: 'Cargo Desempeñado' },
+            { key: 'FECHA_INICIO',          label: 'Fecha de Inicio del Contrato' },
+            { key: 'FECHA_TERMINACION',     label: 'Fecha de Terminación del Contrato' },
+            { key: 'SALARIO',               label: 'Salario Mensual' },
+            { key: 'COPIA',                 label: 'Copia del Contrato' },
+        ],
+    },
+    {
+        key: 'despido',
+        label: 'Despido',
+        variables: [
+            { key: 'FECHA',                    label: 'Fecha del Despido' },
+            { key: 'CONSIDERA_INJUSTO',        label: '¿Despido sin Justa Causa?' },
+            { key: 'MOTIVO_ALEGADO',           label: 'Motivo Alegado por el Empleador' },
+            { key: 'FUERO',                    label: 'Estabilidad Laboral Reforzada (Fuero)' },
+            { key: 'CARTA_TERMINACION',        label: 'Carta de Terminación' },
+        ],
+    },
+    {
+        key: 'prestaciones',
+        label: 'Prestaciones Pendientes',
+        variables: [
+            { key: 'LIQUIDACION_RECIBIDA',      label: '¿Recibió Liquidación?' },
+            { key: 'SOPORTE_LIQUIDACION',       label: 'Soporte de la Liquidación' },
+            { key: 'SALARIOS_PENDIENTES',       label: 'Salarios Pendientes' },
+            { key: 'CESANTIAS_PENDIENTES',      label: 'Cesantías Pendientes' },
+            { key: 'PRIMA_PENDIENTE',           label: 'Prima de Servicios Pendiente' },
+            { key: 'VACACIONES_PENDIENTES',     label: 'Vacaciones Pendientes' },
+        ],
+    },
 ];
 
 /** Flat set of all static variable keys in GROUP.TYPE format — used for highlight validation */
