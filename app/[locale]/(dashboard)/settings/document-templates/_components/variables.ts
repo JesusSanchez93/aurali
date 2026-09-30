@@ -243,6 +243,42 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'LIQUIDAR_MISMO_ACTO',       label: '¿Liquidar en el Mismo Acto?' },
         ],
     },
+    // Flujo "Cobro de Cartera" — mismo mecanismo que `accidente`/`empleador`:
+    // resueltos por mergeDynamicFormResponses.
+    {
+        key: 'deudor',
+        label: 'Deudor',
+        variables: [
+            { key: 'NOMBRE',       label: 'Nombre o Razón Social del Deudor' },
+            { key: 'DOCUMENTO',    label: 'Cédula o NIT del Deudor' },
+            { key: 'DIRECCION',    label: 'Dirección del Deudor' },
+            { key: 'EMAIL',        label: 'Correo del Deudor' },
+            { key: 'TELEFONO',     label: 'Teléfono del Deudor' },
+        ],
+    },
+    {
+        key: 'obligacion',
+        label: 'Obligación',
+        variables: [
+            { key: 'TIPO_TITULO',           label: 'Tipo de Título' },
+            { key: 'NUMERO_REFERENCIA',     label: 'Número o Referencia del Título' },
+            { key: 'FECHA',                 label: 'Fecha de la Obligación' },
+            { key: 'FECHA_VENCIMIENTO',     label: 'Fecha de Vencimiento' },
+            { key: 'VALOR_ORIGINAL',        label: 'Valor Original de la Deuda' },
+            { key: 'TASA_INTERES_PACTADA',  label: 'Tasa de Interés Pactada' },
+            { key: 'SOPORTE',               label: 'Copia del Título o Contrato' },
+        ],
+    },
+    {
+        key: 'mora',
+        label: 'Estado de la Mora',
+        variables: [
+            { key: 'FECHA_DESDE',        label: 'Fecha desde la que Está en Mora' },
+            { key: 'GESTIONES_PREVIAS',  label: 'Gestiones de Cobro Previas' },
+            { key: 'PAGOS_PARCIALES',    label: 'Pagos Parciales Recibidos' },
+            { key: 'SALDO_ACTUAL',       label: 'Saldo Actual Adeudado' },
+        ],
+    },
 ];
 
 /** Flat set of all static variable keys in GROUP.TYPE format — used for highlight validation */
