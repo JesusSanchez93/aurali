@@ -80,6 +80,75 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'EMAIL',           label: 'Email del Representante' },
         ],
     },
+    // Flujo "Accidente de Tránsito / Indemnización" — igual que `banking`, estos
+    // grupos no vienen de una tabla propia sino del Dynamic Form Builder (campos
+    // con key ACCIDENTE__FECHA, etc.) resueltos por mergeDynamicFormResponses.
+    {
+        key: 'accidente',
+        label: 'Accidente',
+        variables: [
+            { key: 'FECHA',               label: 'Fecha del Accidente' },
+            { key: 'HORA',                label: 'Hora del Accidente' },
+            { key: 'LUGAR',               label: 'Lugar del Accidente' },
+            { key: 'AUTORIDAD_TRANSITO',  label: 'Autoridad de Tránsito que Atendió' },
+            { key: 'DESCRIPCION_HECHOS',  label: 'Descripción de los Hechos' },
+            { key: 'IPAT',                label: 'IPAT (Informe Policial de Accidente de Tránsito)' },
+            { key: 'FOTOS',               label: 'Fotos del Accidente' },
+        ],
+    },
+    {
+        key: 'vehiculo',
+        label: 'Vehículo del Cliente',
+        variables: [
+            { key: 'PLACA',               label: 'Placa' },
+            { key: 'MARCA',               label: 'Marca' },
+            { key: 'SOAT_VIGENTE',        label: '¿SOAT Vigente?' },
+            { key: 'SOAT_ASEGURADORA',    label: 'Aseguradora del SOAT' },
+            { key: 'TARJETA_PROPIEDAD',   label: 'Tarjeta de Propiedad' },
+        ],
+    },
+    {
+        key: 'tercero',
+        label: 'Tercero Responsable',
+        variables: [
+            { key: 'NOMBRE',            label: 'Nombre del Tercero' },
+            { key: 'CEDULA',            label: 'Cédula del Tercero' },
+            { key: 'PLACA',             label: 'Placa del Vehículo del Tercero' },
+            { key: 'ASEGURADORA_RC',    label: 'Aseguradora de Responsabilidad Civil' },
+            { key: 'POLIZA_NUMERO',     label: 'Número de Póliza' },
+        ],
+    },
+    {
+        key: 'lesion',
+        label: 'Lesiones y Atención Médica',
+        variables: [
+            { key: 'DESCRIPCION',         label: 'Descripción de las Lesiones' },
+            { key: 'HISTORIA_CLINICA',    label: 'Historia Clínica' },
+            { key: 'INCAPACIDADES',       label: 'Incapacidades Médicas' },
+            { key: 'DIAS_INCAPACIDAD',    label: 'Días de Incapacidad' },
+            { key: 'GASTOS_MEDICOS',      label: 'Gastos Médicos' },
+            { key: 'SOPORTES_GASTOS',     label: 'Soportes de Gastos Médicos' },
+        ],
+    },
+    {
+        key: 'dano',
+        label: 'Daños Materiales',
+        variables: [
+            { key: 'DESCRIPCION',              label: 'Descripción de los Daños' },
+            { key: 'COTIZACION_REPARACION',    label: 'Cotización de Reparación' },
+            { key: 'VALOR_ESTIMADO',           label: 'Valor Estimado de los Daños' },
+        ],
+    },
+    {
+        key: 'lucro',
+        label: 'Lucro Cesante',
+        variables: [
+            { key: 'OCUPACION',              label: 'Ocupación del Cliente' },
+            { key: 'INGRESO_MENSUAL',        label: 'Ingreso Mensual' },
+            { key: 'DIAS_SIN_TRABAJAR',      label: 'Días sin Trabajar' },
+            { key: 'CERTIFICADO_INGRESOS',   label: 'Certificado de Ingresos' },
+        ],
+    },
 ];
 
 /** Flat set of all static variable keys in GROUP.TYPE format — used for highlight validation */
