@@ -164,14 +164,26 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
         ],
     },
     {
+        // Grupo compartido por "Derecho Laboral" (contrato de trabajo) e
+        // "Incumplimiento de contrato" (contrato civil/comercial genérico) —
+        // ambos usan el prefijo CONTRATO__ en sus formularios respectivos;
+        // cada plantilla de documento solo usa los campos de su propio
+        // formulario (mergeDynamicFormResponses resuelve por
+        // workflow_template_id), esta lista es solo autocompletado del editor.
         key: 'contrato',
-        label: 'Contrato de Trabajo',
+        label: 'Contrato',
         variables: [
             { key: 'TIPO',                  label: 'Tipo de Contrato' },
-            { key: 'CARGO',                 label: 'Cargo Desempeñado' },
-            { key: 'FECHA_INICIO',          label: 'Fecha de Inicio del Contrato' },
-            { key: 'FECHA_TERMINACION',     label: 'Fecha de Terminación del Contrato' },
-            { key: 'SALARIO',               label: 'Salario Mensual' },
+            { key: 'CARGO',                 label: 'Cargo Desempeñado (Contrato de Trabajo)' },
+            { key: 'FECHA_INICIO',          label: 'Fecha de Inicio (Contrato de Trabajo)' },
+            { key: 'FECHA_TERMINACION',     label: 'Fecha de Terminación (Contrato de Trabajo)' },
+            { key: 'SALARIO',               label: 'Salario Mensual (Contrato de Trabajo)' },
+            { key: 'FECHA_CELEBRACION',     label: 'Fecha de Celebración (Contrato Civil/Comercial)' },
+            { key: 'VALOR',                 label: 'Valor del Contrato' },
+            { key: 'OBJETO',                label: 'Objeto del Contrato' },
+            { key: 'TIENE_CLAUSULA_PENAL',  label: '¿Tiene Cláusula Penal?' },
+            { key: 'VALOR_CLAUSULA_PENAL',  label: 'Valor de la Cláusula Penal' },
+            { key: 'TIENE_PACTO_ARBITRAL',  label: '¿Tiene Pacto Arbitral?' },
             { key: 'COPIA',                 label: 'Copia del Contrato' },
         ],
     },
@@ -277,6 +289,37 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'GESTIONES_PREVIAS',  label: 'Gestiones de Cobro Previas' },
             { key: 'PAGOS_PARCIALES',    label: 'Pagos Parciales Recibidos' },
             { key: 'SALDO_ACTUAL',       label: 'Saldo Actual Adeudado' },
+        ],
+    },
+    // Flujo "Incumplimiento de contrato" — mismo mecanismo que
+    // `accidente`/`empleador`/`deudor`: resueltos por mergeDynamicFormResponses.
+    {
+        key: 'contraparte',
+        label: 'Contraparte',
+        variables: [
+            { key: 'NOMBRE',       label: 'Nombre o Razón Social de la Contraparte' },
+            { key: 'DOCUMENTO',    label: 'Cédula o NIT de la Contraparte' },
+            { key: 'DIRECCION',    label: 'Dirección de la Contraparte' },
+            { key: 'EMAIL',        label: 'Correo de la Contraparte' },
+        ],
+    },
+    {
+        key: 'incumplimiento',
+        label: 'Incumplimiento',
+        variables: [
+            { key: 'FECHA',                 label: 'Fecha del Incumplimiento' },
+            { key: 'DESCRIPCION',           label: 'Descripción del Incumplimiento' },
+            { key: 'GESTIONES_PREVIAS',     label: 'Gestiones Previas con la Contraparte' },
+            { key: 'PRETENSION',            label: 'Pretensión (Cumplimiento o Resolución)' },
+        ],
+    },
+    {
+        key: 'perjuicio',
+        label: 'Perjuicios (Incumplimiento de Contrato)',
+        variables: [
+            { key: 'DANO_EMERGENTE',   label: 'Daño Emergente Estimado' },
+            { key: 'LUCRO_CESANTE',    label: 'Lucro Cesante Estimado' },
+            { key: 'SOPORTES',         label: 'Soportes de los Perjuicios' },
         ],
     },
 ];
