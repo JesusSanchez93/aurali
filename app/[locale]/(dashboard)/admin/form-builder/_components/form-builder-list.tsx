@@ -198,7 +198,7 @@ export function FormBuilderList({ groups }: Props) {
                 se mueve. */}
             <motion.div
               className="shrink-0"
-              animate={{ x: rowStage === 'idle' ? 0 : 12, opacity: rowStage === 'idle' ? 1 : 0 }}
+              animate={{ x: rowStage === 'idle' ? 0 : -12, opacity: rowStage === 'idle' ? 1 : 0 }}
               transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             >
               <Button
