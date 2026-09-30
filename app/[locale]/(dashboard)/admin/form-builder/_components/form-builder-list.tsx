@@ -176,7 +176,7 @@ export function FormBuilderList({ groups }: Props) {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className={cn('truncate text-sm font-medium', rowStage === 'confirm-delete' && 'text-destructive')}>
+                  <p className={cn('min-w-0 flex-1 truncate text-sm font-medium', rowStage === 'confirm-delete' && 'text-destructive')}>
                     {form.form_name}
                   </p>
                   {form.is_published ? (
