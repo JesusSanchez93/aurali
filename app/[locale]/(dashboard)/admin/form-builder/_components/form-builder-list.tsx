@@ -174,20 +174,18 @@ export function FormBuilderList({ groups }: Props) {
                 (rowStage === 'confirm-delete' || rowStage === 'confirm-duplicate') && '-translate-x-2',
               )}
             >
-              <div className="flex gap-4 items-center">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className={cn('truncate text-sm font-medium', rowStage === 'confirm-delete' && 'text-destructive')}>
-                      {form.form_name}
-                    </p>
-                    {form.is_published ? (
-                      <Badge className="text-[10px]">Publicado</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px]">Borrador</Badge>
-                    )}
-                  </div>
-                  <p className="truncate text-xs text-muted-foreground">Tipo de proceso: {form.workflow_template_name}</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className={cn('truncate text-sm font-medium', rowStage === 'confirm-delete' && 'text-destructive')}>
+                    {form.form_name}
+                  </p>
+                  {form.is_published ? (
+                    <Badge className="shrink-0 text-[10px]">Publicado</Badge>
+                  ) : (
+                    <Badge variant="outline" className="shrink-0 text-[10px]">Borrador</Badge>
+                  )}
                 </div>
+                <p className="truncate text-xs text-muted-foreground">Tipo de proceso: {form.workflow_template_name}</p>
                 <p className="truncate text-xs font-mono text-muted-foreground">{`{FORM_URL:${form.code}}`}</p>
               </div>
             </div>
