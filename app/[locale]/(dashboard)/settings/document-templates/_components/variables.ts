@@ -198,6 +198,51 @@ export const VARIABLE_GROUPS: Array<{ key: string; label: string; variables: Var
             { key: 'VACACIONES_PENDIENTES',     label: 'Vacaciones Pendientes' },
         ],
     },
+    // Flujo "Divorcios" (mutuo acuerdo ante notaría) — mismo mecanismo que
+    // `accidente`/`empleador`: resueltos por mergeDynamicFormResponses.
+    {
+        key: 'matrimonio',
+        label: 'Matrimonio',
+        variables: [
+            { key: 'FECHA',                  label: 'Fecha del Matrimonio' },
+            { key: 'NOTARIA_REGISTRO',       label: 'Notaría/Registro del Matrimonio' },
+            { key: 'NUMERO_ESCRITURA',       label: 'Número de Escritura/Registro Civil' },
+            { key: 'REGIMEN_PATRIMONIAL',    label: 'Régimen Patrimonial' },
+            { key: 'REGISTRO_CIVIL',         label: 'Registro Civil de Matrimonio' },
+        ],
+    },
+    {
+        key: 'conyuge',
+        label: 'Cónyuge',
+        variables: [
+            { key: 'NOMBRE',                    label: 'Nombre del Cónyuge' },
+            { key: 'DOCUMENTO',                 label: 'Documento del Cónyuge' },
+            { key: 'DIRECCION',                 label: 'Dirección del Cónyuge' },
+            { key: 'ACEPTA_MUTUO_ACUERDO',      label: '¿Cónyuge Acepta Mutuo Acuerdo?' },
+        ],
+    },
+    {
+        key: 'hijos',
+        label: 'Hijos y Custodia',
+        variables: [
+            { key: 'TIENE_MENORES',           label: '¿Tiene Hijos Menores?' },
+            { key: 'CANTIDAD',                label: 'Número de Hijos' },
+            { key: 'REGISTROS_CIVILES',       label: 'Registros Civiles de los Hijos' },
+            { key: 'ACUERDO_CUSTODIA',        label: 'Acuerdo de Custodia' },
+            { key: 'ACUERDO_VISITAS',         label: 'Acuerdo de Visitas' },
+            { key: 'CUOTA_ALIMENTOS',         label: 'Cuota de Alimentos' },
+            { key: 'ACUERDO_FIRMADO',         label: 'Acuerdo Firmado' },
+        ],
+    },
+    {
+        key: 'bienes',
+        label: 'Bienes y Sociedad Conyugal',
+        variables: [
+            { key: 'TIENE_BIENES',              label: '¿Hay Bienes en la Sociedad Conyugal?' },
+            { key: 'DESCRIPCION',               label: 'Descripción de los Bienes' },
+            { key: 'LIQUIDAR_MISMO_ACTO',       label: '¿Liquidar en el Mismo Acto?' },
+        ],
+    },
 ];
 
 /** Flat set of all static variable keys in GROUP.TYPE format — used for highlight validation */
