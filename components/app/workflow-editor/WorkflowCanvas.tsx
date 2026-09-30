@@ -19,22 +19,22 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { AlignCenterHorizontal, AlignCenterVertical, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlignCenterHorizontal, AlignCenterVertical, ChevronLeft, ChevronRight, Group, Ungroup } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { nodeTypes } from './nodes';
 import { GradientEdge } from './edges/GradientEdge';
 import { NODE_TYPES_CONFIG } from './node-config';
-import type { WorkflowNode, WorkflowEdge, WorkflowNodeType } from './types';
+import type { WorkflowNode, WorkflowEdge, WorkflowNodeType, CanvasNode } from './types';
 
 interface WorkflowCanvasProps {
-  nodes: WorkflowNode[];
+  nodes: CanvasNode[];
   edges: WorkflowEdge[];
-  onNodesChange: OnNodesChange<WorkflowNode>;
+  onNodesChange: OnNodesChange<CanvasNode>;
   onEdgesChange: OnEdgesChange<WorkflowEdge>;
   onConnect: OnConnect;
   onEdgeReconnect: (oldEdge: WorkflowEdge, newConnection: Connection) => void;
-  onNodeClick: (node: WorkflowNode) => void;
+  onNodeClick: (node: CanvasNode) => void;
   onAddNode: (node: WorkflowNode) => void;
   onPaneClick: () => void;
   readOnly?: boolean;
@@ -44,6 +44,13 @@ interface WorkflowCanvasProps {
   selectedNodeIds?: string[];
   onAlignX?: () => void;
   onAlignY?: () => void;
+  /** Agrupa la selección actual (2+ nodos, ninguno start/end ni ya agrupado). */
+  onGroup?: () => void;
+  /** Deshace un grupo, devolviendo sus hijos a posición absoluta. */
+  onUngroup?: (groupId: string) => void;
+  /** Se llama cuando se borran nodos (ej. tecla Delete) — usado para
+   *  promover a top-level los hijos de un grupo que se borró con ellos. */
+  onNodesDelete?: (deleted: CanvasNode[]) => void;
 }
 
 const edgeTypes = { bezier: GradientEdge };
@@ -163,6 +170,9 @@ export function WorkflowCanvas({
   selectedNodeIds = [],
   onAlignX,
   onAlignY,
+  onGroup,
+  onUngroup,
+  onNodesDelete,
 }: WorkflowCanvasProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -210,8 +220,9 @@ export function WorkflowCanvas({
         onReconnect={readOnly ? undefined : onEdgeReconnect}
         onDragOver={readOnly ? undefined : onDragOver}
         onDrop={readOnly ? undefined : onDrop}
-        onNodeClick={readOnly ? (_, node) => onNodeClick(node as WorkflowNode) : undefined}
-        onNodeDoubleClick={!readOnly ? (_, node) => onNodeClick(node as WorkflowNode) : undefined}
+        onNodeClick={readOnly ? (_, node) => onNodeClick(node as CanvasNode) : undefined}
+        onNodeDoubleClick={!readOnly ? (_, node) => onNodeClick(node as CanvasNode) : undefined}
+        onNodesDelete={readOnly ? undefined : onNodesDelete}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -234,23 +245,58 @@ export function WorkflowCanvas({
         panActivationKeyCode="Meta"
         proOptions={{ hideAttribution: true }}
       >
-        {!readOnly && selectedNodeIds.length >= 2 && (
-          <NodeToolbar
-            nodeId={selectedNodeIds}
-            isVisible
-            position={Position.Top}
-            className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 shadow-md"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <span className="pr-1 text-xs text-muted-foreground">{selectedNodeIds.length} nodos</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAlignY} title="Alinear horizontal">
-              <AlignCenterHorizontal className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAlignX} title="Alinear vertical">
-              <AlignCenterVertical className="h-4 w-4" />
-            </Button>
-          </NodeToolbar>
-        )}
+        {!readOnly && selectedNodeIds.length >= 1 && (() => {
+          const selected = nodes.filter((n) => selectedNodeIds.includes(n.id));
+          const showAlign = selected.length >= 2;
+          // Agrupar: 2+ nodos sueltos, sin Inicio/Fin ni nodos ya agrupados —
+          // más estricto que showAlign, que sigue disponible para cualquier
+          // selección de 2+ (comportamiento preexistente, sin cambios).
+          const canGroup =
+            showAlign &&
+            selected.every((n) => n.type !== 'group' && !n.parentId && n.type !== 'start' && n.type !== 'end');
+          // Desagrupar: exactamente un grupo seleccionado.
+          const ungroupTarget = selected.length === 1 && selected[0].type === 'group' ? selected[0].id : null;
+
+          if (!showAlign && !ungroupTarget) return null;
+
+          return (
+            <NodeToolbar
+              nodeId={selectedNodeIds}
+              isVisible
+              position={Position.Top}
+              className="flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 shadow-md"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {showAlign && (
+                <>
+                  <span className="pr-1 text-xs text-muted-foreground">{selectedNodeIds.length} nodos</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAlignY} title="Alinear horizontal">
+                    <AlignCenterHorizontal className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAlignX} title="Alinear vertical">
+                    <AlignCenterVertical className="h-4 w-4" />
+                  </Button>
+                  {canGroup && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onGroup} title="Agrupar">
+                      <Group className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
+              )}
+              {ungroupTarget && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => onUngroup?.(ungroupTarget)}
+                  title="Desagrupar"
+                >
+                  <Ungroup className="h-4 w-4" />
+                </Button>
+              )}
+            </NodeToolbar>
+          );
+        })()}
         <Background
           variant={BackgroundVariant.Dots}
           gap={16}
@@ -258,10 +304,15 @@ export function WorkflowCanvas({
           className="opacity-50"
           color="hsl(var(--muted-foreground))"
         />
-        {readOnly ? <NodeStepper nodes={nodes} /> : <Controls className="rounded-lg border bg-card shadow-sm" />}
+        {readOnly ? (
+          <NodeStepper nodes={nodes.filter((n): n is WorkflowNode => n.type !== 'group')} />
+        ) : (
+          <Controls className="rounded-lg border bg-card shadow-sm" />
+        )}
         {!readOnly && (
           <MiniMap
             nodeColor={(node) => {
+              if (node.type === 'group') return '#94a3b8';
               const cfg = NODE_TYPES_CONFIG[(node.type ?? 'manual_action') as WorkflowNodeType];
               // Extract the actual color from the tailwind class (fallback to indigo)
               const colorMap: Record<string, string> = {

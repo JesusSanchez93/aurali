@@ -22,7 +22,7 @@ import { WorkflowCanvas } from './WorkflowCanvas';
 import { NodeSidebar } from './NodeSidebar';
 import { NodeConfigPanel } from './NodeConfigPanel';
 import { NodeEditDialog, type EmailNodeEditConfig } from './NodeEditDialog';
-import type { WorkflowNode, WorkflowEdge, WorkflowNodeType } from './types';
+import type { WorkflowNode, WorkflowEdge, WorkflowNodeType, CanvasNode, GroupNode } from './types';
 import { NODE_TYPES_CONFIG } from './node-config';
 import { saveWorkflow } from '@/app/[locale]/(dashboard)/settings/workflows/[id]/actions';
 
@@ -34,12 +34,12 @@ const EDITABLE_NODE_TYPES: WorkflowNodeType[] = ['send_email', 'send_documents']
 interface WorkflowEditorProps {
   templateId: string;
   templateName: string;
-  initialNodes: WorkflowNode[];
+  initialNodes: CanvasNode[];
   initialEdges: WorkflowEdge[];
   /** When true, all editing controls are hidden and no mutations are allowed. */
   readOnly?: boolean;
   /** Custom save action. Defaults to the settings-page saveWorkflow. */
-  onSave?: (templateId: string, nodes: WorkflowNode[], edges: WorkflowEdge[]) => Promise<void>;
+  onSave?: (templateId: string, nodes: CanvasNode[], edges: WorkflowEdge[]) => Promise<void>;
   /** URL for the back-arrow button. Defaults to /settings/workflows. */
   backHref?: string;
   /** Extra classes for the top bar (e.g. hide it at some breakpoints). */
@@ -66,7 +66,7 @@ function WorkflowEditorInner({
   headerClassName,
   onNodeEdit,
 }: WorkflowEditorProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(initialEdges);
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   const [editNode, setEditNode] = useState<WorkflowNode | null>(null);
@@ -100,7 +100,7 @@ function WorkflowEditorInner({
       // Update local node state so the dialog shows fresh data on reopen
       setNodes((nds) =>
         nds.map((n) =>
-          n.id === nodeId
+          n.id === nodeId && n.type !== 'group'
             ? { ...n, data: { ...n.data, config: { ...(n.data.config as object), ...config } } }
             : n,
         ),
@@ -116,7 +116,11 @@ function WorkflowEditorInner({
   );
 
   const onNodeClick = useCallback(
-    (node: WorkflowNode) => {
+    (node: CanvasNode) => {
+      // Los grupos son puramente visuales — no tienen config que editar, así
+      // que el doble-click no debe abrir el panel de configuración (que
+      // asume WorkflowNodeData/NODE_TYPES_CONFIG y rompería con un grupo).
+      if (node.type === 'group') return;
       if (readOnly && onNodeEdit && EDITABLE_NODE_TYPES.includes(node.data.type as WorkflowNodeType)) {
         setEditNode(node);
       } else {
@@ -136,7 +140,7 @@ function WorkflowEditorInner({
   const onUpdateNode = useCallback(
     (id: string, data: Partial<WorkflowNode['data']>) => {
       setNodes((nds) =>
-        nds.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...data } } : n)),
+        nds.map((n) => (n.id === id && n.type !== 'group' ? { ...n, data: { ...n.data, ...data } } : n)),
       );
       setSelectedNode((prev) =>
         prev?.id === id ? { ...prev, data: { ...prev.data, ...data } } : prev,
@@ -147,13 +151,17 @@ function WorkflowEditorInner({
 
   const displayNodes = useMemo(
     () => readOnly
-      ? nodes.map((n) => ({
-          ...n,
-          data: {
-            ...n.data,
-            dimmed: !EDITABLE_NODE_TYPES.includes(n.data.type as WorkflowNodeType),
-          },
-        }))
+      ? nodes.map((n) =>
+          n.type === 'group'
+            ? n
+            : {
+                ...n,
+                data: {
+                  ...n.data,
+                  dimmed: !EDITABLE_NODE_TYPES.includes(n.data.type as WorkflowNodeType),
+                },
+              },
+        )
       : nodes,
     [nodes, readOnly],
   );
@@ -191,6 +199,126 @@ function WorkflowEditorInner({
 
   const alignY = makeAlignFn('y', 'avg');
   const alignX = makeAlignFn('x', 'avg');
+
+  // Agrupar: envuelve la selección en un nodo contenedor (type: 'group') y
+  // reparenta los nodos seleccionados con posición RELATIVA al grupo — el
+  // mecanismo estándar de React Flow (parentId + extent: 'parent'). Es
+  // puramente visual: no toca lib/workflow/, que nunca ve este nodo (vive en
+  // su propia tabla workflow_node_groups, ver Save/Load de este template).
+  const onGroup = useCallback(() => {
+    const ids = new Set(selectedIdsRef.current);
+    if (ids.size < 2) return;
+
+    setNodes((current) => {
+      const selected = current.filter((n) => ids.has(n.id));
+      const invalid = selected.some(
+        (n) => n.type === 'group' || n.parentId || n.type === 'start' || n.type === 'end',
+      );
+      if (invalid) {
+        toast.error('No se puede agrupar esta selección', {
+          description: 'Inicio, Fin y los nodos que ya están en un grupo no se pueden agrupar.',
+        });
+        return current;
+      }
+
+      const PADDING = 40;
+      const HEADER = 32;
+      const DEFAULT_W = 220;
+      const DEFAULT_H = 90;
+
+      const bounds = selected.reduce(
+        (acc, n) => {
+          const w = n.measured?.width ?? n.width ?? DEFAULT_W;
+          const h = n.measured?.height ?? n.height ?? DEFAULT_H;
+          return {
+            minX: Math.min(acc.minX, n.position.x),
+            minY: Math.min(acc.minY, n.position.y),
+            maxX: Math.max(acc.maxX, n.position.x + w),
+            maxY: Math.max(acc.maxY, n.position.y + h),
+          };
+        },
+        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+      );
+
+      const groupPosition = { x: bounds.minX - PADDING, y: bounds.minY - PADDING - HEADER };
+      const groupId = `group-${Date.now()}`;
+      const groupNode: GroupNode = {
+        id: groupId,
+        type: 'group',
+        position: groupPosition,
+        style: {
+          width: bounds.maxX - bounds.minX + PADDING * 2,
+          height: bounds.maxY - bounds.minY + PADDING * 2 + HEADER,
+        },
+        data: { nodeId: groupId, title: 'Grupo' },
+        selected: false,
+      };
+
+      // El nodo padre debe ir antes que sus hijos en el array (requisito de
+      // React Flow) — de ahí el prepend en vez de insertarlo en su lugar.
+      const reparented = current.map((n) =>
+        ids.has(n.id)
+          ? {
+              ...n,
+              parentId: groupId,
+              extent: 'parent' as const,
+              position: { x: n.position.x - groupPosition.x, y: n.position.y - groupPosition.y },
+              selected: false,
+            }
+          : n,
+      );
+
+      return [groupNode, ...reparented];
+    });
+  }, [setNodes]);
+
+  // Desagrupar: convierte la posición de cada hijo de relativa a absoluta y
+  // quita el nodo de grupo — los hijos quedan sueltos exactamente donde se veían.
+  const onUngroup = useCallback(
+    (groupId: string) => {
+      setNodes((current) => {
+        const group = current.find((n) => n.id === groupId && n.type === 'group');
+        if (!group) return current;
+
+        return current
+          .filter((n) => n.id !== groupId)
+          .map((n) => {
+            if (n.parentId !== groupId) return n;
+            const { parentId: _parentId, extent: _extent, ...rest } = n;
+            return {
+              ...rest,
+              position: { x: n.position.x + group.position.x, y: n.position.y + group.position.y },
+            };
+          });
+      });
+    },
+    [setNodes],
+  );
+
+  // Si se borra un grupo (tecla Delete/Backspace con el grupo seleccionado),
+  // sus hijos no se borran con él — quedan con un parentId colgando que RF
+  // ya no puede resolver. Se promueven a top-level con la misma conversión
+  // relativa→absoluta que onUngroup, usando la posición del grupo tal como
+  // estaba justo antes de borrarse (el argumento `deleted` de onNodesDelete).
+  const onNodesDelete = useCallback(
+    (deleted: CanvasNode[]) => {
+      const deletedGroups = deleted.filter((n): n is GroupNode => n.type === 'group');
+      if (deletedGroups.length === 0) return;
+
+      setNodes((current) =>
+        current.map((n) => {
+          const group = n.parentId ? deletedGroups.find((g) => g.id === n.parentId) : undefined;
+          if (!group) return n;
+          const { parentId: _parentId, extent: _extent, ...rest } = n;
+          return {
+            ...rest,
+            position: { x: n.position.x + group.position.x, y: n.position.y + group.position.y },
+          };
+        }),
+      );
+    },
+    [setNodes],
+  );
 
   const onDragStart = useCallback((event: React.DragEvent, nodeType: WorkflowNodeType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
@@ -273,6 +401,9 @@ function WorkflowEditorInner({
             selectedNodeIds={selectedNodes.map((n) => n.id)}
             onAlignX={alignX}
             onAlignY={alignY}
+            onGroup={onGroup}
+            onUngroup={onUngroup}
+            onNodesDelete={onNodesDelete}
           />
         </main>
 
@@ -281,9 +412,12 @@ function WorkflowEditorInner({
       {!readOnly && selectedNode && (() => {
         const cfg = NODE_TYPES_CONFIG[selectedNode.data.type as WorkflowNodeType];
         const Icon = ((LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[cfg.icon]) ?? LucideIcons.Circle;
-        const currentIndex = nodes.findIndex((n) => n.id === selectedNode.id);
-        const prevNode = currentIndex > 0 ? nodes[currentIndex - 1] : null;
-        const nextNode = currentIndex < nodes.length - 1 ? nodes[currentIndex + 1] : null;
+        // Los grupos no tienen panel de configuración — se excluyen de la
+        // navegación anterior/siguiente del Sheet (y de su contador).
+        const configurableNodes = nodes.filter((n): n is WorkflowNode => n.type !== 'group');
+        const currentIndex = configurableNodes.findIndex((n) => n.id === selectedNode.id);
+        const prevNode = currentIndex > 0 ? configurableNodes[currentIndex - 1] : null;
+        const nextNode = currentIndex < configurableNodes.length - 1 ? configurableNodes[currentIndex + 1] : null;
 
         return (
           <Sheet
@@ -314,7 +448,7 @@ function WorkflowEditorInner({
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="w-10 text-center text-xs tabular-nums text-muted-foreground">
-                    {currentIndex + 1}/{nodes.length}
+                    {currentIndex + 1}/{configurableNodes.length}
                   </span>
                   <Button
                     variant="ghost"
@@ -333,7 +467,7 @@ function WorkflowEditorInner({
                 key={selectedNode.id}
                 node={selectedNode}
                 edges={edges}
-                allNodes={nodes}
+                allNodes={nodes.filter((n): n is WorkflowNode => n.type !== 'group')}
                 onUpdate={onUpdateNode}
                 onClose={() => setSelectedNode(null)}
               />

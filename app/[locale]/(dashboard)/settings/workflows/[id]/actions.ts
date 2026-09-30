@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/permissions';
-import type { WorkflowNode, WorkflowEdge } from '@/components/app/workflow-editor/types';
+import type { CanvasNode, WorkflowNode, GroupNode, WorkflowEdge } from '@/components/app/workflow-editor/types';
 
 // Raw DB row shapes — matches the migration schema.
 // Using explicit types here because the Supabase generated types
@@ -16,7 +16,19 @@ interface DbWorkflowNode {
   config: Record<string, unknown>;
   position_x: number;
   position_y: number;
+  parent_group_id: string | null;
   created_at: string;
+}
+
+interface DbWorkflowGroup {
+  id: string;
+  template_id: string;
+  group_id: string;
+  title: string;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
 }
 
 interface DbWorkflowEdge {
@@ -29,13 +41,13 @@ interface DbWorkflowEdge {
 
 export async function loadWorkflow(
   templateId: string,
-): Promise<{ nodes: WorkflowNode[]; edges: WorkflowEdge[] }> {
+): Promise<{ nodes: CanvasNode[]; edges: WorkflowEdge[] }> {
   const supabase = await createClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
 
-  const [{ data: dbNodes, error: nodesErr }, { data: dbEdges, error: edgesErr }] =
+  const [{ data: dbNodes, error: nodesErr }, { data: dbGroups, error: groupsErr }, { data: dbEdges, error: edgesErr }] =
     await Promise.all([
       db
         .from('workflow_nodes')
@@ -43,6 +55,13 @@ export async function loadWorkflow(
         .eq('template_id', templateId)
         .order('created_at', { ascending: true }) as Promise<{
         data: DbWorkflowNode[] | null;
+        error: { message: string } | null;
+      }>,
+      db
+        .from('workflow_node_groups')
+        .select('*')
+        .eq('template_id', templateId) as Promise<{
+        data: DbWorkflowGroup[] | null;
         error: { message: string } | null;
       }>,
       db
@@ -55,12 +74,24 @@ export async function loadWorkflow(
     ]);
 
   if (nodesErr) throw new Error(nodesErr.message);
+  if (groupsErr) throw new Error(groupsErr.message);
   if (edgesErr) throw new Error(edgesErr.message);
 
-  const nodes: WorkflowNode[] = (dbNodes ?? []).map((n) => ({
+  // Los grupos van primero — React Flow exige que un nodo padre aparezca
+  // antes que sus hijos en el arreglo `nodes`.
+  const groupNodes: GroupNode[] = (dbGroups ?? []).map((g) => ({
+    id: g.group_id,
+    type: 'group',
+    position: { x: g.position_x, y: g.position_y },
+    style: { width: g.width, height: g.height },
+    data: { nodeId: g.group_id, title: g.title },
+  }));
+
+  const workflowNodes: WorkflowNode[] = (dbNodes ?? []).map((n) => ({
     id: n.node_id,
     type: n.type as WorkflowNode['type'],
     position: { x: n.position_x, y: n.position_y },
+    ...(n.parent_group_id ? { parentId: n.parent_group_id, extent: 'parent' as const } : {}),
     data: {
       nodeId: n.node_id,
       type: n.type as WorkflowNode['data']['type'],
@@ -79,12 +110,12 @@ export async function loadWorkflow(
     data: (e.condition as WorkflowEdge['data']) ?? undefined,
   }));
 
-  return { nodes, edges };
+  return { nodes: [...groupNodes, ...workflowNodes], edges };
 }
 
 export async function saveWorkflow(
   templateId: string,
-  nodes: WorkflowNode[],
+  nodes: CanvasNode[],
   edges: WorkflowEdge[],
 ): Promise<void> {
   await requireAuth();
@@ -92,18 +123,44 @@ export async function saveWorkflow(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any;
 
-  // Delete existing nodes — FK cascade removes edges automatically
-  const { error: delErr } = await db
+  const groupNodes = nodes.filter((n): n is GroupNode => n.type === 'group');
+  const plainNodes = nodes.filter((n): n is WorkflowNode => n.type !== 'group');
+
+  // Delete existing nodes/groups — FK cascade removes edges automatically.
+  // Nodos primero (referencian a grupos vía parent_group_id).
+  const { error: delNodesErr } = await db
     .from('workflow_nodes')
     .delete()
     .eq('template_id', templateId);
+  if (delNodesErr) throw new Error((delNodesErr as { message: string }).message);
 
-  if (delErr) throw new Error((delErr as { message: string }).message);
+  const { error: delGroupsErr } = await db
+    .from('workflow_node_groups')
+    .delete()
+    .eq('template_id', templateId);
+  if (delGroupsErr) throw new Error((delGroupsErr as { message: string }).message);
+
+  // Insert groups antes que nodos — la FK fk_node_parent_group necesita que
+  // el grupo ya exista cuando se inserta un nodo con parent_group_id.
+  if (groupNodes.length > 0) {
+    const { error: groupsErr } = await db.from('workflow_node_groups').insert(
+      groupNodes.map((g) => ({
+        template_id: templateId,
+        group_id: g.id,
+        title: g.data.title,
+        position_x: g.position.x,
+        position_y: g.position.y,
+        width: typeof g.style?.width === 'number' ? g.style.width : 240,
+        height: typeof g.style?.height === 'number' ? g.style.height : 160,
+      })),
+    );
+    if (groupsErr) throw new Error((groupsErr as { message: string }).message);
+  }
 
   // Insert nodes
-  if (nodes.length > 0) {
+  if (plainNodes.length > 0) {
     const { error: nodesErr } = await db.from('workflow_nodes').insert(
-      nodes.map((n) => ({
+      plainNodes.map((n) => ({
         template_id: templateId,
         node_id: n.id,
         type: n.type,
@@ -111,6 +168,7 @@ export async function saveWorkflow(
         config: (n.data.config as object) ?? {},
         position_x: n.position.x,
         position_y: n.position.y,
+        parent_group_id: n.parentId ?? null,
       })),
     );
     if (nodesErr) throw new Error((nodesErr as { message: string }).message);

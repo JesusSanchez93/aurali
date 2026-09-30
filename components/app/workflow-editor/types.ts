@@ -21,6 +21,22 @@ export interface WorkflowNodeData extends Record<string, unknown> {
 
 export type WorkflowNode = Node<WorkflowNodeData, WorkflowNodeType>;
 
+/**
+ * Contenedor visual (estilo React Flow sub-flows) para agrupar nodos en el
+ * lienzo — puramente organizativo, nunca se persiste en workflow_nodes ni
+ * llega al motor de ejecución (lib/workflow/), que solo conoce
+ * WorkflowNodeType. Vive en su propia tabla (workflow_node_groups).
+ */
+export interface GroupNodeData extends Record<string, unknown> {
+  nodeId: string;
+  title: string;
+}
+
+export type GroupNode = Node<GroupNodeData, 'group'>;
+
+/** Todo lo que puede vivir en el arreglo `nodes` del lienzo. */
+export type CanvasNode = WorkflowNode | GroupNode;
+
 export interface EdgeCondition extends Record<string, unknown> {
   field?: string;
   operator?: 'eq' | 'neq' | 'gt' | 'lt' | 'contains';

@@ -1,5 +1,6 @@
 import type { NodeTypes } from '@xyflow/react';
 import { CustomNode } from './CustomNode';
+import { GroupNode } from './GroupNode';
 
 export const nodeTypes: NodeTypes = {
   start: CustomNode,
@@ -12,4 +13,5 @@ export const nodeTypes: NodeTypes = {
   notify_lawyer: CustomNode,
   manual_action: CustomNode,
   end: CustomNode,
+  group: GroupNode,
 };
