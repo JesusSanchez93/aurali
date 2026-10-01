@@ -839,9 +839,11 @@ export type Database = {
           deadline_at: string
           google_thread_id: string | null
           id: string
+          last_reminder_sent_at: string | null
           legal_process_id: string
           node_id: string
           organization_id: string
+          reminder_sent_count: number
           reply_token: string | null
           requires_attachments: boolean
           requires_receipt: boolean
@@ -859,9 +861,11 @@ export type Database = {
           deadline_at: string
           google_thread_id?: string | null
           id?: string
+          last_reminder_sent_at?: string | null
           legal_process_id: string
           node_id: string
           organization_id: string
+          reminder_sent_count?: number
           reply_token?: string | null
           requires_attachments?: boolean
           requires_receipt?: boolean
@@ -879,9 +883,11 @@ export type Database = {
           deadline_at?: string
           google_thread_id?: string | null
           id?: string
+          last_reminder_sent_at?: string | null
           legal_process_id?: string
           node_id?: string
           organization_id?: string
+          reminder_sent_count?: number
           reply_token?: string | null
           requires_attachments?: boolean
           requires_receipt?: boolean
