@@ -2051,6 +2051,73 @@ export type Database = {
           },
         ]
       }
+      organization_subscriptions: {
+        Row: {
+          agreed_price_cents: number | null
+          billing_cycle: string
+          created_at: string
+          created_by: string | null
+          current_period_end: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          plan_id: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          agreed_price_cents?: number | null
+          billing_cycle?: string
+          created_at?: string
+          created_by?: string | null
+          current_period_end?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          plan_id: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agreed_price_cents?: number | null
+          billing_cycle?: string
+          created_at?: string
+          created_by?: string | null
+          current_period_end?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          plan_id?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_subscriptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_workflows: {
         Row: {
           assigned_at: string
@@ -2147,31 +2214,55 @@ export type Database = {
       }
       plans: {
         Row: {
+          code: string | null
           created_at: string
           features: Json | null
           id: string
+          list_price_monthly_cents: number | null
+          max_monthly_ai_uses: number | null
+          max_monthly_processes: number | null
+          max_storage_gb: number | null
           max_templates: number | null
           max_users: number | null
+          max_workflows: number | null
           name: string | null
+          price_monthly_cents: number | null
           stripe_price_id: string | null
+          updated_at: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           features?: Json | null
           id?: string
+          list_price_monthly_cents?: number | null
+          max_monthly_ai_uses?: number | null
+          max_monthly_processes?: number | null
+          max_storage_gb?: number | null
           max_templates?: number | null
           max_users?: number | null
+          max_workflows?: number | null
           name?: string | null
+          price_monthly_cents?: number | null
           stripe_price_id?: string | null
+          updated_at?: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           features?: Json | null
           id?: string
+          list_price_monthly_cents?: number | null
+          max_monthly_ai_uses?: number | null
+          max_monthly_processes?: number | null
+          max_storage_gb?: number | null
           max_templates?: number | null
           max_users?: number | null
+          max_workflows?: number | null
           name?: string | null
+          price_monthly_cents?: number | null
           stripe_price_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2238,6 +2329,82 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_payments: {
+        Row: {
+          amount_cop: number | null
+          amount_usd_cents: number
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_number: string | null
+          method: string
+          notes: string | null
+          organization_id: string
+          paid_at: string
+          period_end: string | null
+          period_start: string | null
+          reference: string | null
+          subscription_id: string
+          trm_used: number | null
+        }
+        Insert: {
+          amount_cop?: number | null
+          amount_usd_cents: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_number?: string | null
+          method?: string
+          notes?: string | null
+          organization_id: string
+          paid_at?: string
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          subscription_id: string
+          trm_used?: number | null
+        }
+        Update: {
+          amount_cop?: number | null
+          amount_usd_cents?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_number?: string | null
+          method?: string
+          notes?: string | null
+          organization_id?: string
+          paid_at?: string
+          period_end?: string | null
+          period_start?: string | null
+          reference?: string | null
+          subscription_id?: string
+          trm_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "organization_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean
@@ -2288,6 +2455,44 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_monthly: {
+        Row: {
+          created_at: string
+          id: string
+          metric: string
+          organization_id: string
+          period: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metric: string
+          organization_id: string
+          period: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metric?: string
+          organization_id?: string
+          period?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_monthly_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2347,12 +2552,57 @@ export type Database = {
           },
         ]
       }
+      workflow_node_groups: {
+        Row: {
+          created_at: string
+          group_id: string
+          height: number
+          id: string
+          position_x: number
+          position_y: number
+          template_id: string
+          title: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          height?: number
+          id?: string
+          position_x?: number
+          position_y?: number
+          template_id: string
+          title?: string
+          width?: number
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          height?: number
+          id?: string
+          position_x?: number
+          position_y?: number
+          template_id?: string
+          title?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_node_groups_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_nodes: {
         Row: {
           config: Json
           created_at: string
           id: string
           node_id: string
+          parent_group_id: string | null
           position_x: number
           position_y: number
           template_id: string
@@ -2364,6 +2614,7 @@ export type Database = {
           created_at?: string
           id?: string
           node_id: string
+          parent_group_id?: string | null
           position_x?: number
           position_y?: number
           template_id: string
@@ -2375,6 +2626,7 @@ export type Database = {
           created_at?: string
           id?: string
           node_id?: string
+          parent_group_id?: string | null
           position_x?: number
           position_y?: number
           template_id?: string
@@ -2382,6 +2634,13 @@ export type Database = {
           type?: Database["public"]["Enums"]["workflow_node_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_node_parent_group"
+            columns: ["template_id", "parent_group_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_node_groups"
+            referencedColumns: ["template_id", "group_id"]
+          },
           {
             foreignKeyName: "workflow_nodes_template_id_fkey"
             columns: ["template_id"]
@@ -2579,6 +2838,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      increment_usage: {
+        Args: {
+          p_metric: string
+          p_n?: number
+          p_organization_id: string
+          p_period: string
+        }
+        Returns: number
+      }
       is_active_legal_process_path: {
         Args: { object_name: string }
         Returns: boolean
