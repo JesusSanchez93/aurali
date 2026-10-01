@@ -317,13 +317,16 @@ async function sendEmail(
   ctaLabel?: string,
   replyTo?: string,
   messageId?: string,
+  /** true cuando `to` es (solo) el cliente del proceso — exige el correo
+   *  propio de la organización, sin caer al remitente interno de Aurali. */
+  strict = false,
 ): Promise<SendEmailResult> {
   if (!organizationId) {
     logger.error('sendEmail: missing organizationId, cannot resolve org email provider', undefined, { subject, to });
     throw new Error('El proceso legal no tiene organization_id');
   }
   try {
-    return await sendOrgEmail(organizationId, { to, subject, bodyHtml, ctaUrl, ctaLabel, attachments, replyTo, messageId });
+    return await sendOrgEmail(organizationId, { to, subject, bodyHtml, ctaUrl, ctaLabel, attachments, replyTo, messageId }, { strict });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error('Org email send failed', undefined, { subject, errorMessage: message });
@@ -517,6 +520,15 @@ async function executeSendEmail(
     to = substituteVars(cfg.to ?? '', context).trim();
   }
 
+  // Un solo correo con el cliente entre los destinatarios (en el campo "to")
+  // debe salir del correo propio de la organización — no se puede enviar la
+  // misma copia por un proveedor para el cliente y por otro para
+  // abogado/tercero. Si `recipients` no incluye 'client' explícitamente es
+  // puramente interno y puede usar el fallback de Aurali; el campo de texto
+  // libre legado (`cfg.to`, sin `recipients`) por defecto apunta al cliente
+  // ({PROCESS.EMAIL}), así que se trata como estricto también.
+  const strictSend = !Array.isArray(cfg.recipients) || cfg.recipients.includes('client');
+
   const subject = substituteVars(cfg.subject ?? '(Sin asunto)', context);
 
   if (!to) {
@@ -594,6 +606,7 @@ async function executeSendEmail(
     undefined,
     undefined,
     captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
+    strictSend,
   );
 
   void (supabase as SupabaseClient & Record<string, unknown>).from('audit_logs').insert({
@@ -730,6 +743,12 @@ async function executeNotifyLawyer(
       context.legalProcess.email,
       'Actualización de tu proceso legal',
       `<p>${resolvedMessage.replace(/\n/g, '<br>')}</p>`,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      true,
     );
     notified.push(context.legalProcess.email);
   }
@@ -1476,6 +1495,7 @@ async function executeSendDocuments(
       undefined,
       undefined,
       captureMode === 'imap' ? buildTrackingMessageId(replyToken!) : undefined,
+      true,
     );
   } catch (err) {
     return { status: 'failed', output: {}, error: err instanceof Error ? err.message : String(err) };

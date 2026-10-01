@@ -142,7 +142,7 @@ async function processFollowUp(followUp: EmailFollowUpRow, supabase: SupabaseCli
   const subject = substituteVars(cfg.reminder_subject || cfg.subject || '(Recordatorio)', context);
   const bodyHtml = substituteVars(resolveBodyHtml(cfg.reminder_body ?? cfg.body), context);
 
-  await sendOrgEmail(followUp.organization_id, { to: followUp.to_email, subject, bodyHtml });
+  await sendOrgEmail(followUp.organization_id, { to: followUp.to_email, subject, bodyHtml }, { strict: true });
   return 'sent';
 }
 

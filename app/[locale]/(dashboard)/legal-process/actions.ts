@@ -925,12 +925,16 @@ export async function notifyRejectedEmailAttachmentsAction(legalProcessId: strin
   const originalSubject = rejectedAttachments.find((a) => a.subject)?.subject;
   const subject = originalSubject ? `Re: ${originalSubject}` : 'Debes corregir uno o más documentos enviados';
 
-  await sendOrgEmail(organizationId, {
-    to: toEmail,
-    subject,
-    bodyHtml,
-    messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken) : undefined,
-  });
+  await sendOrgEmail(
+    organizationId,
+    {
+      to: toEmail,
+      subject,
+      bodyHtml,
+      messageId: captureMode === 'imap' ? buildTrackingMessageId(replyToken) : undefined,
+    },
+    { strict: true },
+  );
 
   const notifiedIds = rejectedAttachments.map((a) => a.id);
   await supabase
@@ -2005,13 +2009,17 @@ export async function resendDraftEmail(legalProcessId: string): Promise<void> {
     }
   }
 
-  await sendOrgEmail(lp.organization_id, {
-    to: toEmail,
-    subject,
-    bodyHtml,
-    ctaUrl,
-    ctaLabel: 'Completar formulario →',
-  });
+  await sendOrgEmail(
+    lp.organization_id,
+    {
+      to: toEmail,
+      subject,
+      bodyHtml,
+      ctaUrl,
+      ctaLabel: 'Completar formulario →',
+    },
+    { strict: true },
+  );
 
   void supabase.from('audit_logs').insert({
     organization_id: lp.organization_id,

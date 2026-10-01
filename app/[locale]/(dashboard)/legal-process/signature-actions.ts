@@ -148,11 +148,15 @@ export async function approveSignedDocumentAction(itemId: string, legalProcessId
     .single();
 
   if (request?.status === 'approved') {
-    await sendOrgEmail(request.organization_id, {
-      to: request.client_email,
-      subject: 'Tus documentos firmados fueron aprobados',
-      bodyHtml: '<p>Confirmamos que tus documentos firmados fueron revisados y aprobados. No necesitas realizar ninguna acción adicional.</p>',
-    });
+    await sendOrgEmail(
+      request.organization_id,
+      {
+        to: request.client_email,
+        subject: 'Tus documentos firmados fueron aprobados',
+        bodyHtml: '<p>Confirmamos que tus documentos firmados fueron revisados y aprobados. No necesitas realizar ninguna acción adicional.</p>',
+      },
+      { strict: true },
+    );
   }
 
   await supabase.from('audit_logs').insert({
@@ -210,13 +214,17 @@ export async function rejectSignedDocumentAction(
       : '';
     const signUrl = `${process.env.NEXT_PUBLIC_APP_URL}/legal-process/sign-documents/validate-token?token=${request.access_token}`;
 
-    await sendOrgEmail(request.organization_id, {
-      to: request.client_email,
-      subject: 'Debes corregir un documento firmado',
-      bodyHtml: `<p>Uno de tus documentos firmados fue rechazado y debes volver a subirlo.</p>${reasonHtml}`,
-      ctaUrl: signUrl,
-      ctaLabel: 'Volver a subir →',
-    });
+    await sendOrgEmail(
+      request.organization_id,
+      {
+        to: request.client_email,
+        subject: 'Debes corregir un documento firmado',
+        bodyHtml: `<p>Uno de tus documentos firmados fue rechazado y debes volver a subirlo.</p>${reasonHtml}`,
+        ctaUrl: signUrl,
+        ctaLabel: 'Volver a subir →',
+      },
+      { strict: true },
+    );
   }
 
   await supabase.from('audit_logs').insert({
@@ -330,12 +338,16 @@ async function resendSignaturePortalEmail(
     )
   ).filter((a): a is EmailAttachment => a !== null);
 
-  await sendOrgEmail(existingRequest.organization_id, {
-    to: existingRequest.client_email,
-    subject: emailSubject,
-    bodyHtml: emailIntroHtml,
-    attachments: attachments.length ? attachments : undefined,
-  });
+  await sendOrgEmail(
+    existingRequest.organization_id,
+    {
+      to: existingRequest.client_email,
+      subject: emailSubject,
+      bodyHtml: emailIntroHtml,
+      attachments: attachments.length ? attachments : undefined,
+    },
+    { strict: true },
+  );
 
   await supabase.from('audit_logs').insert({
     organization_id: existingRequest.organization_id,
@@ -415,12 +427,16 @@ async function resendAttachedDocumentsEmail(
     attachments.push({ filename: `${baseName}.pdf`, content: Buffer.from(await res.arrayBuffer()) });
   }
 
-  await sendOrgEmail(legalProcess.organization_id, {
-    to: toEmail,
-    subject,
-    bodyHtml,
-    attachments,
-  });
+  await sendOrgEmail(
+    legalProcess.organization_id,
+    {
+      to: toEmail,
+      subject,
+      bodyHtml,
+      attachments,
+    },
+    { strict: true },
+  );
 
   await supabase.from('audit_logs').insert({
     organization_id: legalProcess.organization_id,

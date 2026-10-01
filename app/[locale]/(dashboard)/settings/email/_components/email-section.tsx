@@ -20,7 +20,7 @@ const PROVIDER_LABEL: Record<string, string> = {
   google: 'Google Workspace',
   microsoft: 'Microsoft 365',
   smtp: 'SMTP',
-  aurali: 'Aurali',
+  aurali: 'No conectado',
 };
 
 const SECURITY_LABEL: Record<string, string> = {
@@ -112,7 +112,7 @@ export function EmailSection({ initialConnection, locale }: Props) {
         await disconnectEmailConnection();
         setConnection(DEFAULT_AURALI);
         router.refresh();
-        toast.success('Correo desconectado. Aurali usará su correo interno.');
+        toast.success('Correo desconectado.');
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Error al desconectar el correo');
       }
@@ -208,24 +208,24 @@ export function EmailSection({ initialConnection, locale }: Props) {
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">
-                      {isConnected ? 'Correo de tu organización' : 'Correo de Aurali'}
+                      {isConnected ? 'Correo de tu organización' : 'Correo no conectado'}
                     </span>
                     <Badge
                       variant={isConnected ? 'default' : 'secondary'}
                       className={isConnected ? 'gap-1 bg-emerald-600 hover:bg-emerald-600/90' : 'gap-1'}
                     >
                       {isConnected && <CheckCircle2 className="h-3 w-3" />}
-                      {isConnected ? 'Conectado' : 'Predeterminado'}
+                      {isConnected ? 'Conectado' : 'No conectado'}
                     </Badge>
                     {isConnected && (
                       <span className="text-xs text-muted-foreground">{PROVIDER_LABEL[connection.provider]}</span>
                     )}
                   </div>
-                  <p className="font-mono text-sm text-muted-foreground">{connection.email}</p>
+                  {isConnected && <p className="font-mono text-sm text-muted-foreground">{connection.email}</p>}
                   <p className="text-sm text-muted-foreground">
                     {isConnected
                       ? 'Las comunicaciones de tus procesos utilizarán este correo.'
-                      : 'Actualmente Aurali utiliza su correo interno para enviar las comunicaciones de tu organización.'}
+                      : 'Conecta tu correo para poder enviar comunicaciones a tus clientes — Aurali no envía en nombre de tu organización.'}
                   </p>
                 </div>
               </div>
@@ -360,7 +360,7 @@ export function EmailSection({ initialConnection, locale }: Props) {
         onClose={() => setConfirmDisconnectOpen(false)}
         onConfirm={handleDisconnect}
         title="¿Desconectar este correo?"
-        description="Después de desconectar este correo, Aurali utilizará automáticamente su sistema interno de correo para enviar las comunicaciones."
+        description="Después de desconectar este correo, no podrás enviar comunicaciones a tus clientes hasta que conectes uno nuevo."
         confirmLabel={isDisconnecting ? 'Desconectando…' : 'Desconectar'}
         variant="destructive"
       />

@@ -169,11 +169,19 @@ export async function resendOtpAction(requestId: string): Promise<{ success: tru
     .update({ otp_code_hash: hashOtpCode(code), otp_expires_at: otpExpiresAt, otp_attempts: 0, status: 'otp_sent' })
     .eq('id', requestId);
 
-  await sendOrgEmail(request.organization_id, {
-    to: request.client_email,
-    subject: 'Código de verificación para firmar sus documentos',
-    bodyHtml: `<p>Su nuevo código de verificación es:</p><p style="font-size:28px;font-weight:700;letter-spacing:4px;">${code}</p><p>Este código vence en 10 minutos.</p>`,
-  });
+  try {
+    await sendOrgEmail(
+      request.organization_id,
+      {
+        to: request.client_email,
+        subject: 'Código de verificación para firmar sus documentos',
+        bodyHtml: `<p>Su nuevo código de verificación es:</p><p style="font-size:28px;font-weight:700;letter-spacing:4px;">${code}</p><p>Este código vence en 10 minutos.</p>`,
+      },
+      { strict: true },
+    );
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'No se pudo enviar el correo' };
+  }
 
   return { success: true };
 }

@@ -115,6 +115,10 @@
       "viewing_as": "Viewing as:",
       "return_profile": "Return to my profile"
     },
+    "email_connection_banner": {
+      "message": "You don't have your own email connected — emails to your clients won't be able to send until you connect one.",
+      "cta": "Connect email"
+    },
     "workflow_guide": {
       "skip": "Skip",
       "step_counter": "Step {current} of {total}",

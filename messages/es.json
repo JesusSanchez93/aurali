@@ -115,6 +115,10 @@
       "viewing_as": "Visualizando como:",
       "return_profile": "Regresar a mi perfil"
     },
+    "email_connection_banner": {
+      "message": "No tienes un correo propio conectado — los correos a tus clientes no podrán enviarse hasta que lo conectes.",
+      "cta": "Conectar correo"
+    },
     "workflow_guide": {
       "skip": "Omitir",
       "step_counter": "Paso {current} de {total}",

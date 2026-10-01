@@ -2,8 +2,21 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/permissions';
+import { getEmailProvider } from '@/lib/email/connection';
 import { revalidatePath } from 'next/cache';
 import type { Database } from '@/types/database.types';
+
+const EMAIL_DEPENDENT_NODE_TYPES = ['send_email', 'send_documents', 'wait_email_reply'] as const;
+
+/** true si el workflow tiene algún nodo que envía/espera correo a clientes. */
+async function workflowRequiresEmail(supabase: Awaited<ReturnType<typeof createClient>>, workflowTemplateId: string): Promise<boolean> {
+  const { count } = await supabase
+    .from('workflow_nodes')
+    .select('id', { count: 'exact', head: true })
+    .eq('template_id', workflowTemplateId)
+    .in('type', [...EMAIL_DEPENDENT_NODE_TYPES] as Database['public']['Tables']['workflow_nodes']['Row']['type'][]);
+  return (count ?? 0) > 0;
+}
 
 type WorkflowStepInput = Omit<Database['public']['Tables']['workflow_steps']['Insert'], 'template_id' | 'order_index'>;
 
@@ -25,6 +38,13 @@ export async function activateWorkflowForOrg(workflowTemplateId: string): Promis
     .single();
 
   if (!profile?.current_organization_id) throw new Error('Organization not found');
+
+  if (await workflowRequiresEmail(supabase, workflowTemplateId)) {
+    const provider = await getEmailProvider(profile.current_organization_id);
+    if (provider === 'aurali') {
+      throw new Error('Este flujo envía correos a tus clientes. Conecta tu correo en Ajustes → Correo antes de activarlo.');
+    }
+  }
 
   const { error } = await supabase
     .from('organization_workflows')
