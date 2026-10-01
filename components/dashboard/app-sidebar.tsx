@@ -3,7 +3,7 @@
 import {
   Home, Scale, Settings, Users, ShieldCheck, BookOpen,
   Sparkles, Building2, ChevronRight, Workflow, IdCard, FileText,
-  ShieldAlert, Mail, Kanban,
+  ShieldAlert, Mail, Kanban, CreditCard,
 } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -72,6 +72,7 @@ export const adminUserItems: NavItem[] = [
 export const adminItems: NavItem[] = [
   { titleKey: 'analytics',     url: '/analytics',       icon: Home       },
   { titleKey: 'admin_clients', url: '/admin/clients',   icon: Users      },
+  { titleKey: 'admin_billing', url: '/admin/billing',   icon: CreditCard },
   { titleKey: 'workflows',     url: '/admin/workflows', icon: ShieldCheck},
   { titleKey: 'form_builder',  url: '/admin/form-builder', icon: FileText},
   { titleKey: 'catalog',       url: '/admin/catalog',   icon: BookOpen   },
