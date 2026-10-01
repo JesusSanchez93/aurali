@@ -153,12 +153,14 @@ Core tables grouped by domain:
 | `workflow_step_runs` | id, run_id, node_id, status, output (JSONB), started/completed_at |
 | `organization_workflows` | org_id, template_id (active template per org) |
 
-### AI & Google
+### AI & Email
 | Table | Key columns |
 |---|---|
 | `ai_variables` | id, org_id, key, name, description, prompt, examples[] |
-| `google_oauth_credentials` | user_id, access_token, refresh_token, expires_at, email |
-| `google_doc_templates` | id, org_id, name, google_doc_id, description |
+| `email_connections` | id, organization_id, provider (`google` \| `microsoft` \| `smtp`), email, status, access_token, refresh_token, token_expires_at, smtp_* / imap_* (password encrypted), google_watch_expiration, google_watch_history_id |
+| `email_follow_ups` | Pending replies for `wait_email_reply` (reply token, capture mode, linked process / workflow run) |
+
+`google_oauth_credentials` and `google_doc_templates` still exist in the schema but are legacy (Google Docs pipeline removed).
 
 ---
 
@@ -305,7 +307,7 @@ supabase.storage.upload('documents', path, docx)
 
 ONLYOFFICE Document Server is self-hosted and never talks to Supabase directly: Aurali serves files to it via short-lived signed tokens (`lib/onlyoffice/jwt.ts`) and stores results itself. Env: `ONLYOFFICE_URL`, `NEXT_PUBLIC_ONLYOFFICE_URL`, `ONLYOFFICE_JWT_SECRET`, `ONLYOFFICE_CALLBACK_BASE_URL`.
 
-The previous TipTap → HTML → PDF (Puppeteer) and Google Docs pipelines were removed. The TipTap editor (`components/common/tip-tap/`) remains as a component, and `tiptap_content` / Google tables are legacy.
+The previous TipTap → HTML → PDF (Puppeteer) and Google Docs pipelines were removed. The TipTap editor (`components/common/tip-tap/`) remains as a component, and `tiptap_content` and the Google Docs tables are legacy.
 
 ### AI Variables
 
@@ -369,21 +371,41 @@ When `mode="document"`, the editor activates `PaginationPlus` (A4 page simulatio
 
 ---
 
-## Google OAuth Integration
+## Email Provider OAuth (Google / Microsoft)
+
+Each organization can send email from its own mailbox instead of Aurali's default sender. OAuth is used only for this; there is no per-user Google/Docs integration anymore.
 
 ### Flow
 
-1. User clicks "Connect Google" → `GET /api/google/auth` → redirects to Google consent screen
-2. Google redirects to `GET /api/google/callback?code=...` → exchanges for tokens → stores in `google_oauth_credentials` table (per-user)
-3. Subsequent Google Docs API calls retrieve the token for the current user from DB, auto-refresh if expired
+1. An org admin clicks "Connect" in `/settings/email` → `GET /api/auth/email/[provider]/connect` (`provider` = `google` | `microsoft`). `requireOrgAdmin()` resolves the organization from the session (never from client input) and a state cookie (`aurali_email_oauth_state`) is set.
+2. The provider redirects to `GET /api/auth/email/[provider]/callback?code=...` → code exchanged for tokens, mailbox address resolved, connection stored in `email_connections` for the org in the state cookie (`demoteActiveConnection` retires any previous one). For Google, `startOrRenewGmailWatch()` registers the push watch.
+3. Sending: `getEmailProvider(orgId)` picks `google` | `microsoft` | `smtp` when the org has a `connected` connection, otherwise falls back to `aurali` (Resend). Provider services in `lib/email/providers/` refresh the access token via `refreshAccessToken()` (`lib/email/oauth/providers.ts`) when expired; a failed refresh surfaces a reconnect prompt.
 
-### Credentials config (`.env`)
+Scopes: Google `openid email gmail.send gmail.readonly` (readonly is needed to read replies; accounts connected before it was added must reconnect). Microsoft `openid email offline_access Mail.Send`.
+
+Tokens and the SMTP password are only readable with the service-role client (column-level GRANTs lock them from `anon`/`authenticated`); the SMTP password is additionally AES-256-GCM encrypted (`lib/email/crypto.ts`, `SMTP_CREDENTIALS_ENCRYPTION_KEY`).
+
+### Inbound replies (`wait_email_reply` node)
+
+Replies are captured in one of three modes per org, all resolved by `lib/workflow/emailReplyResolution.ts`:
+
+| `capture_mode` | Mechanism |
+|---|---|
+| `google` | Gmail `users.watch()` → Cloud Pub/Sub → `POST /api/webhooks/gmail-push` (OIDC JWT verified against `GMAIL_PUSH_AUDIENCE`) → delta via `users.history.list`. Cron `/api/cron/gmail-watch-renew` renews the watch (max 7 days) and resyncs as a backup. |
+| `imap` | SMTP org with IMAP fields configured; cron `/api/cron/email-inbound-imap-poll` reads the mailbox and matches by `In-Reply-To`/`References`. |
+| `webhook` | Outbound mail carries `Reply-To: reply+{token}@INBOUND_EMAIL_DOMAIN`; Resend Inbound posts to `POST /api/webhooks/email-inbound` (Svix signature, `RESEND_INBOUND_WEBHOOK_SECRET`). |
+
+### Config (`.env`)
 ```
-GOOGLE_CLIENT_ID
-GOOGLE_CLIENT_SECRET
+GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+MICROSOFT_CLIENT_ID / MICROSOFT_CLIENT_SECRET / MICROSOFT_TENANT_ID   # tenant defaults to 'common'
+GOOGLE_PUBSUB_TOPIC, GMAIL_PUSH_AUDIENCE                               # Gmail push
+SMTP_CREDENTIALS_ENCRYPTION_KEY
+INBOUND_EMAIL_DOMAIN, RESEND_INBOUND_WEBHOOK_SECRET                    # webhook capture mode
+CRON_SECRET                                                            # Authorization: Bearer for /api/cron/*
 ```
 
-If any are missing, the Google features are disabled in the UI (setup guide shown with instructions).
+A provider whose client id/secret are missing cannot be connected (`refreshAccessToken` returns null).
 
 ---
 
@@ -405,6 +427,8 @@ React Email templates live in `emails/`. The workflow engine renders them server
 Main template: `WorkflowEmail` — supports subject, body, optional CTA button, attachments (base64 buffers from generated PDFs).
 
 Variable substitution in email body uses `substituteVars()` with the same `{VAR}` syntax.
+
+Sending goes through `lib/email/sendOrgEmail.ts`, which picks the org's provider (`aurali`/Resend, `google`, `microsoft` or `smtp`). See [Email Provider OAuth](#email-provider-oauth-google--microsoft) for connections and inbound replies.
 
 ---
 
@@ -459,9 +483,26 @@ SUPABASE_SERVICE_ROLE_KEY       # Admin client (workflow engine)
 RESEND_API_KEY
 EMAIL_FROM                      # Default: noreply@aurali.app
 
-# Google OAuth
+# Email provider OAuth + inbound (see Email Provider OAuth section)
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
+MICROSOFT_CLIENT_ID
+MICROSOFT_CLIENT_SECRET
+MICROSOFT_TENANT_ID             # Default: common
+GOOGLE_PUBSUB_TOPIC
+GMAIL_PUSH_AUDIENCE
+SMTP_CREDENTIALS_ENCRYPTION_KEY
+INBOUND_EMAIL_DOMAIN
+RESEND_INBOUND_WEBHOOK_SECRET
+
+# ONLYOFFICE
+ONLYOFFICE_URL
+NEXT_PUBLIC_ONLYOFFICE_URL
+ONLYOFFICE_JWT_SECRET
+ONLYOFFICE_CALLBACK_BASE_URL
+
+# Cron
+CRON_SECRET
 
 # AI
 ANTHROPIC_API_KEY               # For AI variable resolution
