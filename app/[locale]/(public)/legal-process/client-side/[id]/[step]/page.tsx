@@ -65,10 +65,20 @@ export default async function ProcessCompleteStepPage({ params }: Props) {
   const defaultValues = existingResponse
     ?? await getClientPrefillValues(id, resolvedSection.fields.map((f) => f.key));
 
+  // Campos filledByLawyer ya diligenciados al crear el proceso no se le
+  // vuelven a pedir al cliente — si por algún motivo no tienen valor todavía
+  // (proceso viejo anterior a esta función, o el abogado lo dejó vacío), se
+  // muestran igual para no dejar un dato requerido sin forma de llenarse.
+  const hasValue = (value: unknown) => value !== undefined && value !== null && value !== '';
+  const clientVisibleSection = {
+    ...resolvedSection,
+    fields: resolvedSection.fields.filter((f) => !f.filledByLawyer || !hasValue(defaultValues?.[f.key])),
+  };
+
   return (
     <DynamicStepForm
       formSchemaId={process.form_schema_id}
-      section={resolvedSection}
+      section={clientVisibleSection}
       defaultValues={defaultValues}
       previousSectionKey={previousSectionKey}
     />

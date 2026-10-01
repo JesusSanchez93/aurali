@@ -377,6 +377,19 @@ export function FieldConfigPanel({
             />
           </div>
 
+          <div className="flex items-center justify-between rounded-md border px-3 py-2">
+            <div>
+              <Label className="text-sm">Diligenciado por el abogado</Label>
+              <p className="text-xs text-muted-foreground">
+                Se pide al crear el proceso, antes de enviarle el formulario al cliente.
+              </p>
+            </div>
+            <Switch
+              checked={field.filledByLawyer ?? false}
+              onCheckedChange={(v) => setField({ ...field, filledByLawyer: v })}
+            />
+          </div>
+
           {!NO_WIDTH_CONTROL_TYPES.includes(field.type) && (
             <div className="space-y-1.5">
               <Label>Ancho en desktop (en mobile siempre ocupa el 100%)</Label>

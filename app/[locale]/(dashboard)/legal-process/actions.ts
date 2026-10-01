@@ -9,7 +9,7 @@ import { buildDocumentTemplateData, resolveBodyHtml, substituteVars, inlineFormB
 import type { ExecutionContext } from '@/lib/workflow/types';
 import { tiptapJsonToBodyHtml } from '@/lib/documents/tiptapServer';
 import { approveGeneratedDocument } from '@/lib/onlyoffice/approveDocument';
-import type { FormSchema } from '@/lib/forms/types';
+import type { FormFieldSchema, FormSchema } from '@/lib/forms/types';
 import { resolveSectionOptions } from '@/lib/forms/catalogOptions';
 import { resolveFormResponseFileUrls } from '@/lib/forms/resolveFormResponseFileUrls';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
@@ -275,6 +275,117 @@ export async function   getOrgLawyers() {
   }));
 }
 
+function sanitizeFileName(name: string) {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9.-]/g, '')
+    .toLowerCase();
+}
+
+export interface LawyerFilledSection {
+  sectionKey: string;
+  sectionTitle: string;
+  fields: FormFieldSchema[];
+}
+
+/**
+ * Campos del formulario dinámico publicado de un tipo de proceso marcados
+ * `filledByLawyer` — el abogado los diligencia al crear el proceso, antes de
+ * que el flujo le envíe el formulario al cliente (ver process-form.tsx).
+ * null si el tipo de proceso no tiene formulario dinámico publicado.
+ */
+export async function getLawyerFilledSections(workflowTemplateId: string): Promise<{
+  formSchemaId: string;
+  sections: LawyerFilledSection[];
+} | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Unauthorized');
+
+  const { data: schemaRow } = await supabase
+    .from('legal_process_form_schemas')
+    .select('id, schema')
+    .eq('workflow_template_id', workflowTemplateId)
+    .eq('is_published', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!schemaRow) return null;
+
+  const schema = schemaRow.schema as unknown as FormSchema;
+  const sections = [...schema.sections]
+    .sort((a, b) => a.order - b.order)
+    .map((s) => ({ sectionKey: s.key, sectionTitle: s.title, fields: s.fields.filter((f) => f.filledByLawyer) }))
+    .filter((s) => s.fields.length > 0);
+
+  return { formSchemaId: schemaRow.id, sections };
+}
+
+/**
+ * Agrupa `lawyerFieldValues` (plano, por field.key) de vuelta a sus
+ * secciones según el schema, sube los archivos que vengan como File, y hace
+ * upsert en legal_process_form_responses — misma tabla/mecanismo que usa el
+ * cliente final (submitSectionAction), así mergeDynamicFormResponses
+ * (nodeExecutors.ts) las resuelve a variables de documento sin cambios.
+ */
+async function persistLawyerFieldResponses(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  schema: FormSchema,
+  formSchemaId: string,
+  legalProcessId: string,
+  organizationId: string,
+  lawyerFieldValues: Record<string, unknown>,
+): Promise<void> {
+  for (const section of schema.sections) {
+    const lawyerFields = section.fields.filter((f) => f.filledByLawyer && f.key in lawyerFieldValues);
+    if (lawyerFields.length === 0) continue;
+
+    const data: Record<string, unknown> = {};
+
+    for (const field of lawyerFields) {
+      const rawValue = lawyerFieldValues[field.key];
+
+      if (field.type === 'file_upload' || field.type === 'image_upload') {
+        const files = (Array.isArray(rawValue) ? rawValue : [rawValue]).filter((v): v is File => v instanceof File);
+        const uploadedPaths: string[] = [];
+
+        for (const file of files) {
+          const path = `${organizationId}/${legalProcessId}/${section.key}-${field.key}-${Date.now()}-${sanitizeFileName(file.name)}`;
+          const { data: uploaded, error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(path, file, { upsert: true });
+
+          if (uploadError) throw new Error(`Error al subir archivo: ${file.name}`);
+          uploadedPaths.push(uploaded.path);
+        }
+
+        data[field.key] = field.type === 'file_upload' && (field.maxFiles ?? 1) > 1 ? uploadedPaths : (uploadedPaths[0] ?? null);
+        continue;
+      }
+
+      data[field.key] = rawValue;
+    }
+
+    const { error } = await supabase
+      .from('legal_process_form_responses')
+      .upsert(
+        {
+          legal_process_id: legalProcessId,
+          form_schema_id: formSchemaId,
+          section_key: section.key,
+          data: data as never,
+          submitted_at: new Date().toISOString(),
+        },
+        { onConflict: 'legal_process_id,section_key' },
+      );
+
+    if (error) throw new Error(error.message);
+  }
+}
+
 export async function createLegalProcessDraft(values: {
   document_id: string;
   document_slug: string;
@@ -284,6 +395,11 @@ export async function createLegalProcessDraft(values: {
   assigned_to: string;
   /** Requerido solo cuando la organización tiene más de un tipo de proceso activo. */
   workflow_template_id?: string;
+  /** Valores de los campos del formulario dinámico marcados `filledByLawyer`
+   *  para el tipo de proceso elegido — key plano (field.key), sin agrupar por
+   *  sección; se agrupan acá usando el schema publicado. Ver
+   *  getLawyerFilledSections. */
+  lawyer_field_values?: Record<string, unknown>;
 }): Promise<{ id: string }> {
   const traceId = randomUUID();
   const supabase = await createClient();
@@ -353,7 +469,7 @@ export async function createLegalProcessDraft(values: {
     // actualizado como default determinístico.
     const { data: publishedSchemas } = await supabase
       .from('legal_process_form_schemas')
-      .select('id')
+      .select('id, schema')
       .eq('workflow_template_id', chosenWorkflowTemplateId)
       .eq('is_published', true)
       .order('updated_at', { ascending: false })
@@ -458,6 +574,23 @@ export async function createLegalProcessDraft(values: {
         // Rollback: cascade delete will also remove legal_process_clients
         await supabase.from('legal_processes').delete().eq('id', newLegalProcess.id);
         throw new Error(errorLegalProcessBanks.message);
+      }
+
+      if (publishedSchema && values.lawyer_field_values && Object.keys(values.lawyer_field_values).length > 0) {
+        try {
+          await persistLawyerFieldResponses(
+            supabase,
+            publishedSchema.schema as unknown as FormSchema,
+            publishedSchema.id,
+            newLegalProcess.id,
+            organizationId,
+            values.lawyer_field_values,
+          );
+        } catch (err) {
+          // Rollback: cascade delete will also remove legal_process_clients/banks
+          await supabase.from('legal_processes').delete().eq('id', newLegalProcess.id);
+          throw err;
+        }
       }
     }
   // Start the workflow — it will send the invitation email automatically

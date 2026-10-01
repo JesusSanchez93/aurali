@@ -44,6 +44,11 @@ function buildFieldValidator(field: FormFieldSchema): z.ZodTypeAny {
       return required ? schema : schema.optional().nullable();
     }
 
+    case 'email': {
+      const schema = z.string().email('Correo electrónico inválido');
+      return required ? schema.min(1, 'Este campo es requerido') : schema.optional().or(z.literal(''));
+    }
+
     case 'text':
     case 'textarea':
     case 'select':

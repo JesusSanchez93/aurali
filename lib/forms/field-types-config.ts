@@ -16,6 +16,11 @@ export const FORM_FIELD_TYPES_CONFIG: Record<FormFieldType, FormFieldTypeConfig>
     icon: 'TextCursorInput',
     description: 'Una línea de texto libre (nombre, número de documento, etc.)',
   },
+  email: {
+    label: 'Correo electrónico',
+    icon: 'Mail',
+    description: 'Correo del cliente — a esta dirección llega el enlace del formulario',
+  },
   textarea: {
     label: 'Texto largo',
     icon: 'AlignLeft',

@@ -144,7 +144,13 @@ export async function submitSectionAction(
 
   const data: Record<string, unknown> = {};
 
-  for (const field of section.fields) {
+  // Campos filledByLawyer: el cliente nunca los ve ni los envía (ver page.tsx,
+  // que ya los excluye de `section.fields` cuando tienen respuesta guardada) —
+  // se excluyen también acá por si acaso, para no pisar con `undefined` lo
+  // que el abogado ya guardó al crear el proceso (createLegalProcessDraft).
+  const clientFields = section.fields.filter((f) => !f.filledByLawyer);
+
+  for (const field of clientFields) {
     const decoded = decodeSectionFormValue(field, formData);
 
     if (field.type === 'file_upload' || field.type === 'image_upload') {
@@ -171,6 +177,18 @@ export async function submitSectionAction(
     data[field.key] = decoded;
   }
 
+  // Merge con la respuesta existente de esta sección en vez de reemplazarla
+  // entera — preserva los campos filledByLawyer (guardados por
+  // createLegalProcessDraft con el mismo section_key) que el cliente nunca
+  // envía porque no los ve.
+  const { data: existingRow } = await supabase
+    .from('legal_process_form_responses')
+    .select('data')
+    .eq('legal_process_id', legalProcessId)
+    .eq('section_key', sectionKey)
+    .maybeSingle();
+  const mergedData = { ...(existingRow?.data as Record<string, unknown> | undefined), ...data };
+
   const { error: upsertError } = await supabase
     .from('legal_process_form_responses')
     .upsert(
@@ -178,7 +196,7 @@ export async function submitSectionAction(
         legal_process_id: legalProcessId,
         form_schema_id: formSchemaId,
         section_key: sectionKey,
-        data: data as never,
+        data: mergedData as never,
         submitted_at: new Date().toISOString(),
       },
       { onConflict: 'legal_process_id,section_key' },

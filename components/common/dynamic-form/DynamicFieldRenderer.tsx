@@ -32,6 +32,10 @@ export function DynamicFieldRenderer<T extends FieldValues>({ control, field, di
   const options = field.options ?? [];
 
   switch (field.type) {
+    case 'email':
+      return (
+        <FormInput control={control} name={name} label={field.label} required={required} disabled={disabled} placeholder={field.placeholder} type="email" description={field.helpText} />
+      );
     case 'textarea':
       return (
         <FormTextarea control={control} name={name} label={field.label} required={required} disabled={disabled} placeholder={field.placeholder} description={field.helpText} />

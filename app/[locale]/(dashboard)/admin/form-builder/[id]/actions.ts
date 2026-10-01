@@ -10,6 +10,14 @@ type Supabase = any
 
 const EMPTY_SCHEMA: FormSchema = { version: 1, sections: [] }
 
+/** Todo formulario debe tener al menos un campo de correo requerido — es la
+ *  dirección a la que llega la invitación para diligenciarlo. */
+function hasRequiredEmailField(schema: FormSchema): boolean {
+  return schema.sections.some((section) =>
+    section.fields.some((field) => field.type === 'email' && field.validation?.required),
+  )
+}
+
 export interface FormSchemaRow {
   id: string
   workflow_template_id: string
@@ -283,11 +291,15 @@ export async function publishSchemaAction(schemaId: string): Promise<void> {
 
   const { data: row, error: rowErr } = await db
     .from('legal_process_form_schemas')
-    .select('code')
+    .select('code, schema')
     .eq('id', schemaId)
     .single()
 
   if (rowErr || !row) throw new Error(rowErr?.message ?? 'Formulario no encontrado')
+
+  if (!hasRequiredEmailField(row.schema as FormSchema)) {
+    throw new Error('El formulario necesita al menos un campo de correo electrónico marcado como requerido antes de publicarse.')
+  }
 
   const { error: unpublishErr } = await db
     .from('legal_process_form_schemas')

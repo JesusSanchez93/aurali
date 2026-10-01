@@ -2,6 +2,7 @@
  *  externo, uno por workflow_template / tipo de proceso legal). */
 export type FormFieldType =
   | 'text'
+  | 'email'
   | 'textarea'
   | 'select'
   | 'switch'
@@ -78,6 +79,10 @@ export interface FormFieldSchema {
   accept?: string;
   /** file_upload: máximo de archivos permitidos */
   maxFiles?: number;
+  /** El abogado diligencia este campo al crear el proceso (antes de enviarle
+   *  el formulario al cliente) en vez de que lo complete el cliente final —
+   *  ver app/[locale]/(dashboard)/legal-process/_components/process-form.tsx. */
+  filledByLawyer?: boolean;
 }
 
 export interface FormSection {
