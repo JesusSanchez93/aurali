@@ -40,14 +40,13 @@ Aurali is a legal process automation platform. Multi-tenant, multi-language (ES/
 - `(public)/legal-process/` — Client-facing forms for external users
 - `(dashboard)/` — Internal dashboard (clients, settings, legal-process, powers)
 
-Auth lives at `app/[locale]/auth/`. API routes at `app/api/` (PDF generation, workflow execution, document generation).
+Auth lives at `app/[locale]/auth/`. API routes at `app/api/` (document generation, ONLYOFFICE callbacks, workflow execution, cron, email webhooks).
 
 ### Key Subsystems
 
-**Document Generation** (`lib/documents/`)
-- `generateDocument.ts` orchestrates the TipTap-based pipeline: TipTap JSON → HTML → PDF → Supabase Storage
-- `htmlRenderer.ts` converts TipTap JSON to HTML; `pdfGenerator.ts` renders HTML to PDF via Puppeteer + `@sparticuz/chromium-min`
-- Google Docs pipeline: `generateFromGoogleDoc()` exports HTML from the Docs API, substitutes variables, then passes through the same PDF step
+**Document Generation** (`lib/documents/`, `lib/onlyoffice/`)
+- `generateOnlyOfficeDocument.ts` orchestrates the pipeline: `.docx` template (Storage) → AI variables → `{GROUP.TYPE}` substitution in the .docx XML → upload to Storage. `mode: 'preview'` stops there (lawyer edits/approves in the ONLYOFFICE editor); `mode: 'final'` converts to PDF through ONLYOFFICE's Conversion API
+- `lib/onlyoffice/` holds the ONLYOFFICE integration: `convert.ts` (docx → PDF), `approveDocument.ts` (finalize a preview), `docxVariables.ts`, `jwt.ts`, `config.ts`. Routes live under `app/api/onlyoffice/`. There is no Puppeteer/Chromium in this project
 - Variable tokens use `{GROUP.TYPE}` format — e.g. `{CLIENT.FIRST_NAME}`, `{PROCESS.ID}`. Defined in `app/[locale]/(dashboard)/settings/document-templates/_components/variables.ts`
 - Templates stored in Supabase Storage; signed URLs returned on generation
 

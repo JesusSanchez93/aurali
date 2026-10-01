@@ -15,8 +15,8 @@ Aurali is a legal process automation platform built with Next.js 15 (App Router)
 | Auth | Supabase Auth (cookie-based SSR) |
 | Storage | Supabase Storage (`documents` bucket) |
 | Email | Resend + React Email |
-| PDF | Puppeteer + `@sparticuz/chromium-min` |
-| Editor | TipTap v3 + `tiptap-pagination-plus` |
+| Documents / PDF | ONLYOFFICE Document Server (self-hosted): `.docx` templates, embedded editor, docx → PDF Conversion API |
+| Rich-text editor | TipTap v3 + `tiptap-pagination-plus` |
 | Workflow UI | `@xyflow/react` v12 |
 | AI | Anthropic Claude + OpenAI |
 | i18n | next-intl v4 |
@@ -34,7 +34,7 @@ app/                  Next.js routes (App Router)
     (public)/         Client-facing public forms (tokenized)
     auth/             Auth pages (login, sign-up, reset)
     onboarding/       New-org setup wizard
-  api/                API routes (PDF, workflow, Google OAuth)
+  api/                API routes (documents, ONLYOFFICE, workflow, cron, webhooks)
 
 components/
   ui/                 shadcn/ui primitives — do not edit directly
@@ -44,8 +44,9 @@ components/
   providers/          React context providers
 
 lib/
+  onlyoffice/         ONLYOFFICE client: convert, approve, docx variables, JWT, config
   workflow/           Workflow engine (runner, node executors, seed)
-  documents/          Document generation pipeline (HTML → PDF)
+  documents/          Document generation pipeline (.docx → PDF via ONLYOFFICE)
   supabase/           DB client factory (browser + server + admin)
   auth/               Session helpers
   tiptap/             Server-safe TipTap utilities
@@ -137,9 +138,9 @@ Core tables grouped by domain:
 ### Documents
 | Table | Key columns |
 |---|---|
-| `legal_templates` | id, org_id, name, content (JSONB), font_family, header_left, footer_left, header_id, footer_id |
+| `legal_templates` | id, org_id, name, docx_storage_path, content (JSONB, legacy TipTap), font_family, header_left, footer_left, header_id, footer_id |
 | `document_templates` | id, org_id, name, content (JSONB), font_family, header_left, footer_left, version |
-| `generated_documents` | id, process_id, template_id, storage_path, signed_url, tiptap_content |
+| `generated_documents` | id, legal_process_id, template_id, storage_path (PDF), docx_storage_path, document_key, is_preview, signed_url, tiptap_content (legacy) |
 | `document_headers` / `document_footers` | id, org_id, content (JSONB), name |
 
 ### Workflow
@@ -174,8 +175,7 @@ All routes under `app/[locale]/(dashboard)/` are auth-gated via the root layout.
 | `/legal-process` | Legal process list + detail |
 | `/powers` | Power-of-attorney management |
 | `/analytics` | Usage analytics (recharts) |
-| `/settings/document-templates` | TipTap-based document editor |
-| `/settings/google-templates` | Google Docs template manager |
+| `/settings/document-templates` | Template manager (.docx templates edited in ONLYOFFICE) |
 | `/settings/workflows/[id]` | Workflow editor (`@xyflow/react`) |
 | `/settings/ai-variables` | AI variable definitions |
 | `/settings/banks` | Bank catalog |
@@ -196,14 +196,11 @@ Tokenized, no auth required:
 
 | Route | Method | Description |
 |---|---|---|
-| `/api/documents/generate` | POST | TipTap template → PDF (uploads to Storage) |
-| `/api/documents/preview` | POST | TipTap template → HTML (no storage) |
-| `/api/google/auth` | GET | Initiate Google OAuth |
-| `/api/google/callback` | GET | OAuth callback; stores tokens |
-| `/api/google/disconnect` | POST | Revoke + delete Google OAuth tokens |
-| `/api/google/documents/generate` | POST | Google Docs → HTML → PDF |
-| `/api/pdf` | POST | Raw HTML → PDF |
-| `/api/powers/generate` | POST | Power-of-attorney PDF |
+| `/api/documents/generate` | POST | Generate a document from a `.docx` template (preview or final PDF) |
+| `/api/onlyoffice/templates/[templateId]/{config,file,callback}` | GET/POST | ONLYOFFICE editor config, file download, save callback for templates |
+| `/api/onlyoffice/documents/[documentId]/{config,file,callback}` | GET/POST | Same, for generated documents (lawyer edits on previews) |
+| `/api/onlyoffice/documents/[documentId]/approve` | POST | Convert an approved preview to PDF and mark it final |
+| `/api/onlyoffice/plugin/variables/data` | GET | Variable catalog for the ONLYOFFICE editor plugin |
 | `/api/workflow/resume` | POST | Resume a paused workflow run |
 | `/api/legal-process/client-side/validate-token` | POST | Verify client access token |
 | `/api/legal-process/transcribe-audio` | POST | Audio → text (AI) |
@@ -227,7 +224,7 @@ The workflow engine executes directed graphs of nodes persisted as `workflow_nod
 | `client_form` | Suspends execution (returns `waiting`). Lawyer manually resumes after client fills in form. |
 | `notify_lawyer` | Sends in-app or email notification to the assigned lawyer. |
 | `manual_action` | Suspends execution. Lawyer reviews and clicks Approve/Reject. |
-| `generate_document` | Calls `generateDocument()` for each template in `config.template_ids[]`. Produces PDFs in Storage. Supports Google Docs templates via `config.google_doc_template_id`. |
+| `generate_document` | Calls `generateOnlyOfficeDocument()` for each template in `config.template_ids[]`. Produces `.docx` previews (pending lawyer approval) or final PDFs in Storage. |
 | `send_documents` | Sends generated documents as email attachments. |
 | `status_update` | Updates `legal_processes.status`. |
 | `end` | Marks run completed. |
@@ -281,55 +278,34 @@ For document nodes, `buildTemplateData()` returns `{GROUP.TYPE}` keyed records t
 
 ## Document Generation Pipeline
 
-### TipTap-based (native) templates
+### ONLYOFFICE-based templates (`generateOnlyOfficeDocument.ts`)
 
 ```
-legal_templates table (content: JSONB TipTap document)
+legal_templates.docx_storage_path        — real .docx in Supabase Storage
           │
           ▼
-substituteVarsInJson(tiptapJson, data)   — replace {VAR} tokens in JSON tree
+extractDocxPlainText() + resolveAiVariables()   — AI_ variables (Anthropic)
           │
           ▼
-extractDocumentSections(json)            — split off documentHeader / documentFooter nodes
+substituteDocxVariables(docx, data)      — replace {GROUP.TYPE} tokens in the .docx XML
           │
           ▼
-generateHTML(bodyJson, TIPTAP_EXTENSIONS) — TipTap JSON → HTML string
+supabase.storage.upload('documents', path, docx)
           │
-          ▼
-substituteVars(bodyHtml, data)           — handle any remaining tokens in HTML
+          ├── mode 'preview' → generated_documents row (is_preview: true)
+          │       lawyer opens it in the embedded ONLYOFFICE editor,
+          │       then POST /api/onlyoffice/documents/[id]/approve
+          │       (approveGeneratedDocument → convert → mark final)
           │
-          ▼
-wrapWithPageLayout(html, styles)         — wrap in full <html> with page CSS
-          │
-          ▼
-htmlToPdf(html, { headerTemplate, footerTemplate })  — Puppeteer → PDF buffer
-          │
-          ▼
-supabase.storage.upload('documents', path, buffer)
-          │
-          ▼
-supabase.storage.createSignedUrl()       — 7-day signed URL returned
+          └── mode 'final'   → convertDocxToPdf()  (ONLYOFFICE Conversion API)
+                      │
+                      ▼
+          supabase.storage.upload() PDF + createSignedUrl() + generated_documents row
 ```
 
-Server-side TipTap extensions (no React NodeViews): `StarterKit`, `TextStyle`, `TextAlign`, `SignatureExtensionServer`, `ColumnExtensionServer`, `TwoColumnExtensionServer`, `VariableNodeServer`, `ImageExtensionServer`, `DocumentHeaderServer`, `DocumentFooterServer`, `Table*`.
+ONLYOFFICE Document Server is self-hosted and never talks to Supabase directly: Aurali serves files to it via short-lived signed tokens (`lib/onlyoffice/jwt.ts`) and stores results itself. Env: `ONLYOFFICE_URL`, `NEXT_PUBLIC_ONLYOFFICE_URL`, `ONLYOFFICE_JWT_SECRET`, `ONLYOFFICE_CALLBACK_BASE_URL`.
 
-### Google Docs-based templates
-
-```
-google_doc_templates.google_doc_id
-          │
-          ▼
-Google Docs API (export as HTML) via user OAuth token
-          │
-          ▼
-substituteVars(html, data)               — replace {GROUP.TYPE} tokens
-          │
-          ▼
-htmlToPdf(wrappedHtml)                   — Puppeteer → PDF
-          │
-          ▼
-Storage upload + DB record
-```
+The previous TipTap → HTML → PDF (Puppeteer) and Google Docs pipelines were removed. The TipTap editor (`components/common/tip-tap/`) remains as a component, and `tiptap_content` / Google tables are legacy.
 
 ### AI Variables
 
@@ -504,7 +480,6 @@ NEXT_PUBLIC_APP_URL             # Used for access token URLs in emails
 | Supabase Auth + RLS | Consistent multi-tenant access control at DB level — app code never needs WHERE org_id = ? |
 | Server Actions for mutations | Avoids API route boilerplate for simple CRUD; Next.js 15 cache invalidation (revalidatePath) works natively |
 | TipTap variable system as external config | `components/common/tip-tap/` has zero domain imports; callers pass `variableGroups` prop — reusable across template editor and Google templates UI |
-| Puppeteer for PDF | Renders full CSS/fonts faithfully. `@sparticuz/chromium-min` for Vercel serverless. Browser always closed after generation to avoid leaks. |
+| ONLYOFFICE for documents/PDF | Lawyers keep editing real Word (.docx) templates; same engine powers the embedded editor and docx → PDF conversion, so output matches what they approved. Requires a self-hosted Document Server. |
 | Forward-only migrations | Cloud DB + local DB stay in sync without destructive resets |
 | `MAX_STEPS = 100` guard in workflow runner | Prevents runaway execution on misconfigured graphs |
-| `waitUntil: 'networkidle0'` in PDF generation | Ensures Google Fonts and background images load before PDF capture |
