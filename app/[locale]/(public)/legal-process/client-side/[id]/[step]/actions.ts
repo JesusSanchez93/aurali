@@ -244,13 +244,16 @@ export async function updatePersonalDataAction(
 
         if (frontSigned?.signedUrl && backSigned?.signedUrl) {
             console.log('[updatePersonalDataAction] Calling validateDocumentImages with paths:', { frontPath, backPath });
-            const validation = await validateDocumentImages({
-                firstName: firstname,
-                lastName: lastname,
-                documentNumber: document_number,
-                frontImageUrl: frontSigned.signedUrl,
-                backImageUrl: backSigned.signedUrl,
-            });
+            const validation = await validateDocumentImages(
+                {
+                    firstName: firstname,
+                    lastName: lastname,
+                    documentNumber: document_number,
+                    frontImageUrl: frontSigned.signedUrl,
+                    backImageUrl: backSigned.signedUrl,
+                },
+                legalProcess.organization_id!,
+            );
             console.log('[updatePersonalDataAction] Validation result:', validation);
 
             // Persist result for lawyer audit (always, even on error)

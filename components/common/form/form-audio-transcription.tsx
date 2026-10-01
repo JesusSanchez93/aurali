@@ -16,6 +16,7 @@ interface Props<T extends FieldValues> {
   disabled?: boolean;
   className?: string;
   rows?: number;
+  legalProcessId?: string;
 }
 
 /**
@@ -38,6 +39,7 @@ export function FormAudioTranscription<T extends FieldValues>({
   disabled,
   className,
   rows = 6,
+  legalProcessId,
 }: Props<T>) {
   const [modalOpen, setModalOpen] = useState(false);
   const [isPolishing, setIsPolishing] = useState(false);
@@ -142,7 +144,7 @@ export function FormAudioTranscription<T extends FieldValues>({
         ya sea que lo escribas o lo grabes por voz.
       </p>
 
-      <AudioRecorderModal open={modalOpen} onOpenChange={setModalOpen} onComplete={handleRecordingComplete} />
+      <AudioRecorderModal open={modalOpen} onOpenChange={setModalOpen} onComplete={handleRecordingComplete} legalProcessId={legalProcessId} />
     </div>
   );
 }

@@ -63,7 +63,7 @@ export function DynamicStepForm({ formSchemaId, section, defaultValues, previous
           )}
         </div>
 
-        <DynamicSectionFields control={form.control} fields={section.fields} disabled={isPending} />
+        <DynamicSectionFields control={form.control} fields={section.fields} disabled={isPending} legalProcessId={legalProcessId} />
 
         <div className="flex justify-between">
           {previousSectionKey ? (

@@ -21,11 +21,11 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: process } = await supabase
     .from('legal_processes')
-    .select('id')
+    .select('id, organization_id')
     .eq('access_token', token)
     .maybeSingle();
 
-  if (!process) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!process?.organization_id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json().catch(() => null);
   const text = body?.text;
@@ -33,6 +33,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'text requerido' }, { status: 400 });
   }
 
-  const polished = await polishLegalNarrative(text);
+  const polished = await polishLegalNarrative(text, process.organization_id);
   return NextResponse.json({ text: polished });
 }

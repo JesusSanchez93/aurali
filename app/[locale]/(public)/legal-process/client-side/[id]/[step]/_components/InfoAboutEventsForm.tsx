@@ -188,6 +188,7 @@ export default function InfoAboutEventsForm() {
                                 shouldValidate: true,
                             })
                         }
+                        legalProcessId={id}
                     />
                     <ViewTransition name="onboarding-form-footer">
                         <div className="mt-6 flex justify-between">

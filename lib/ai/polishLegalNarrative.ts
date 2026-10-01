@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { checkLimit, incrementUsage } from '@/lib/billing/usage';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -33,11 +34,17 @@ INSTRUCCIONES DE REDACCIÓN:
  * Devuelve el texto crudo sin cambios si la llamada a OpenAI falla — nunca
  * debe bloquear al cliente por un problema del pulido.
  */
-export async function polishLegalNarrative(rawText: string): Promise<string> {
+export async function polishLegalNarrative(rawText: string, orgId: string): Promise<string> {
   const trimmed = rawText.trim();
   if (!trimmed) return trimmed;
 
   try {
+    const limit = await checkLimit(orgId, 'ai_uses');
+    if (!limit.allowed) {
+      console.warn('[polishLegalNarrative] Monthly AI usage limit reached, returning raw text', { orgId, limit: limit.limit });
+      return trimmed;
+    }
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0.1,
@@ -49,6 +56,8 @@ export async function polishLegalNarrative(rawText: string): Promise<string> {
         },
       ],
     });
+
+    await incrementUsage(orgId, 'ai_uses');
 
     return completion.choices[0].message.content?.trim() || trimmed;
   } catch (error) {

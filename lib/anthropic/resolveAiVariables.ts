@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@/lib/supabase/server';
+import { checkLimit, incrementUsage } from '@/lib/billing/usage';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
@@ -196,9 +197,23 @@ export async function resolveAiVariables(
     }
   }
 
-  // Resolve each AI variable
+  // Resolve each AI variable — cada llamada a Claude cuenta contra el tope
+  // mensual de IA del plan (usage_monthly.ai_uses). Al superarlo, degrada con
+  // gracia: deja la variable sin resolver en vez de romper la generación del
+  // documento completo (el literal {AI_XXX} queda en el texto — ver
+  // warnIfUnresolvedAiVars, que ya loguea esto como señal de ops).
+  let aiUsesRemaining = await checkLimit(orgId, 'ai_uses');
   const result: Record<string, string> = {};
   for (const aiVar of aiVars) {
+    if (!aiUsesRemaining.allowed) {
+      console.error('[resolveAiVariables] Monthly AI usage limit reached, skipping variable', {
+        key: aiVar.key,
+        legalProcessId,
+        orgId,
+        limit: aiUsesRemaining.limit,
+      });
+      continue;
+    }
     try {
       const examples = (aiVar.examples ?? []).filter(Boolean);
       const examplesText = examples.length > 0
@@ -241,6 +256,13 @@ export async function resolveAiVariables(
           'Responde SOLO con el texto del fragmento, sin explicaciones, sin introducción, sin comillas.',
         messages: [{ role: 'user', content: userContent }],
       });
+
+      await incrementUsage(orgId, 'ai_uses');
+      aiUsesRemaining = {
+        ...aiUsesRemaining,
+        used: aiUsesRemaining.used + 1,
+        allowed: aiUsesRemaining.limit === null || aiUsesRemaining.used + 1 < aiUsesRemaining.limit,
+      };
 
       const textBlock = response.content.find((b) => b.type === 'text');
       if (textBlock && textBlock.type === 'text') {

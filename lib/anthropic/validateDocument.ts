@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { checkLimit, incrementUsage } from '@/lib/billing/usage';
 
 interface DocumentValidationInput {
     firstName: string;
@@ -43,9 +44,16 @@ function numberMatches(form: string, extracted: string): boolean {
 }
 
 export async function validateDocumentImages(
-    input: DocumentValidationInput
+    input: DocumentValidationInput,
+    orgId: string,
 ): Promise<DocumentValidationResult> {
     try {
+        const limit = await checkLimit(orgId, 'ai_uses');
+        if (!limit.allowed) {
+            console.warn('[validateDocument] Monthly AI usage limit reached, skipping validation', { orgId, limit: limit.limit });
+            return { status: 'error', errors: [], extractedData: {} };
+        }
+
         const response = await anthropic.messages.create({
             model: 'claude-sonnet-4-6',
             max_tokens: 512,
@@ -75,6 +83,8 @@ Si las imágenes no son legibles o no corresponden a una cédula, responde:
                 },
             ],
         });
+
+        await incrementUsage(orgId, 'ai_uses');
 
         const textBlock = response.content.find((b) => b.type === 'text');
         if (!textBlock || textBlock.type !== 'text') {

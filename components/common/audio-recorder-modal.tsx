@@ -14,9 +14,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete: (text: string) => void;
+  legalProcessId?: string;
 }
 
-export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
+export function AudioRecorderModal({ open, onOpenChange, onComplete, legalProcessId }: Props) {
   const t = useTranslations('common.audio_recorder');
   const [state, setState] = useState<RecorderState>('idle');
   const [elapsed, setElapsed] = useState(0);
@@ -112,6 +113,7 @@ export function AudioRecorderModal({ open, onOpenChange, onComplete }: Props) {
       try {
         const fd = new FormData();
         fd.append('audio', blob);
+        if (legalProcessId) fd.append('legalProcessId', legalProcessId);
 
         const res = await fetch('/api/legal-process/transcribe-audio', {
           method: 'POST',

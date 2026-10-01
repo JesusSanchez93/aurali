@@ -17,6 +17,7 @@ interface Props<T extends FieldValues> {
   control: Control<T>;
   field: FormFieldSchema;
   disabled?: boolean;
+  legalProcessId?: string;
 }
 
 /** Switch-case declarativo que renderiza un FormFieldSchema con el componente
@@ -25,7 +26,7 @@ interface Props<T extends FieldValues> {
  *  de campos de formulario de cliente (lib/forms/types.ts). Compartido entre la
  *  vista previa del builder (admin/form-builder/[id]) y el renderer
  *  público del cliente. */
-export function DynamicFieldRenderer<T extends FieldValues>({ control, field, disabled }: Props<T>) {
+export function DynamicFieldRenderer<T extends FieldValues>({ control, field, disabled, legalProcessId }: Props<T>) {
   const name = field.key as Path<T>;
   const required = field.validation?.required;
   const options = field.options ?? [];
@@ -67,7 +68,7 @@ export function DynamicFieldRenderer<T extends FieldValues>({ control, field, di
     case 'image_upload':
       return <FormImageUpload control={control} name={name} label={field.label} required={required} disabled={disabled} description={field.helpText} />;
     case 'audio_transcription':
-      return <FormAudioTranscription control={control} name={name} label={field.label} required={required} disabled={disabled} />;
+      return <FormAudioTranscription control={control} name={name} label={field.label} required={required} disabled={disabled} legalProcessId={legalProcessId} />;
     case 'financial_product':
       return <FormFinancialProduct control={control} name={name} label={field.label} required={required} disabled={disabled} />;
     case 'text':

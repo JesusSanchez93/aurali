@@ -8,13 +8,17 @@ interface Props<T extends FieldValues> {
   control: Control<T>;
   fields: FormFieldSchema[];
   disabled?: boolean;
+  /** Necesario para que el campo de audio (FormAudioTranscription) pueda
+   *  resolver la organización y aplicar el tope de uso de IA — ausente en la
+   *  vista previa del form-builder (no hay proceso real). */
+  legalProcessId?: string;
 }
 
 /** Arma una sección de formulario dinámico como grid mobile-first: en mobile
  *  (sin prefijo) todo campo ocupa 100%; desde `sm:` hacia arriba, un campo
  *  `width: 'half'` ocupa una columna y uno `'full'` ocupa las dos. También
  *  filtra campos según `dependsOn` con el helper compartido. */
-export function DynamicSectionFields<T extends FieldValues>({ control, fields, disabled }: Props<T>) {
+export function DynamicSectionFields<T extends FieldValues>({ control, fields, disabled, legalProcessId }: Props<T>) {
   const values = useWatch({ control }) as Record<string, unknown>;
 
   return (
@@ -28,7 +32,7 @@ export function DynamicSectionFields<T extends FieldValues>({ control, fields, d
           const isHalf = field.width === 'half' && field.type !== 'financial_product';
           return (
             <div key={field.key} className={isHalf ? 'sm:col-span-1' : 'col-span-1 sm:col-span-2'}>
-              <DynamicFieldRenderer control={control} field={field} disabled={disabled} />
+              <DynamicFieldRenderer control={control} field={field} disabled={disabled} legalProcessId={legalProcessId} />
             </div>
           );
         })}

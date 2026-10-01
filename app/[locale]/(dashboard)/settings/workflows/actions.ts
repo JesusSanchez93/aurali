@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { requireAuth } from '@/lib/auth/permissions';
 import { getEmailProvider } from '@/lib/email/connection';
+import { getOrgPlan } from '@/lib/billing/getOrgPlan';
 import { revalidatePath } from 'next/cache';
 import type { Database } from '@/types/database.types';
 
@@ -38,6 +39,30 @@ export async function activateWorkflowForOrg(workflowTemplateId: string): Promis
     .single();
 
   if (!profile?.current_organization_id) throw new Error('Organization not found');
+
+  const orgId = profile.current_organization_id;
+  const orgPlan = await getOrgPlan(orgId);
+  if (orgPlan.plan.maxWorkflows !== null) {
+    const { data: alreadyActive } = await supabase
+      .from('organization_workflows')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('workflow_template_id', workflowTemplateId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!alreadyActive) {
+      const { count } = await supabase
+        .from('organization_workflows')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', orgId)
+        .eq('is_active', true);
+
+      if ((count ?? 0) >= orgPlan.plan.maxWorkflows) {
+        throw new Error(`Tu plan permite hasta ${orgPlan.plan.maxWorkflows} tipos de proceso activos. Desactiva uno antes de activar otro, o mejora tu plan.`);
+      }
+    }
+  }
 
   if (await workflowRequiresEmail(supabase, workflowTemplateId)) {
     const provider = await getEmailProvider(profile.current_organization_id);

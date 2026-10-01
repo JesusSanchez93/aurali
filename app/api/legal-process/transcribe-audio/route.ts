@@ -13,9 +13,20 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const audio = formData.get('audio');
+    const legalProcessId = formData.get('legalProcessId');
 
     if (!audio || !(audio instanceof Blob)) {
       return NextResponse.json({ error: 'Audio file required' }, { status: 400 });
+    }
+
+    let orgId: string | null = null;
+    if (typeof legalProcessId === 'string' && legalProcessId) {
+      const { data: legalProcess } = await supabase
+        .from('legal_processes')
+        .select('organization_id')
+        .eq('id', legalProcessId)
+        .maybeSingle();
+      orgId = legalProcess?.organization_id ?? null;
     }
 
     const file = new File([audio], 'audio.webm', { type: audio.type || 'audio/webm' });
@@ -31,7 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No se pudo transcribir el audio' }, { status: 422 });
     }
 
-    const text = await polishLegalNarrative(raw);
+    const text = orgId ? await polishLegalNarrative(raw, orgId) : raw;
     return NextResponse.json({ text });
   } catch (error) {
     console.error('[transcribe-audio]', error instanceof Error ? error.message : 'unknown error');

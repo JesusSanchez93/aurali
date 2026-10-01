@@ -13,6 +13,8 @@ import type { FormSchema } from '@/lib/forms/types';
 import { resolveSectionOptions } from '@/lib/forms/catalogOptions';
 import { resolveFormResponseFileUrls } from '@/lib/forms/resolveFormResponseFileUrls';
 import { sendOrgEmail } from '@/lib/email/sendOrgEmail';
+import { isSubscriptionWritable } from '@/lib/billing/getOrgPlan';
+import { incrementUsage } from '@/lib/billing/usage';
 import { buildTrackingMessageId, determineReplyCapture } from '@/lib/email/inboundReply';
 import { fetchLatestGmailThreadReply } from '@/lib/email/gmail/gmailInboxClient';
 import { getValidGoogleAccessToken } from '@/lib/email/providers/googleEmailService';
@@ -309,6 +311,10 @@ export async function createLegalProcessDraft(values: {
     const organizationId = profile.current_organization_id;
     const normalizedEmail = values.email.trim().toLowerCase();
 
+    if (!(await isSubscriptionWritable(organizationId))) {
+      throw new Error('Tu suscripción venció. Regulariza tu plan para poder crear nuevos procesos.');
+    }
+
     // Resolve which workflow_template (= tipo de proceso legal) applies to this
     // case. Orgs with a single active workflow keep the previous behavior
     // (no selection needed); orgs with several require values.workflow_template_id.
@@ -457,6 +463,9 @@ export async function createLegalProcessDraft(values: {
   // Start the workflow — it will send the invitation email automatically
   // via the send_email node configured with email_template: 'client_form_email'
     await startWorkflow(chosenWorkflowTemplateId, newLegalProcess.id);
+
+    // Medición de uso — tope del plan es aviso blando (banner), nunca bloquea aquí.
+    void incrementUsage(organizationId, 'processes');
 
   // Audit: process created
     void supabase.from('audit_logs').insert({

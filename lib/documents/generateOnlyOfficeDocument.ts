@@ -26,6 +26,7 @@ import { substituteDocxVariables, extractDocxPlainText } from '@/lib/onlyoffice/
 import { convertDocxToPdf } from '@/lib/onlyoffice/convert';
 import { signFileAccessToken } from '@/lib/onlyoffice/jwt';
 import { getCallbackBaseUrl } from '@/lib/onlyoffice/config';
+import { isSubscriptionWritable } from '@/lib/billing/getOrgPlan';
 
 export interface GenerateOnlyOfficeDocumentInput {
   /** UUID of the legal_templates row */
@@ -103,6 +104,10 @@ export async function generateDocument(
   }
 
   const orgId = organizationId ?? template.organization_id;
+
+  if (orgId && !(await isSubscriptionWritable(orgId))) {
+    throw new Error('La suscripción de la organización venció. Regulariza el plan para poder generar nuevos documentos — los ya generados siguen disponibles para descarga.');
+  }
 
   // ── 2. Download source .docx ──────────────────────────────────────────────
   const { data: sourceFile, error: downloadErr } = await supabase.storage
