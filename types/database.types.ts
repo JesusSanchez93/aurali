@@ -189,6 +189,38 @@ export type Database = {
           },
         ]
       }
+      billing_reminder_log: {
+        Row: {
+          id: string
+          period_end: string
+          reminder_type: string
+          sent_at: string
+          subscription_id: string
+        }
+        Insert: {
+          id?: string
+          period_end: string
+          reminder_type: string
+          sent_at?: string
+          subscription_id: string
+        }
+        Update: {
+          id?: string
+          period_end?: string
+          reminder_type?: string
+          sent_at?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_reminder_log_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "organization_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_banks: {
         Row: {
           code: string
