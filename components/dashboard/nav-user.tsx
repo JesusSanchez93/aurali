@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import {
   BadgeCheck,
   Bell,
@@ -29,6 +30,7 @@ import {
 
 import { logoutAction } from '@/app/[locale]/auth/actions';
 import { exitOrganizationAction } from '@/app/[locale]/(dashboard)/admin/clients/actions';
+import { getCurrentUserPlanCode } from './nav-user-actions';
 import Link from 'next/link';
 import { useProfile } from '@/components/providers/profile-provider';
 import { useTranslations } from 'next-intl';
@@ -37,6 +39,11 @@ export function NavUser() {
   const t = useTranslations('common.nav.user');
   const profile = useProfile();
   const { isMobile } = useSidebar();
+  const [planCode, setPlanCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCurrentUserPlanCode().then(setPlanCode).catch(() => setPlanCode(null));
+  }, []);
 
   const initials =
     (profile.firstname?.[0]?.toUpperCase() ?? '') + (profile.lastname?.[0]?.toUpperCase() ?? '');
@@ -95,25 +102,36 @@ export function NavUser() {
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            {planCode === 'essential' && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem asChild>
+                    <Link href={'/settings/billing'}>
+                      <Sparkles />
+                      {t('upgrade')}
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </>
+            )}
             <DropdownMenuGroup>
-              <DropdownMenuItem disabled>
-                <Sparkles />
-                {t('upgrade')}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href={'/account'}>
-                  <BadgeCheck />
-                  {t('account')}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <CreditCard />
-                {t('billing')}
-              </DropdownMenuItem>
+              {!isSuperAdmin && (
+                <DropdownMenuItem asChild>
+                  <Link href={'/account'}>
+                    <BadgeCheck />
+                    {t('account')}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {!isSuperAdmin && (
+                <DropdownMenuItem asChild>
+                  <Link href={'/settings/billing'}>
+                    <CreditCard />
+                    {t('billing')}
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem disabled>
                 <Bell />
                 {t('notifications')}
