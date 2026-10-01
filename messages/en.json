@@ -59,6 +59,7 @@
       "ai_variables": "AI Variables",
       "formats": "Document Templates",
       "email_settings": "Email",
+      "billing": "Plan & billing",
       "board": "Board"
     },
     "upload": {
@@ -119,6 +120,12 @@
     "email_connection_banner": {
       "message": "You don't have your own email connected — emails to your clients won't be able to send until you connect one.",
       "cta": "Connect email"
+    },
+    "plan_usage_banner": {
+      "expired_message": "Your subscription expired — you have {days} day(s) of grace period to regularize your plan before losing the ability to create new processes and documents.",
+      "expiring_message": "Your plan expires on {date}.",
+      "usage_message": "You're close to your plan's limit on {metric}.",
+      "cta": "View plan & billing"
     },
     "workflow_guide": {
       "skip": "Skip",

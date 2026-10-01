@@ -59,6 +59,7 @@
       "ai_variables": "Variables IA",
       "formats": "Plantillas de Documentos",
       "email_settings": "Correo electrónico",
+      "billing": "Plan y facturación",
       "board": "Tablero"
     },
     "upload": {
@@ -119,6 +120,12 @@
     "email_connection_banner": {
       "message": "No tienes un correo propio conectado — los correos a tus clientes no podrán enviarse hasta que lo conectes.",
       "cta": "Conectar correo"
+    },
+    "plan_usage_banner": {
+      "expired_message": "Tu suscripción venció — tienes {days} día(s) de gracia para regularizar tu plan antes de perder la posibilidad de crear procesos y documentos nuevos.",
+      "expiring_message": "Tu plan vence el {date}.",
+      "usage_message": "Estás cerca del límite de tu plan en {metric}.",
+      "cta": "Ver plan y facturación"
     },
     "workflow_guide": {
       "skip": "Omitir",

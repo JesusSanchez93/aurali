@@ -49,6 +49,7 @@ const SETTINGS_SUB = [
   { titleKey: 'banks',           url: '/settings/banks',        icon: Building2 },
   { titleKey: 'document_types', url: '/settings/documents',    icon: IdCard    },
   { titleKey: 'email_settings', url: '/settings/email',        icon: Mail      },
+  { titleKey: 'billing',        url: '/settings/billing',      icon: CreditCard},
 ];
 
 export const userItems: NavItem[] = [

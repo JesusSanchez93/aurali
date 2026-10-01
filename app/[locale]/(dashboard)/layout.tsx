@@ -3,6 +3,7 @@ import { AppSidebar } from '@/components/dashboard/app-sidebar';
 import { AppNavBar } from '@/components/dashboard/app-navbar';
 import { SuperAdminBanner } from '@/components/dashboard/superadmin-banner';
 import { EmailConnectionBanner } from '@/components/dashboard/email-connection-banner';
+import { PlanUsageBanner } from '@/components/dashboard/plan-usage-banner';
 import { CSSProperties, ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -61,6 +62,7 @@ export default async function DashboardLayout({ children }: Props) {
           <main className="relative flex flex-1 flex-col overflow-auto bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:shadow-sm">
             <SuperAdminBanner profile={profile} />
             <EmailConnectionBanner profile={profile} />
+            <PlanUsageBanner profile={profile} />
             <AppNavBar />
             <div className="flex flex-1 flex-col">
               <div className="@container/main flex flex-1 flex-col gap-2">
