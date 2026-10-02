@@ -85,7 +85,7 @@ function FinKpi({
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function FinancialsSection({ data }: { data: Financials }) {
+export default function FinancialsSection({ data }: { data: NonNullable<Financials> }) {
     const { totalBilled, totalCollected, totalPending, collectionRate, currency, monthlyPayments, paymentMethods } = data;
 
     const pieMethods = paymentMethods.map((m, i) => ({

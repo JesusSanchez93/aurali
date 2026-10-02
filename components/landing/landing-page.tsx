@@ -222,6 +222,7 @@ export function LandingPage({
         <HowItWorksSection t={t} steps={steps} />
         <BenefitsSection t={t} benefits={benefits} />
         <TestimonialsSection t={t} testimonials={testimonials} />
+        <PricingSection t={t} />
         <FinalCtaSection t={t} />
       </main>
 
@@ -1091,10 +1092,103 @@ function TestimonialModal({
   );
 }
 
+// Precios en USD/mes; reflejan la tabla `plans` (essential/professional) — si cambian ahí, actualizar aquí también.
+// trialDays refleja TRIAL_PERIOD_DAYS_BY_PLAN_CODE en lib/billing/getOrgPlan.ts — si cambia ahí, actualizar aquí también.
+const PRICING_PLANS = [
+  { code: 'essential', priceUsd: 25, listPriceUsd: 49, popular: false, trialDays: 15 },
+  { code: 'professional', priceUsd: 69, listPriceUsd: 129, popular: true, trialDays: 30 },
+] as const;
+
+function PricingSection({ t }: { t: Translator }) {
+  return (
+    <section id="pricing" className="bg-white/75 px-4 py-20 sm:px-6 lg:px-8 dark:bg-white/5">
+      <SectionHeader eyebrow={t('pricing.eyebrow')} title={t('pricing.title')} description={t('pricing.description')} />
+      <p className="mt-3 text-center text-sm text-[var(--landing-muted)]">{t('pricing.billingNote')}</p>
+
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="visible"
+        viewport={sectionViewport}
+        className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2"
+      >
+        {PRICING_PLANS.map((plan) => {
+          const features = t.raw(`pricing.plans.${plan.code}.features`) as Record<string, string>;
+          return (
+            <motion.div
+              key={plan.code}
+              variants={staggerItem}
+              whileHover={{ y: -4, boxShadow: '0 26px 54px -32px rgba(30,27,75,0.25)' }}
+              transition={{ duration: 0.2 }}
+              style={{ willChange: 'transform, opacity' }}
+            >
+              <Card
+                className={cn(
+                  'relative h-full rounded-3xl backdrop-blur-xl',
+                  plan.popular
+                    ? 'border-[var(--landing-accent)]/60 bg-white/80 shadow-[0_28px_64px_-34px_rgba(124,58,237,0.45)] dark:border-violet-400/40 dark:bg-white/10'
+                    : 'border-white/40 bg-white/62 shadow-[0_24px_60px_-38px_rgba(17,24,39,0.28)] dark:border-white/10 dark:bg-white/5',
+                )}
+              >
+                {plan.popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--landing-accent)] px-4 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-md">
+                    {t('pricing.popularBadge')}
+                  </span>
+                )}
+                <CardContent className="flex h-full flex-col p-7">
+                  <h3 className="text-xl font-bold tracking-tight text-[var(--landing-text)]">
+                    {t(`pricing.plans.${plan.code}.name`)}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[var(--landing-muted)]">
+                    {t(`pricing.plans.${plan.code}.description`)}
+                  </p>
+
+                  <div className="mt-6 flex items-end gap-2">
+                    <span className="text-4xl font-bold tracking-tight text-[var(--landing-text)]">${plan.priceUsd}</span>
+                    <span className="pb-1 text-sm text-[var(--landing-muted)]">{t('pricing.perMonth')}</span>
+                    <span className="pb-1 text-sm text-[var(--landing-muted)] line-through">${plan.listPriceUsd}</span>
+                  </div>
+
+                  <span className="mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {t('pricing.trialBadge', { days: plan.trialDays })}
+                  </span>
+
+                  <ul className="mt-6 flex-1 space-y-3">
+                    {Object.values(features).map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm text-[var(--landing-text)]">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    asChild
+                    size="lg"
+                    className={cn(
+                      'mt-7 h-11 w-full rounded-full border-0 text-sm',
+                      plan.popular
+                        ? 'bg-[var(--landing-cta)] text-white hover:bg-[#4d41e0]'
+                        : 'bg-[rgba(30,27,75,0.08)] text-[var(--landing-primary)] hover:bg-[rgba(30,27,75,0.14)] dark:bg-white/10 dark:text-white dark:hover:bg-white/15',
+                    )}
+                  >
+                    <Link href="/auth/login">{t('pricing.cta')}</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+    </section>
+  );
+}
+
 function FinalCtaSection({ t }: { t: Translator }) {
   const reducedMotion = useReducedMotion();
   return (
-    <section id="pricing" className="px-4 py-20 sm:px-6 lg:px-8">
+    <section className="px-4 py-20 sm:px-6 lg:px-8">
       <motion.div
         {...itemMotion}
         className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-[var(--landing-primary)] via-[#2d226e] to-[var(--landing-accent)] px-6 py-14 text-white shadow-[0_40px_90px_-45px_rgba(30,27,75,0.9)] sm:px-10 lg:px-14"

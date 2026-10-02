@@ -107,7 +107,7 @@ export function NavUser() {
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
-                    <Link href={'/settings/billing'}>
+                    <Link href={'/billing'}>
                       <Sparkles />
                       {t('upgrade')}
                     </Link>
@@ -126,7 +126,7 @@ export function NavUser() {
               )}
               {!isSuperAdmin && (
                 <DropdownMenuItem asChild>
-                  <Link href={'/settings/billing'}>
+                  <Link href={'/billing'}>
                     <CreditCard />
                     {t('billing')}
                   </Link>

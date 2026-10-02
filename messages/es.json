@@ -60,6 +60,9 @@
       "formats": "Plantillas de Documentos",
       "email_settings": "Correo electrónico",
       "billing": "Plan y facturación",
+      "payments": "Pagos",
+      "roles": "Roles",
+      "admin_roles": "Roles y permisos",
       "board": "Tablero"
     },
     "upload": {
@@ -289,7 +292,9 @@
       "method_other": "Otro",
       "success": "Pago registrado",
       "fee_label": "Valor del proceso",
-      "fee_helper": "Honorarios acordados con el cliente (opcional)"
+      "fee_helper": "Honorarios acordados con el cliente (opcional)",
+      "set_fee_btn": "Establecer honorario",
+      "fee_set_success": "Honorario establecido"
     },
     "filter": {
       "all": "Todos",
@@ -599,6 +604,16 @@
       "update_success": "Cliente actualizado correctamente",
       "error": "Ocurrió un error"
     }
+  },
+  "payments": {
+    "title": "Pagos",
+    "description": "Honorarios y pagos de todos tus procesos, en un solo lugar.",
+    "empty": "No hay procesos con cliente registrado todavía.",
+    "no_fee_badge": "Sin honorario",
+    "paid_badge": "Pagado",
+    "pending_badge": "Pendiente",
+    "manage_btn": "Gestionar",
+    "manage_title": "Honorarios y pagos"
   },
   "onboarding": {
     "home": {
@@ -914,6 +929,38 @@
           "extended": "Trabajar como abogada independiente significa que cada minuto cuenta. Aurali me da visibilidad total de cada proceso activo, automatiza las notificaciones a mis clientes y me deja enfocarme en la estrategia legal en lugar de perseguir actualizaciones por chat.\n\nAntes perdía tiempo revisando conversaciones antiguas para recordar en qué había quedado con cada cliente. Ahora todo queda registrado en el proceso, así que puedo retomar cualquier caso en segundos y dar una respuesta mucho más profesional.",
           "author": "Valentina Pardo",
           "role": "Abogada independiente"
+        }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Precios",
+      "title": "Un plan simple para cada etapa de tu bufete",
+      "description": "Sin letras pequeñas ni contratos forzosos. Cambia o cancela tu plan cuando quieras.",
+      "billingNote": "Precios en USD, facturación mensual.",
+      "perMonth": "USD/mes",
+      "popularBadge": "Más elegido",
+      "trialBadge": "{days} días gratis",
+      "cta": "Comenzar ahora",
+      "plans": {
+        "essential": {
+          "name": "Esencial",
+          "description": "Para bufetes pequeños que están automatizando sus primeros procesos.",
+          "features": {
+            "processes": "Hasta 50 procesos nuevos al mes",
+            "ai": "400 usos de IA al mes",
+            "users": "Hasta 3 usuarios",
+            "workflows": "Hasta 3 flujos de trabajo"
+          }
+        },
+        "professional": {
+          "name": "Profesional",
+          "description": "Para bufetes en crecimiento con varios abogados y más volumen de procesos.",
+          "features": {
+            "processes": "Hasta 250 procesos nuevos al mes",
+            "ai": "2.000 usos de IA al mes",
+            "users": "Hasta 10 usuarios",
+            "workflows": "Flujos de trabajo ilimitados"
+          }
         }
       }
     },

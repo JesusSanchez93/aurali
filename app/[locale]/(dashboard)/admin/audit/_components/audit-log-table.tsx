@@ -44,6 +44,12 @@ const ACTION_LABELS: Record<string, string> = {
   client_banking_info_submitted: 'Cliente envió información bancaria',
   client_image_deleted: 'Cliente eliminó una imagen subida',
   client_process_completed: 'Cliente completó el formulario',
+  role_created: 'Rol creado',
+  role_updated: 'Rol actualizado',
+  role_deleted: 'Rol eliminado',
+  role_permission_added: 'Permiso agregado a un rol',
+  role_permission_removed: 'Permiso retirado de un rol',
+  member_role_changed: 'Cambio de rol de un miembro',
 }
 
 // Actions worth flagging visually — the ones a superadmin is usually hunting for

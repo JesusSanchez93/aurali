@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { CurrencyInput } from '@/components/common/form/currency-input';
-import { registerPayment, type PaymentMethod } from '@/app/[locale]/(dashboard)/legal-process/actions';
+import { registerPayment, setProcessFee, type PaymentMethod } from '@/app/[locale]/(dashboard)/legal-process/actions';
 
 const formatCOP = (amount: number | string) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(amount));
@@ -58,6 +58,8 @@ export function ProcessPaymentsSection({ legalProcessId, fee, payments, onUpdate
   const [method, setMethod] = useState<PaymentMethod | ''>('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [reference, setReference] = useState('');
+  const [feeAmount, setFeeAmount] = useState<number | undefined>(undefined);
+  const [isSettingFee, startSetFee] = useTransition();
   const [notes, setNotes] = useState('');
 
   const paidAmount = payments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -86,6 +88,21 @@ export function ProcessPaymentsSection({ legalProcessId, fee, payments, onUpdate
     setPaymentDate(new Date().toISOString().split('T')[0]);
     setReference('');
     setNotes('');
+  }
+
+  function handleSetFee() {
+    if (!feeAmount || feeAmount <= 0) return;
+
+    startSetFee(async () => {
+      try {
+        await setProcessFee(legalProcessId, feeAmount);
+        toast.success(t('fee_set_success'));
+        setFeeAmount(undefined);
+        onUpdate();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : commonT('error_fallback'));
+      }
+    });
   }
 
   function handleSubmit() {
@@ -127,7 +144,21 @@ export function ProcessPaymentsSection({ legalProcessId, fee, payments, onUpdate
         </div>
 
         {!fee ? (
-          <p className="text-sm text-muted-foreground">{t('no_fee')}</p>
+          <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+            <p className="text-sm text-muted-foreground">{t('no_fee')}</p>
+            <div className="flex items-center gap-2">
+              <CurrencyInput value={feeAmount} onChange={setFeeAmount} disabled={isSettingFee} />
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                disabled={isSettingFee || !feeAmount || feeAmount <= 0}
+                onClick={handleSetFee}
+              >
+                {t('set_fee_btn')}
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="rounded-md border bg-muted/30 p-3 space-y-2">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">

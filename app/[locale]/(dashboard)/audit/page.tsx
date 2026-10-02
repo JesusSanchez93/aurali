@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { getAuditLogs } from '../admin/audit/actions';
 import { AuditLogTable } from '../admin/audit/_components/audit-log-table';
 import { ShieldAlert } from 'lucide-react';
+import { can } from '@/lib/auth/authorization';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -10,6 +11,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 export default async function OrgAuditPage() {
+  if (!(await can('audit.view'))) {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-muted-foreground">No tienes permisos para ver esta sección.</p>
+      </div>
+    );
+  }
+
   const logs = await getAuditLogs({ days: 30 });
 
   return (

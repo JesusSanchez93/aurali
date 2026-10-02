@@ -6,9 +6,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: 'common' });
   return { title: t('nav.users') };
 }
-import { createClient } from '@/lib/supabase/server';
 import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import { getOrgMembers, getPendingInvitations } from './actions';
+import { getAssignableRoles } from '../roles/actions';
 import { UsersSection } from './_components/users-section';
 
 export default async function UsersPage() {
@@ -24,18 +24,8 @@ export default async function UsersPage() {
     );
   }
 
-  // Check ORG_ADMIN role
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = (await createClient()) as any;
-  const { data: membership } = await db
-    .from('organization_members')
-    .select('role')
-    .eq('organization_id', orgId)
-    .eq('user_id', profile.id)
-    .single();
-
-  const isAdmin = profile.system_role === 'SUPERADMIN' || membership?.role === 'ORG_ADMIN';
-  if (!isAdmin) {
+  const can = (permission: string) => profile.permissions.includes(permission);
+  if (!can('users.view')) {
     return (
       <div className="px-6 py-6">
         <p className="text-sm text-muted-foreground">No tienes permisos para ver esta sección.</p>
@@ -43,23 +33,28 @@ export default async function UsersPage() {
     );
   }
 
-  const [members, invitations] = await Promise.all([
+  const [members, invitations, roles] = await Promise.all([
     getOrgMembers(),
     getPendingInvitations(),
+    getAssignableRoles(),
   ]);
 
   return (
     <div className="space-y-6 px-6 py-6">
       <div>
-        <h1 className="text-2xl font-semibold">Usuarios</h1>
+        <h1 className="text-2xl font-semibold">Equipo</h1>
         <p className="text-sm text-muted-foreground">
-          Administra los usuarios de tu organización e invita a nuevos miembros.
+          Administra los miembros de tu organización, sus roles y las invitaciones.
         </p>
       </div>
       <UsersSection
         initialMembers={members}
         initialInvitations={invitations}
         currentUserId={profile.id}
+        roles={roles}
+        canInvite={can('users.create')}
+        canUpdate={can('users.update')}
+        canDelete={can('users.delete')}
       />
     </div>
   );

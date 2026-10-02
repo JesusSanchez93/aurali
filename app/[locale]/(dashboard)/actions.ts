@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { getSessionProfile } from '@/lib/auth/get-session-profile';
 
 export async function getDashboardStats() {
     const supabase = await createClient();
@@ -70,7 +71,7 @@ export type DashboardAnalytics = {
         currency: string;
         monthlyPayments: { month: string; label: string; amount: number }[];
         paymentMethods: { method: string; count: number; amount: number }[];
-    };
+    } | null;
 };
 
 const ACTIVE_STATUSES = new Set([
@@ -81,14 +82,8 @@ const ACTIVE_STATUSES = new Set([
 export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
     const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (!user || authError) throw new Error('Unauthorized');
-
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('current_organization_id, system_role')
-        .eq('id', user.id)
-        .single();
+    const { user, profile } = await getSessionProfile();
+    if (!user) throw new Error('Unauthorized');
 
     const isSuperAdmin = profile?.system_role === 'SUPERADMIN';
     const orgId = profile?.current_organization_id;
@@ -102,12 +97,13 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
             monthlyVolume: [],
             topBanks: [],
             fraudFactors: [],
-            financials: {
-                totalBilled: 0, totalCollected: 0, totalPending: 0, collectionRate: 0,
-                currency: 'ARS', monthlyPayments: [], paymentMethods: [],
-            },
+            financials: null,
         };
     }
+
+    // Valores económicos: solo roles con el permiso `reports.financial` (el
+    // SUPERADMIN que ingresó a la organización recibe todos los permisos).
+    const canSeeFinancials = profile?.permissions.includes('reports.financial') ?? false;
 
     // ── Fetch raw data ───────────────────────────────────────────────────────
     const [{ data: processes }, { data: banks }, { data: fees }, { data: payments }] = await Promise.all([
@@ -119,14 +115,12 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
             .from('legal_process_banks')
             .select('bank_name, file_complait, no_signal, bank_notification, access_website, access_link, used_to_operate_stolen_amount, lost_card')
             .eq('organization_id', orgId),
-        supabase
-            .from('legal_process_fees')
-            .select('total_amount, currency')
-            .eq('organization_id', orgId),
-        supabase
-            .from('legal_process_payments')
-            .select('amount, payment_date, payment_method')
-            .eq('organization_id', orgId),
+        canSeeFinancials
+            ? supabase.from('legal_process_fees').select('total_amount, currency').eq('organization_id', orgId)
+            : Promise.resolve({ data: [] as { total_amount: number; currency: string }[] }),
+        canSeeFinancials
+            ? supabase.from('legal_process_payments').select('amount, payment_date, payment_method').eq('organization_id', orgId)
+            : Promise.resolve({ data: [] as { amount: number; payment_date: string; payment_method: string | null }[] }),
     ]);
 
     const allProcesses = processes ?? [];
@@ -247,6 +241,8 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
         monthlyVolume,
         topBanks,
         fraudFactors,
-        financials: { totalBilled, totalCollected, totalPending, collectionRate, currency, monthlyPayments, paymentMethods },
+        financials: canSeeFinancials
+            ? { totalBilled, totalCollected, totalPending, collectionRate, currency, monthlyPayments, paymentMethods }
+            : null,
     };
 }

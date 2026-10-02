@@ -20,8 +20,12 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-6 p-6">
       <DashboardCards {...stats} />
-      <FinancialsSection data={analytics.financials} />
-      <Separator />
+      {analytics.financials && (
+        <>
+          <FinancialsSection data={analytics.financials} />
+          <Separator />
+        </>
+      )}
       <AnalyticsSection data={analytics} />
     </div>
   );

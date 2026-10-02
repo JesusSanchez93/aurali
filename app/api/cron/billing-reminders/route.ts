@@ -113,7 +113,7 @@ export async function GET(request: Request) {
             planName: sub.plans?.name ?? 'tu plan',
             dueToday: reminderType === 'due_today',
             periodEndLabel: new Date(expiryIso).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' }),
-            billingUrl: `${appUrl}/es/settings/billing`,
+            billingUrl: `${appUrl}/es/billing`,
           }) as React.ReactElement,
         );
 

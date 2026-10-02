@@ -5,24 +5,22 @@ import { revalidatePath } from 'next/cache';
 import { render } from '@react-email/render';
 import { resend } from '@/lib/resend';
 import { OrgInviteEmail } from '@/emails/OrgInviteEmail';
+import { requirePermission } from '@/lib/auth/authorization';
+import type { PermissionKey } from '@/lib/auth/permission-keys';
+import { roleErrorMessage } from '@/lib/roles/roles';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = any;
 
-async function getOrgContext() {
+/**
+ * Exige el permiso en la organización actual y devuelve el cliente con la
+ * sesión del usuario: RLS y los triggers de `organization_members` repiten
+ * la comprobación (permiso, rol de la misma organización, no escalar).
+ */
+async function getOrgContext(permission: PermissionKey) {
+  const { profile } = await requirePermission(permission);
   const supabase = await createClient();
-  const db = supabase as DB;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('No autenticado');
-
-  const { data: profile } = await db
-    .from('profiles')
-    .select('id, firstname, lastname, email, current_organization_id')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile?.current_organization_id) throw new Error('Sin organización activa');
-  return { supabase, db, profile };
+  return { supabase, db: supabase as DB, profile };
 }
 
 // ─── READ ──────────────────────────────────────────────────────────────────────
@@ -30,17 +28,18 @@ async function getOrgContext() {
 export type OrgMember = {
   id: string;
   user_id: string;
-  role: 'ORG_ADMIN' | 'ORG_USER';
+  role_id: string;
+  role_name: string;
   active: boolean;
   created_at: string;
   profile: { firstname: string | null; lastname: string | null; email: string | null };
 };
 
 export async function getOrgMembers(): Promise<OrgMember[]> {
-  const { db, profile } = await getOrgContext();
+  const { db, profile } = await getOrgContext('users.view');
   const { data, error } = await db
     .from('organization_members')
-    .select('id, user_id, role, active, created_at, profiles(firstname, lastname, email)')
+    .select('id, user_id, role_id, active, created_at, profiles(firstname, lastname, email), roles(name)')
     .eq('organization_id', profile.current_organization_id)
     .order('created_at', { ascending: true });
 
@@ -48,7 +47,8 @@ export async function getOrgMembers(): Promise<OrgMember[]> {
   return (data ?? []).map((m: DB) => ({
     id: m.id,
     user_id: m.user_id,
-    role: m.role,
+    role_id: m.role_id,
+    role_name: m.roles?.name ?? '—',
     active: m.active,
     created_at: m.created_at,
     profile: m.profiles ?? { firstname: null, lastname: null, email: null },
@@ -58,29 +58,35 @@ export async function getOrgMembers(): Promise<OrgMember[]> {
 export type PendingInvitation = {
   id: string;
   email: string;
-  role: 'ORG_ADMIN' | 'ORG_USER';
+  role_name: string;
   expires_at: string;
   created_at: string;
 };
 
 export async function getPendingInvitations(): Promise<PendingInvitation[]> {
-  const { db, profile } = await getOrgContext();
+  const { db, profile } = await getOrgContext('users.view');
   const { data, error } = await db
     .from('organization_invitations')
-    .select('id, email, role, expires_at, created_at')
+    .select('id, email, expires_at, created_at, roles(name)')
     .eq('organization_id', profile.current_organization_id)
     .is('accepted_at', null)
     .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map((i: DB) => ({
+    id: i.id,
+    email: i.email,
+    role_name: i.roles?.name ?? '—',
+    expires_at: i.expires_at,
+    created_at: i.created_at,
+  }));
 }
 
 // ─── MUTATIONS ─────────────────────────────────────────────────────────────────
 
-export async function inviteUserToOrg(email: string, role: 'ORG_ADMIN' | 'ORG_USER') {
-  const { db, profile } = await getOrgContext();
+export async function inviteUserToOrg(email: string, roleId: string) {
+  const { db, profile } = await getOrgContext('users.create');
 
   // Get org name for the email
   const { data: org } = await db
@@ -102,7 +108,7 @@ export async function inviteUserToOrg(email: string, role: 'ORG_ADMIN' | 'ORG_US
       {
         organization_id: profile.current_organization_id,
         email: normalizedEmail,
-        role,
+        role_id: roleId,
         invited_by: profile.id,
         expires_at: expiresAt,
       },
@@ -111,7 +117,7 @@ export async function inviteUserToOrg(email: string, role: 'ORG_ADMIN' | 'ORG_US
     .select('token')
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(roleErrorMessage(error));
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   const signUpUrl = `${appUrl}/es/auth/sign-up?token=${invitation.token}`;
@@ -132,7 +138,7 @@ export async function inviteUserToOrg(email: string, role: 'ORG_ADMIN' | 'ORG_US
 }
 
 export async function cancelInvitation(invitationId: string) {
-  const { db, profile } = await getOrgContext();
+  const { db, profile } = await getOrgContext('users.create');
   const { error } = await db
     .from('organization_invitations')
     .delete()
@@ -143,38 +149,40 @@ export async function cancelInvitation(invitationId: string) {
   revalidatePath('/settings/users');
 }
 
-export async function updateMemberRole(memberId: string, role: 'ORG_ADMIN' | 'ORG_USER') {
-  const { db, profile } = await getOrgContext();
-  const { error } = await db
+export async function updateMemberRole(memberId: string, roleId: string) {
+  const { db, profile } = await getOrgContext('users.update');
+  const { data, error } = await db
     .from('organization_members')
-    .update({ role })
+    .update({ role_id: roleId })
     .eq('id', memberId)
-    .eq('organization_id', profile.current_organization_id);
+    .eq('organization_id', profile.current_organization_id)
+    .select('id');
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(roleErrorMessage(error));
+  if (!data?.length) throw new Error('No tienes permiso para cambiar este rol');
   revalidatePath('/settings/users');
 }
 
 export async function toggleMemberActive(memberId: string, active: boolean) {
-  const { db, profile } = await getOrgContext();
+  const { db, profile } = await getOrgContext('users.update');
   const { error } = await db
     .from('organization_members')
     .update({ active })
     .eq('id', memberId)
     .eq('organization_id', profile.current_organization_id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(roleErrorMessage(error));
   revalidatePath('/settings/users');
 }
 
 export async function removeMember(memberId: string) {
-  const { db, profile } = await getOrgContext();
+  const { db, profile } = await getOrgContext('users.delete');
   const { error } = await db
     .from('organization_members')
     .delete()
     .eq('id', memberId)
     .eq('organization_id', profile.current_organization_id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(roleErrorMessage(error));
   revalidatePath('/settings/users');
 }

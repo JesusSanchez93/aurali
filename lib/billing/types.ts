@@ -21,8 +21,12 @@ export interface OrgPlan {
     maxStorageGb: number | null
     maxWorkflows: number | null
     maxMonthlyAiUses: number | null
+    features: Partial<Record<PlanFeature, boolean>>
   }
 }
+
+/** Features de plan guardadas en `plans.features` (json). */
+export type PlanFeature = 'custom_roles'
 
 export interface OrgUsage {
   processes: number

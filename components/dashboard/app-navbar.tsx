@@ -5,7 +5,7 @@ import { ModeToggle } from './mode-toggle';
 import { LanguageSwitcher } from './language-switcher';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Separator } from '@/components/ui/separator';
-import { userItems, adminItems, adminUserItems } from './app-sidebar';
+import { adminItems, orgItems } from './app-sidebar';
 import { useTranslations } from 'next-intl';
 import { useProfile } from '@/components/providers/profile-provider';
 import { ChevronRight } from 'lucide-react';
@@ -17,12 +17,7 @@ export function AppNavBar() {
 
   const isSuperAdmin = profile?.system_role === 'SUPERADMIN';
   const isImpersonating = isSuperAdmin && !!profile?.current_organization_id;
-  const isOrgAdmin = profile?.org_role === 'ORG_ADMIN';
-  const items = isSuperAdmin && !isImpersonating
-    ? adminItems
-    : isOrgAdmin
-      ? adminUserItems
-      : userItems;
+  const items = isSuperAdmin && !isImpersonating ? adminItems : orgItems;
 
   // Find active parent and optional active sub-item
   let parentItem = items.find((e) => {

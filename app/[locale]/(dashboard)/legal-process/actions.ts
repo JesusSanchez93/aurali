@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { requirePermission } from '@/lib/auth/authorization';
 import { createClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
 import { startWorkflow, resumeWorkflow, retryWorkflow, executeDocumentWithTemplates, executeEmailWithAttachments, executeSendEmailWithThirdPartyEmails } from '@/lib/workflow/workflowRunner';
@@ -646,7 +647,7 @@ export async function getLegalProcessDetail(legalProcessId: string) {
     throw new Error('Proceso legal no encontrado');
   }
 
-  const [{ data: clientData }, { data: bankingData }, { data: feeData }, { data: paymentsData }] = await Promise.all([
+  const [{ data: clientData }, { data: bankingData }] = await Promise.all([
     supabase
       .from('legal_process_clients')
       .select('*')
@@ -657,16 +658,6 @@ export async function getLegalProcessDetail(legalProcessId: string) {
       .select('*')
       .eq('legal_process_id', legalProcessId)
       .single(),
-    supabase
-      .from('legal_process_fees')
-      .select('id, total_amount, currency, notes')
-      .eq('legal_process_id', legalProcessId)
-      .maybeSingle(),
-    supabase
-      .from('legal_process_payments')
-      .select('id, amount, payment_method, payment_date, reference, notes, created_at')
-      .eq('legal_process_id', legalProcessId)
-      .order('payment_date', { ascending: true }),
   ]);
 
   if (clientData) {
@@ -787,8 +778,6 @@ export async function getLegalProcessDetail(legalProcessId: string) {
     process: legalProcess,
     client: clientData ?? null,
     banking: bankingData ?? null,
-    fee: feeData ?? null,
-    payments: (paymentsData ?? []) as { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string }[],
     formSchema,
     formResponses,
     emailAttachments: refreshedEmailAttachments as {
@@ -1884,6 +1873,7 @@ export async function setProcessFee(
   totalAmount: number,
   notes?: string,
 ): Promise<void> {
+  await requirePermission('payments.manage');
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (!user || authError) throw new Error('Unauthorized');
@@ -1924,6 +1914,7 @@ export async function registerPayment(
     notes?: string;
   },
 ): Promise<void> {
+  await requirePermission('payments.manage');
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (!user || authError) throw new Error('Unauthorized');
@@ -1970,6 +1961,7 @@ export async function getProcessFeeAndPayments(legalProcessId: string): Promise<
   fee: { id: string; total_amount: number; currency: string; notes: string | null } | null;
   payments: { id: string; amount: number; payment_method: string; payment_date: string; reference: string | null; notes: string | null; created_at: string }[];
 }> {
+  await requirePermission('payments.view');
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');

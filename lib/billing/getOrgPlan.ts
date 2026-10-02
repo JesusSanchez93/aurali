@@ -2,6 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import type { OrgPlan } from './types'
 
 const DEFAULT_PLAN_CODE_FOR_NEW_ORGS = 'essential'
+const TRIAL_PERIOD_DAYS_BY_PLAN_CODE: Record<string, number> = {
+  essential: 15,
+  professional: 30,
+}
 
 /**
  * El trigger `handle_new_user` crea la organización en el signup pero no una
@@ -14,7 +18,7 @@ async function createDefaultSubscription(
 ) {
   const { data: plan, error: planError } = await supabase
     .from('plans')
-    .select('id')
+    .select('id, code')
     .eq('code', DEFAULT_PLAN_CODE_FOR_NEW_ORGS)
     .single()
 
@@ -22,9 +26,19 @@ async function createDefaultSubscription(
     throw new Error(`No se encontró el plan por defecto "${DEFAULT_PLAN_CODE_FOR_NEW_ORGS}".`)
   }
 
+  const trialDays = TRIAL_PERIOD_DAYS_BY_PLAN_CODE[plan.code ?? ''] ?? 15
+  const trialEndsAt = new Date()
+  trialEndsAt.setDate(trialEndsAt.getDate() + trialDays)
+
   const { error: insertError } = await supabase
     .from('organization_subscriptions')
-    .insert({ organization_id: organizationId, plan_id: plan.id, status: 'trial', billing_cycle: 'monthly' })
+    .insert({
+      organization_id: organizationId,
+      plan_id: plan.id,
+      status: 'trial',
+      billing_cycle: 'monthly',
+      trial_ends_at: trialEndsAt.toISOString(),
+    })
 
   if (insertError) {
     throw new Error(`No se pudo crear la suscripción por defecto: ${insertError.message}`)
@@ -42,7 +56,7 @@ export async function getOrgPlan(organizationId: string): Promise<OrgPlan> {
   let { data } = await supabase
     .from('organization_subscriptions')
     .select(
-      'id, status, billing_cycle, agreed_price_cents, trial_ends_at, current_period_end, plans(id, code, name, price_monthly_cents, list_price_monthly_cents, max_users, max_monthly_processes, max_storage_gb, max_workflows, max_monthly_ai_uses)',
+      'id, status, billing_cycle, agreed_price_cents, trial_ends_at, current_period_end, plans(id, code, name, price_monthly_cents, list_price_monthly_cents, max_users, max_monthly_processes, max_storage_gb, max_workflows, max_monthly_ai_uses, features)',
     )
     .eq('organization_id', organizationId)
     .maybeSingle()
@@ -52,7 +66,7 @@ export async function getOrgPlan(organizationId: string): Promise<OrgPlan> {
     ;({ data } = await supabase
       .from('organization_subscriptions')
       .select(
-        'id, status, billing_cycle, agreed_price_cents, trial_ends_at, current_period_end, plans(id, code, name, price_monthly_cents, list_price_monthly_cents, max_users, max_monthly_processes, max_storage_gb, max_workflows, max_monthly_ai_uses)',
+        'id, status, billing_cycle, agreed_price_cents, trial_ends_at, current_period_end, plans(id, code, name, price_monthly_cents, list_price_monthly_cents, max_users, max_monthly_processes, max_storage_gb, max_workflows, max_monthly_ai_uses, features)',
       )
       .eq('organization_id', organizationId)
       .maybeSingle())
@@ -82,6 +96,7 @@ export async function getOrgPlan(organizationId: string): Promise<OrgPlan> {
       maxStorageGb: plan.max_storage_gb,
       maxWorkflows: plan.max_workflows,
       maxMonthlyAiUses: plan.max_monthly_ai_uses,
+      features: (plan.features ?? {}) as OrgPlan['plan']['features'],
     },
   }
 }

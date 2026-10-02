@@ -2006,6 +2006,7 @@ export type Database = {
           invited_by: string | null
           organization_id: string
           role: string
+          role_id: string | null
           token: string
         }
         Insert: {
@@ -2017,6 +2018,7 @@ export type Database = {
           invited_by?: string | null
           organization_id: string
           role?: string
+          role_id?: string | null
           token?: string
         }
         Update: {
@@ -2028,6 +2030,7 @@ export type Database = {
           invited_by?: string | null
           organization_id?: string
           role?: string
+          role_id?: string | null
           token?: string
         }
         Relationships: [
@@ -2045,6 +2048,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "organization_invitations_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organization_members: {
@@ -2054,6 +2064,7 @@ export type Database = {
           id: string
           organization_id: string
           role: string
+          role_id: string
           user_id: string
         }
         Insert: {
@@ -2062,6 +2073,7 @@ export type Database = {
           id?: string
           organization_id: string
           role: string
+          role_id: string
           user_id: string
         }
         Update: {
@@ -2070,6 +2082,7 @@ export type Database = {
           id?: string
           organization_id?: string
           role?: string
+          role_id?: string
           user_id?: string
         }
         Relationships: [
@@ -2078,6 +2091,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
             referencedColumns: ["id"]
           },
           {
@@ -2250,6 +2270,45 @@ export type Database = {
         }
         Relationships: []
       }
+      permissions: {
+        Row: {
+          action: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          resource: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          resource: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          resource?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           code: string | null
@@ -2366,6 +2425,106 @@ export type Database = {
           workflow_guide_seen?: boolean
         }
         Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          created_at?: string
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          created_at?: string
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          permissions_updated_at: string
+          source_role_id: string | null
+          source_synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          permissions_updated_at?: string
+          source_role_id?: string | null
+          source_synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          permissions_updated_at?: string
+          source_role_id?: string | null
+          source_synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roles_source_role_id_fkey"
+            columns: ["source_role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_payments: {
         Row: {
@@ -2876,6 +3035,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assert_assignable_role: {
+        Args: { p_check_actor: boolean; p_org_id: string; p_role_id: string }
+        Returns: undefined
+      }
+      assert_org_keeps_admin: { Args: { p_org_id: string }; Returns: undefined }
+      default_role_id_for_legacy: {
+        Args: { p_legacy_role: string }
+        Returns: string
+      }
+      has_permission: {
+        Args: { p_key: string; p_org_id: string }
+        Returns: boolean
+      }
       increment_usage: {
         Args: {
           p_metric: string
@@ -2892,9 +3064,30 @@ export type Database = {
       is_org_admin: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      legacy_role_for: { Args: { p_role_id: string }; Returns: string }
+      my_permissions: { Args: { p_org_id: string }; Returns: string[] }
+      org_plan_has_feature: {
+        Args: { p_feature: string; p_org_id: string }
+        Returns: boolean
+      }
       org_storage_bytes: {
         Args: { p_organization_id: string }
         Returns: number
+      }
+      role_grants: {
+        Args: { p_key: string; p_role_id: string }
+        Returns: boolean
+      }
+      save_role: {
+        Args: {
+          p_description: string
+          p_name: string
+          p_organization_id: string
+          p_permission_keys: string[]
+          p_role_id: string
+          p_source_role_id: string
+        }
+        Returns: string
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

@@ -1,7 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { requireAuth, requireOrgAdmin, requireSuperAdmin } from '@/lib/auth/permissions'
+import { requireAuth, requireSuperAdmin } from '@/lib/auth/permissions'
+import { requirePermission } from '@/lib/auth/authorization'
 
 export type ActorType = 'client' | 'staff' | 'system'
 
@@ -46,10 +47,8 @@ export async function getAuditLogs(filters: AuditLogFilters = {}): Promise<Audit
 
   let orgScope: string | undefined
   if (profile.system_role !== 'SUPERADMIN') {
-    const orgId = profile.current_organization_id
-    if (!orgId) throw new Error('No organization')
-    await requireOrgAdmin(orgId)
-    orgScope = orgId
+    const { organizationId } = await requirePermission('audit.view')
+    orgScope = organizationId
   }
 
   const supabase = (await createClient()) as DB

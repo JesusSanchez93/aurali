@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { User } from '@supabase/supabase-js'
+import { cache } from 'react'
 
 export interface SessionProfile {
   id: string
@@ -12,16 +13,20 @@ export interface SessionProfile {
   workflow_guide_seen: boolean
   org_role: 'ORG_ADMIN' | 'ORG_USER' | null
   org_status: 'pending' | 'active' | 'rejected' | null
+  /** Nombre del rol del usuario en la organización actual. */
+  org_role_name: string | null
+  /** Claves de permiso efectivas en la organización actual (ver lib/auth/authorization.ts). */
+  permissions: string[]
 }
 
 /**
  * Returns the current authenticated Supabase user and their profile row.
  * Used by the dashboard layout and server components that need identity info.
  */
-export async function getSessionProfile(): Promise<{
+export const getSessionProfile = cache(async (): Promise<{
   user: User | null
   profile: SessionProfile | null
-}> {
+}> => {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -38,11 +43,13 @@ export async function getSessionProfile(): Promise<{
   // Fetch org role + org approval status
   let org_role: 'ORG_ADMIN' | 'ORG_USER' | null = null
   let org_status: 'pending' | 'active' | 'rejected' | null = null
+  let org_role_name: string | null = null
+  let permissions: string[] = []
   if (data.current_organization_id) {
-    const [{ data: membership }, { data: org }] = await Promise.all([
+    const [{ data: membership }, { data: org }, { data: permissionKeys }] = await Promise.all([
       supabase
         .from('organization_members')
-        .select('role')
+        .select('role, roles(name)')
         .eq('organization_id', data.current_organization_id)
         .eq('user_id', user.id)
         .eq('active', true)
@@ -52,10 +59,13 @@ export async function getSessionProfile(): Promise<{
         .select('status')
         .eq('id', data.current_organization_id)
         .maybeSingle(),
+      supabase.rpc('my_permissions', { p_org_id: data.current_organization_id }),
     ])
     org_role = (membership?.role as 'ORG_ADMIN' | 'ORG_USER') ?? null
+    org_role_name = membership?.roles?.name ?? null
     org_status = (org?.status as 'pending' | 'active' | 'rejected') ?? null
+    permissions = permissionKeys ?? []
   }
 
-  return { user, profile: { ...(data as SessionProfile), org_role, org_status } }
-}
+  return { user, profile: { ...(data as SessionProfile), org_role, org_status, org_role_name, permissions } }
+})

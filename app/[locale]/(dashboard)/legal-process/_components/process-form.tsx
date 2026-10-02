@@ -10,13 +10,12 @@ import { toast } from '@/lib/toast';
 import { FormSelect } from '@/components/common/form/form-select';
 import { useTranslations } from 'next-intl';
 import { FormInput } from '@/components/common/form/form-input';
-import { CurrencyInput } from '@/components/common/form/currency-input';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form } from '@/components/ui/form';
 import { DynamicSectionFields } from '@/components/common/dynamic-form/DynamicSectionFields';
 import { buildZodSchema } from '@/lib/forms/buildZodSchema';
 import type { FormFieldSchema } from '@/lib/forms/types';
-import { createLegalProcessDraft, getLawyerFilledSections, setProcessFee, type LawyerFilledSection } from '../actions';
+import { createLegalProcessDraft, getLawyerFilledSections, type LawyerFilledSection } from '../actions';
 
 
 type Lawyer = { id: string; firstname: string | null; lastname: string | null; email: string | null };
@@ -69,9 +68,6 @@ export default function ProcessForm({ documents, lawyers, workflowTemplates, cur
       workflow_template_id: showWorkflowTemplateSelector
         ? z.string().min(1, validationT('required'))
         : z.string().optional(),
-      total_amount: z.coerce
-        .number({ required_error: validationT('required'), invalid_type_error: validationT('required') })
-        .positive({ message: validationT('required') }),
     });
     return base.merge(buildZodSchema(lawyerFields));
   }, [validationT, showWorkflowTemplateSelector, lawyerFields]);
@@ -94,7 +90,6 @@ export default function ProcessForm({ documents, lawyers, workflowTemplates, cur
       document_number: '',
       assigned_to: currentUserId,
       workflow_template_id: showWorkflowTemplateSelector ? '' : (workflowTemplates[0]?.id ?? ''),
-      total_amount: undefined,
     },
   });
 
@@ -147,7 +142,6 @@ export default function ProcessForm({ documents, lawyers, workflowTemplates, cur
           document_number: string;
           email: string;
           assigned_to: string;
-          total_amount: number;
         } & Record<string, unknown>;
 
         const lawyerFieldValues: Record<string, unknown> = {};
@@ -155,7 +149,7 @@ export default function ProcessForm({ documents, lawyers, workflowTemplates, cur
           lawyerFieldValues[field.key] = v[field.key];
         }
 
-        const { id: newProcessId } = await createLegalProcessDraft({
+        await createLegalProcessDraft({
           document_id: v.document_id,
           document_number: v.document_number,
           email: v.email,
@@ -165,12 +159,6 @@ export default function ProcessForm({ documents, lawyers, workflowTemplates, cur
           document_slug: key ?? '',
           lawyer_field_values: lawyerFieldValues,
         });
-
-        try {
-          await setProcessFee(newProcessId, v.total_amount);
-        } catch {
-          // Non-blocking: fee can be set later from the detail view
-        }
 
         form.reset();
         toast.success(processT('form.success_toast'), {
@@ -264,25 +252,6 @@ export default function ProcessForm({ documents, lawyers, workflowTemplates, cur
                     disabled={isPending}
                     options={lawyerOptions}
                   />
-                  <FormField
-                    control={form.control}
-                    name="total_amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium after:content-['*'] after:ml-0.5 after:text-destructive">{processT('payments.fee_label')}</FormLabel>
-                        <FormControl>
-                          <CurrencyInput
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {lawyerSections.map((section) => (
                     <div key={section.sectionKey} className="space-y-3 border-t pt-4">
                       <p className="text-sm font-medium text-muted-foreground">{section.sectionTitle}</p>

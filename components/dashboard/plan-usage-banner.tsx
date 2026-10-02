@@ -75,7 +75,7 @@ export async function PlanUsageBanner({ profile }: Props) {
         <span className="truncate">{message}</span>
       </div>
       <Link
-        href="/settings/billing"
+        href="/billing"
         className="shrink-0 rounded-md border border-amber-700/40 bg-amber-300 px-3 py-1 text-xs font-semibold text-amber-950 transition-colors hover:bg-amber-200"
       >
         {t('cta')}

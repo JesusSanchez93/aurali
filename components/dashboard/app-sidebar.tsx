@@ -3,7 +3,7 @@
 import {
   Home, Scale, Settings, Users, ShieldCheck, BookOpen,
   Sparkles, Building2, ChevronRight, Workflow, IdCard, FileText,
-  ShieldAlert, Mail, Kanban, CreditCard,
+  ShieldAlert, Mail, Kanban, CreditCard, KeyRound,
 } from 'lucide-react';
 import { Logo } from '@/components/common/logo';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -34,11 +34,14 @@ import { usePathname as useNextPathname } from 'next/navigation';
 import { NavUser } from './nav-user';
 import { useTranslations } from 'next-intl';
 import { useProfile } from '@/components/providers/profile-provider';
+import type { PermissionKey } from '@/lib/auth/permission-keys';
 
 type NavItem = {
   titleKey: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Permiso requerido para ver el ítem; sin él lo ven todos los miembros. */
+  permission?: PermissionKey;
   sub?: { titleKey: string; url: string; icon: React.ComponentType<{ className?: string }> }[];
 };
 
@@ -49,31 +52,26 @@ const SETTINGS_SUB = [
   { titleKey: 'banks',           url: '/settings/banks',        icon: Building2 },
   { titleKey: 'document_types', url: '/settings/documents',    icon: IdCard    },
   { titleKey: 'email_settings', url: '/settings/email',        icon: Mail      },
-  { titleKey: 'billing',        url: '/settings/billing',      icon: CreditCard},
 ];
 
-export const userItems: NavItem[] = [
-  { titleKey: 'analytics', url: '/analytics',     icon: Home  },
-  { titleKey: 'processes', url: '/legal-process', icon: Scale },
-  { titleKey: 'board',     url: '/board', icon: Kanban },
-  { titleKey: 'clients',   url: '/clients',       icon: Users },
-  { titleKey: 'settings',  url: '/settings',      icon: Settings, sub: SETTINGS_SUB },
-];
-
-export const adminUserItems: NavItem[] = [
-  { titleKey: 'analytics',   url: '/analytics',     icon: Home       },
-  { titleKey: 'processes',   url: '/legal-process', icon: Scale      },
-  { titleKey: 'board',       url: '/board', icon: Kanban},
-  { titleKey: 'clients',     url: '/clients',       icon: Users      },
-  { titleKey: 'users',       url: '/settings/users',icon: Users      },
-  { titleKey: 'admin_audit', url: '/audit',         icon: ShieldAlert},
-  { titleKey: 'settings',    url: '/settings',      icon: Settings, sub: SETTINGS_SUB },
+// Menú de una organización: cada miembro ve los ítems que su rol permite.
+export const orgItems: NavItem[] = [
+  { titleKey: 'analytics',   url: '/analytics',      icon: Home       },
+  { titleKey: 'processes',   url: '/legal-process',  icon: Scale      },
+  { titleKey: 'board',       url: '/board',          icon: Kanban     },
+  { titleKey: 'clients',     url: '/clients',        icon: Users      },
+  { titleKey: 'payments',    url: '/payments',       icon: CreditCard,  permission: 'payments.view' },
+  { titleKey: 'users',       url: '/settings/users', icon: Users,       permission: 'users.view'    },
+  { titleKey: 'roles',       url: '/settings/roles', icon: KeyRound,    permission: 'roles.manage'  },
+  { titleKey: 'admin_audit', url: '/audit',          icon: ShieldAlert, permission: 'audit.view'    },
+  { titleKey: 'settings',    url: '/settings',       icon: Settings, sub: SETTINGS_SUB },
 ];
 
 export const adminItems: NavItem[] = [
   { titleKey: 'analytics',     url: '/analytics',       icon: Home       },
   { titleKey: 'admin_clients', url: '/admin/clients',   icon: Users      },
   { titleKey: 'admin_billing', url: '/admin/billing',   icon: CreditCard },
+  { titleKey: 'admin_roles',   url: '/admin/roles',     icon: KeyRound   },
   { titleKey: 'workflows',     url: '/admin/workflows', icon: ShieldCheck},
   { titleKey: 'form_builder',  url: '/admin/form-builder', icon: FileText},
   { titleKey: 'catalog',       url: '/admin/catalog',   icon: BookOpen   },
@@ -217,11 +215,10 @@ export function AppSidebar() {
   const settingsSub = canTestDocGen
     ? SETTINGS_SUB
     : SETTINGS_SUB.filter((s) => s.titleKey !== 'test_doc_gen');
+  const permissions = profile?.permissions ?? [];
   const items = (isSuperAdmin && !isImpersonating
     ? adminItems
-    : isOrgAdmin
-      ? adminUserItems
-      : userItems
+    : orgItems.filter((item) => !item.permission || permissions.includes(item.permission))
   ).map((item) => (item.sub ? { ...item, sub: settingsSub } : item));
 
   return (
