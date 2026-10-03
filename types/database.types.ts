@@ -221,6 +221,194 @@ export type Database = {
           },
         ]
       }
+      board_card_comments: {
+        Row: {
+          body: string
+          card_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          card_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          card_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_card_comments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "board_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_card_comments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_card_comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      board_cards: {
+        Row: {
+          assigned_to: string | null
+          board_id: string
+          column_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          organization_id: string
+          position: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          board_id: string
+          column_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id: string
+          position?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          board_id?: string
+          column_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_cards_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_cards_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_cards_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "legal_process_board_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_cards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_cards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boards: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          organization_id: string
+          position: number
+          updated_at: string
+          workflow_template_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          position?: number
+          updated_at?: string
+          workflow_template_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          position?: number
+          updated_at?: string
+          workflow_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boards_workflow_template_id_fkey"
+            columns: ["workflow_template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_banks: {
         Row: {
           code: string
@@ -1220,33 +1408,46 @@ export type Database = {
       }
       legal_process_board_columns: {
         Row: {
+          board_id: string | null
           created_at: string
           id: string
           is_default: boolean
+          is_finished: boolean
           name: string
           organization_id: string
           position: number
           updated_at: string
         }
         Insert: {
+          board_id?: string | null
           created_at?: string
           id?: string
           is_default?: boolean
+          is_finished?: boolean
           name: string
           organization_id: string
           position?: number
           updated_at?: string
         }
         Update: {
+          board_id?: string | null
           created_at?: string
           id?: string
           is_default?: boolean
+          is_finished?: boolean
           name?: string
           organization_id?: string
           position?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "legal_process_board_columns_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "legal_process_board_columns_organization_id_fkey"
             columns: ["organization_id"]
@@ -3258,6 +3459,10 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: number
       }
+      place_process_on_board: {
+        Args: { p_process_id: string }
+        Returns: undefined
+      }
       request_org_access: {
         Args: { p_mode?: string; p_org_id: string }
         Returns: {
@@ -3285,6 +3490,7 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       staff_display_name: { Args: { p_user_id: string }; Returns: string }
+      sync_board_processes: { Args: { p_board_id: string }; Returns: undefined }
     }
     Enums: {
       workflow_node_type:

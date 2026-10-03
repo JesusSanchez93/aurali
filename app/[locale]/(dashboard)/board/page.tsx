@@ -1,20 +1,18 @@
 import { getTranslations } from 'next-intl/server';
-import { getBoardData } from '@/app/[locale]/(dashboard)/legal-process/board-actions';
-import { LegalProcessBoard } from '@/app/[locale]/(dashboard)/legal-process/_components/legal-process-board';
+import { getAvailableProcessTypes, listBoards } from './actions';
+import { BoardsOverview } from './_components/boards-overview';
 
-export default async function LegalProcessBoardPage() {
-  const [t, board] = await Promise.all([
-    getTranslations('process.board'),
-    getBoardData(),
-  ]);
+export async function generateMetadata() {
+  const t = await getTranslations('process.board.list');
+  return { title: t('title') };
+}
+
+export default async function BoardsPage() {
+  const [boards, processTypes] = await Promise.all([listBoards(), getAvailableProcessTypes()]);
 
   return (
-    <div className="flex flex-col gap-4 p-4 md:p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground">{t('description')}</p>
-      </div>
-      <LegalProcessBoard initialColumns={board.columns} initialCards={board.cards} />
+    <div className="p-4 md:p-6">
+      <BoardsOverview boards={boards} processTypes={processTypes} />
     </div>
   );
 }

@@ -64,7 +64,7 @@
       "payments": "Pagos",
       "roles": "Roles",
       "admin_roles": "Roles y permisos",
-      "board": "Tablero"
+      "board": "Tableros"
     },
     "upload": {
       "click_to_upload": "Haz clic para subir un documento",
@@ -580,6 +580,72 @@
         "a11y_description": "Detalle del proceso #{process} y sus comentarios",
         "switch_to_comments": "Ver comentarios",
         "switch_to_description": "Ver descripción"
+      },
+      "column_empty_cards": "Sin tarjetas",
+      "delete_last_column_error": "El tablero debe conservar al menos una columna",
+      "create_card_error": "No se pudo crear la tarjeta",
+      "column_actions": "Acciones de la columna",
+      "delete_column_confirm_description_generic": "Sus tarjetas se moverán a la primera columna del tablero.",
+      "add_card": "Añadir tarjeta",
+      "new_card_placeholder": "Título de la tarjeta",
+      "cancel": "Cancelar",
+      "list": {
+        "title": "Tableros",
+        "description": "Organiza el trabajo en tableros: amarrados a un proceso legal o con tus propias tarjetas.",
+        "create": "Crear tablero",
+        "free": "Tarjetas libres"
+      },
+      "create": {
+        "title": "Nuevo tablero",
+        "description": "Puedes amarrarlo a un proceso legal o crear tus propias tarjetas.",
+        "description_free_only": "Crearás tus propias tarjetas. Los procesos legales activos ya tienen su tablero.",
+        "name": "Nombre",
+        "name_placeholder": "Ej. Seguimiento con la entidad",
+        "process": "Proceso legal (opcional)",
+        "no_process": "Ninguno — tarjetas libres",
+        "no_process_hint": "Crearás las tarjetas a mano, con responsable, fecha límite y comentarios.",
+        "process_hint": "Cada proceso de este tipo aparecerá como tarjeta, desde que se crea.",
+        "cancel": "Cancelar",
+        "submit": "Crear tablero",
+        "error": "No se pudo crear el tablero"
+      },
+      "detail": {
+        "back": "Volver a tableros",
+        "free": "Tarjetas libres",
+        "linked_hint": "Los procesos de este tipo entran solos a la primera columna.",
+        "free_hint": "Crea tarjetas en cualquier columna.",
+        "actions": "Acciones del tablero",
+        "rename": "Renombrar",
+        "delete": "Eliminar tablero",
+        "rename_error": "No se pudo renombrar el tablero",
+        "deleted": "Tablero eliminado",
+        "delete_error": "No se pudo eliminar el tablero",
+        "delete_confirm_title": "¿Eliminar este tablero?",
+        "delete_confirm_linked": "Se borran sus columnas. Los procesos legales no se eliminan.",
+        "delete_confirm_free": "Se borran sus columnas, tarjetas y comentarios."
+      },
+      "task_dialog": {
+        "loading": "Cargando tarjeta…",
+        "load_error": "No se pudo cargar la tarjeta",
+        "a11y_description": "Detalle de la tarjeta y sus comentarios",
+        "title": "Título",
+        "assignee": "Responsable",
+        "unassigned": "Sin asignar",
+        "due_date": "Fecha límite",
+        "description": "Descripción",
+        "description_placeholder": "Agrega más detalles…",
+        "created_by": "Creada por {name}",
+        "delete": "Eliminar",
+        "deleted": "Tarjeta eliminada",
+        "delete_error": "No se pudo eliminar la tarjeta",
+        "delete_confirm_title": "¿Eliminar esta tarjeta?",
+        "delete_confirm_description": "Se borrarán también sus comentarios.",
+        "save_error": "No se pudo guardar el cambio",
+        "comments_title": "Comentarios",
+        "comments_empty": "Todavía no hay comentarios.",
+        "comment_placeholder": "Escribe un comentario…",
+        "comment_send": "Enviar comentario",
+        "comment_error": "No se pudo enviar el comentario"
       }
     }
   },

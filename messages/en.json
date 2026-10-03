@@ -64,7 +64,7 @@
       "payments": "Payments",
       "roles": "Roles",
       "admin_roles": "Roles & permissions",
-      "board": "Board"
+      "board": "Boards"
     },
     "upload": {
       "click_to_upload": "Click to upload a document",
@@ -580,6 +580,72 @@
         "a11y_description": "Detail for process #{process} and its comments",
         "switch_to_comments": "View comments",
         "switch_to_description": "View description"
+      },
+      "column_empty_cards": "No cards",
+      "delete_last_column_error": "A board must keep at least one column",
+      "create_card_error": "Could not create the card",
+      "column_actions": "Column actions",
+      "delete_column_confirm_description_generic": "Its cards will move to the first column of the board.",
+      "add_card": "Add card",
+      "new_card_placeholder": "Card title",
+      "cancel": "Cancel",
+      "list": {
+        "title": "Boards",
+        "description": "Organize work in boards: linked to a legal process or with your own cards.",
+        "create": "Create board",
+        "free": "Free cards"
+      },
+      "create": {
+        "title": "New board",
+        "description": "You can link it to a legal process or create your own cards.",
+        "description_free_only": "You will create your own cards. Active legal processes already have a board.",
+        "name": "Name",
+        "name_placeholder": "E.g. Follow-up with the bank",
+        "process": "Legal process (optional)",
+        "no_process": "None — free cards",
+        "no_process_hint": "You will create cards by hand, with assignee, due date and comments.",
+        "process_hint": "Every process of this type will appear as a card from the moment it is created.",
+        "cancel": "Cancel",
+        "submit": "Create board",
+        "error": "Could not create the board"
+      },
+      "detail": {
+        "back": "Back to boards",
+        "free": "Free cards",
+        "linked_hint": "Processes of this type land in the first column automatically.",
+        "free_hint": "Create cards in any column.",
+        "actions": "Board actions",
+        "rename": "Rename",
+        "delete": "Delete board",
+        "rename_error": "Could not rename the board",
+        "deleted": "Board deleted",
+        "delete_error": "Could not delete the board",
+        "delete_confirm_title": "Delete this board?",
+        "delete_confirm_linked": "Its columns are deleted. Legal processes are not.",
+        "delete_confirm_free": "Its columns, cards and comments are deleted."
+      },
+      "task_dialog": {
+        "loading": "Loading card…",
+        "load_error": "Could not load the card",
+        "a11y_description": "Card detail and comments",
+        "title": "Title",
+        "assignee": "Assignee",
+        "unassigned": "Unassigned",
+        "due_date": "Due date",
+        "description": "Description",
+        "description_placeholder": "Add more details…",
+        "created_by": "Created by {name}",
+        "delete": "Delete",
+        "deleted": "Card deleted",
+        "delete_error": "Could not delete the card",
+        "delete_confirm_title": "Delete this card?",
+        "delete_confirm_description": "Its comments will be deleted too.",
+        "save_error": "Could not save the change",
+        "comments_title": "Comments",
+        "comments_empty": "No comments yet.",
+        "comment_placeholder": "Write a comment…",
+        "comment_send": "Send comment",
+        "comment_error": "Could not send the comment"
       }
     }
   },
