@@ -70,7 +70,7 @@ export function NotificationsBell() {
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="icon" className="relative" aria-label="Notificaciones" title="Notificaciones">
+        <Button variant="ghost" size="icon" className="relative" aria-label="Notificaciones" title="Notificaciones">
           <Bell className="h-4 w-4" />
           {unread > 0 && (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white">
@@ -79,7 +79,7 @@ export function NotificationsBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[22rem] max-w-[calc(100vw-2rem)] p-0">
+      <PopoverContent align="end" className="w-[22rem] max-w-[calc(100vw-2rem)] border-white/40 bg-white/70 p-0 backdrop-blur-xl dark:border-white/10 dark:bg-background/70">
         <div className="border-b px-4 py-3">
           <p className="text-sm font-semibold">Notificaciones</p>
         </div>

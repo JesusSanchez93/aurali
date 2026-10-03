@@ -46,7 +46,8 @@
         "notifications": "Notifications",
         "settings": "Settings",
         "logout": "Log out",
-        "exit_organization": "Exit organization"
+        "exit_organization": "Exit organization",
+        "preferences": "Settings"
       },
       "workflows": "Workflows",
       "form_builder": "Forms",
@@ -103,6 +104,14 @@
       "reason_placeholder": "Briefly describe the reason for this action...",
       "confirm": "Confirm",
       "cancel": "Cancel"
+    },
+    "preferences": {
+      "title": "Settings",
+      "description": "Language and appearance preferences for your account.",
+      "language": "Language",
+      "language_description": "Interface language.",
+      "theme": "Theme",
+      "theme_description": "How the app looks in this browser."
     }
   },
   "dashboard": {

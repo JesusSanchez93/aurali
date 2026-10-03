@@ -7,6 +7,7 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
+  Settings,
   Sparkles,
   ArrowLeft,
 } from 'lucide-react';
@@ -132,6 +133,12 @@ export function NavUser() {
                   </Link>
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem asChild>
+                <Link href={'/preferences'}>
+                  <Settings />
+                  {t('preferences')}
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <Bell />
                 {t('notifications')}

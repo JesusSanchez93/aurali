@@ -46,7 +46,8 @@
         "notifications": "Notificaciones",
         "settings": "Configuración",
         "logout": "Cerrar sesión",
-        "exit_organization": "Salir de la organización"
+        "exit_organization": "Salir de la organización",
+        "preferences": "Ajustes"
       },
       "workflows": "Flujos de Trabajo",
       "form_builder": "Formularios",
@@ -103,6 +104,14 @@
       "reason_placeholder": "Describe brevemente el motivo de esta acción...",
       "confirm": "Confirmar",
       "cancel": "Cancelar"
+    },
+    "preferences": {
+      "title": "Ajustes",
+      "description": "Preferencias de idioma y apariencia de tu cuenta.",
+      "language": "Idioma",
+      "language_description": "Idioma de la interfaz.",
+      "theme": "Tema",
+      "theme_description": "Apariencia de la aplicación en este navegador."
     }
   },
   "dashboard": {

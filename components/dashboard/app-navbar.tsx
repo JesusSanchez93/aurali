@@ -1,8 +1,6 @@
 'use client';
 
 import { usePathname } from '@/i18n/routing';
-import { ModeToggle } from './mode-toggle';
-import { LanguageSwitcher } from './language-switcher';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { adminItems, orgItems } from './app-sidebar';
@@ -57,8 +55,6 @@ export function AppNavBar() {
         <div className="flex-auto" />
         <div className="flex items-center gap-2">
           <NotificationsBell />
-          <LanguageSwitcher />
-          <ModeToggle />
         </div>
       </div>
     </header>

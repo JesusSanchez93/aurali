@@ -32,6 +32,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { toast } from '@/lib/toast'
 
+const ORG_STATUS_LABELS: Record<string, string> = {
+  active: 'Activa',
+  pending: 'Pendiente',
+  rejected: 'Rechazada',
+  draft: 'Borrador',
+}
+
 interface Props {
   clients: ClientRow[]
 }
@@ -190,30 +197,34 @@ export function ClientsList({ clients }: Props) {
                 const isPendingApproval = org.status === 'pending' || org.status === 'rejected'
 
                 return (
-                  <div key={org.id} className="flex items-center gap-3 px-4 py-3">
-                    <Building2 className="size-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {org.name ?? org.legal_name ?? 'Sin nombre'}
-                      </p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {membership.role.toLowerCase().replace('_', ' ')}
-                      </p>
+                  <div key={org.id} className="space-y-3 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                        <Building2 className="size-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {org.name ?? org.legal_name ?? 'Sin nombre'}
+                        </p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {membership.role.toLowerCase().replace('_', ' ')}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          org.status === 'active'
+                            ? 'default'
+                            : org.status === 'rejected'
+                              ? 'destructive'
+                              : 'secondary'
+                        }
+                        className="shrink-0"
+                      >
+                        {ORG_STATUS_LABELS[org.status ?? 'draft'] ?? org.status}
+                      </Badge>
                     </div>
-                    <Badge
-                      variant={
-                        org.status === 'active'
-                          ? 'default'
-                          : org.status === 'rejected'
-                            ? 'destructive'
-                            : 'secondary'
-                      }
-                      className="shrink-0"
-                    >
-                      {org.status ?? 'draft'}
-                    </Badge>
                     {isPendingApproval ? (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex justify-end gap-1.5">
                         <Button
                           size="sm"
                           variant="outline"
@@ -234,22 +245,22 @@ export function ClientsList({ clients }: Props) {
                       </div>
                     ) : membership.access === 'approved' ? (
                       // Al aprobarse entra solo (ver support-access-realtime.tsx).
-                      <Button size="sm" disabled>
+                      <Button size="sm" className="w-full" disabled>
                         <Loader2 className="size-4 animate-spin" />
                         Ingresando…
                       </Button>
                     ) : membership.access === 'pending' ? (
-                      <Button size="sm" variant="outline" disabled title="La organización aún no responde">
+                      <Button size="sm" variant="outline" className="w-full" disabled title="La organización aún no responde">
                         <Clock className="size-4" />
                         Esperando aprobación
                       </Button>
                     ) : (
                       // Botón dividido: el principal envía; la flecha elige el modo.
-                      <div className="flex shrink-0 items-center">
+                      <div className="flex w-full items-center">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="rounded-r-none"
+                          className="min-w-0 flex-1 rounded-r-none"
                           onClick={() => submitAccessRequest(org.id)}
                           disabled={isPending}
                         >
@@ -260,7 +271,9 @@ export function ClientsList({ clients }: Props) {
                           ) : (
                             <KeyRound className="size-4" />
                           )}
-                          {requestMode === 'control' ? 'Solicitar acceso y tomar el control' : 'Solicitar acceso'}
+                          <span className="truncate">
+                            {requestMode === 'control' ? 'Solicitar acceso y tomar el control' : 'Solicitar acceso'}
+                          </span>
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
