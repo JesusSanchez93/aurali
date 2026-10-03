@@ -75,7 +75,7 @@ export function ActionReasonDialog({
                         onChange={(e) => setNote(e.target.value)}
                         placeholder={resolvedReasonPlaceholder}
                         rows={3}
-                        className="resize-none text-sm"
+                        className="resize-none text-base md:text-sm"
                     />
                 </div>
 

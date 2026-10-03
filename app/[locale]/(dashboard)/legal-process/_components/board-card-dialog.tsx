@@ -145,7 +145,7 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
 
     return (
         <Dialog open={Boolean(legalProcessId)} onOpenChange={onOpenChange}>
-            <DialogContent className="flex max-h-[85vh] max-w-4xl flex-col overflow-hidden p-0">
+            <DialogContent className="flex max-h-[85dvh] max-w-4xl flex-col overflow-hidden p-0">
                 {loading && !detail ? (
                     <>
                         {/* Dialog de Radix exige un DialogTitle para lectores de
@@ -326,7 +326,7 @@ export function BoardCardDialog({ legalProcessId, onOpenChange }: Props) {
                                     value={commentValue}
                                     onChange={(e) => setCommentValue(e.target.value)}
                                     placeholder={t('comment_placeholder')}
-                                    className="min-h-16 text-sm"
+                                    className="min-h-16 text-base md:text-sm"
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handlePostComment();
                                     }}

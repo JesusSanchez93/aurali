@@ -122,7 +122,7 @@ export function TaskCardDialog({ cardId, onOpenChange, onChanged, onDeleted }: P
 
   return (
     <Dialog open={!!cardId} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="flex max-h-[90dvh] max-w-3xl flex-col gap-0 overflow-hidden p-0">
         <DialogTitle className="sr-only">{detail?.title ?? t('loading')}</DialogTitle>
         <DialogDescription className="sr-only">{t('a11y_description')}</DialogDescription>
 
@@ -200,7 +200,7 @@ export function TaskCardDialog({ cardId, onOpenChange, onChanged, onDeleted }: P
                   onBlur={saveDescription}
                   placeholder={t('description_placeholder')}
                   maxLength={5000}
-                  className="min-h-32 text-sm"
+                  className="min-h-32 text-base md:text-sm"
                 />
               </div>
 
@@ -251,12 +251,13 @@ export function TaskCardDialog({ cardId, onOpenChange, onChanged, onDeleted }: P
                   </div>
                 ))}
               </div>
-              <div className="flex items-start gap-2 border-t px-5 pb-5 pt-3">
+              {/* En móvil todo el diálogo hace scroll: el campo y el botón de enviar quedan fijos abajo. */}
+              <div className="sticky bottom-0 z-10 flex items-start gap-2 border-t bg-background px-5 pb-5 pt-3 md:static">
                 <Textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   placeholder={t('comment_placeholder')}
-                  className="min-h-16 text-sm"
+                  className="min-h-16 text-base md:text-sm"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void postComment();
                   }}
