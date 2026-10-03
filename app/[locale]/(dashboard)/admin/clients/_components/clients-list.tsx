@@ -225,15 +225,17 @@ export function ClientsList({ clients }: Props) {
                     </div>
                     {isPendingApproval ? (
                       <div className="flex justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => rejectOrg(org.id)}
-                          disabled={isPending}
-                        >
-                          {isReviewing ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
-                          Rechazar
-                        </Button>
+                        {org.status !== 'rejected' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => rejectOrg(org.id)}
+                            disabled={isPending}
+                          >
+                            {isReviewing ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+                            Rechazar
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           onClick={() => approveOrg(org.id)}

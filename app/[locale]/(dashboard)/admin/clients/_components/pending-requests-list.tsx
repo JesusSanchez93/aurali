@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Building2, Check, X, Loader2, ClipboardList } from 'lucide-react'
 import { type PendingOrgRow, approveOrganizationAction, rejectOrganizationAction } from '../actions'
+import { toast } from '@/lib/toast'
 
 interface Props {
   orgs: PendingOrgRow[]
@@ -16,19 +18,21 @@ export function PendingRequestsList({ orgs }: Props) {
   const [reviewingOrgId, setReviewingOrgId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const approve = (orgId: string) => {
-    setReviewingOrgId(orgId)
-    startTransition(async () => {
-      await approveOrganizationAction(orgId)
-      setReviewingOrgId(null)
-    })
-  }
+  const router = useRouter()
+  const pendingCount = orgs.filter((org) => org.status === 'pending').length
 
-  const reject = (orgId: string) => {
+  const review = (orgId: string, action: (id: string) => Promise<void>, success: string) => {
     setReviewingOrgId(orgId)
     startTransition(async () => {
-      await rejectOrganizationAction(orgId)
-      setReviewingOrgId(null)
+      try {
+        await action(orgId)
+        toast.success(success)
+        router.refresh()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'No se pudo completar la acción')
+      } finally {
+        setReviewingOrgId(null)
+      }
     })
   }
 
@@ -46,7 +50,7 @@ export function PendingRequestsList({ orgs }: Props) {
         <div>
           <h2 className="text-lg font-semibold">Solicitudes pendientes</h2>
           <p className="text-sm text-muted-foreground">
-            {orgs.length} {orgs.length === 1 ? 'organización esperando revisión' : 'organizaciones esperando revisión'}
+            {pendingCount} {pendingCount === 1 ? 'organización esperando revisión' : 'organizaciones esperando revisión'}
           </p>
         </div>
       </div>
@@ -77,14 +81,26 @@ export function PendingRequestsList({ orgs }: Props) {
                   {formatDistanceToNow(new Date(org.created_at), { addSuffix: true, locale: es })}
                 </p>
                 <Badge variant={org.status === 'rejected' ? 'destructive' : 'secondary'} className="shrink-0">
-                  {org.status}
+                  {org.status === 'rejected' ? 'Rechazada' : 'Pendiente'}
                 </Badge>
                 <div className="flex items-center gap-1.5">
-                  <Button size="sm" variant="outline" onClick={() => reject(org.id)} disabled={isPending}>
-                    {isReviewing ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
-                    Rechazar
-                  </Button>
-                  <Button size="sm" onClick={() => approve(org.id)} disabled={isPending}>
+                  {/* Una rechazada solo puede aprobarse después (rechazarla otra vez no cambia nada). */}
+                  {org.status !== 'rejected' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => review(org.id, rejectOrganizationAction, 'Solicitud rechazada')}
+                      disabled={isPending}
+                    >
+                      {isReviewing ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+                      Rechazar
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => review(org.id, approveOrganizationAction, 'Organización aprobada')}
+                    disabled={isPending}
+                  >
                     {isReviewing ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                     Aprobar
                   </Button>

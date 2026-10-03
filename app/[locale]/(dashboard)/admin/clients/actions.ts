@@ -173,7 +173,7 @@ export async function requestOrganizationAccess(orgId: string, mode: AccessMode 
     }
   }
 
-  revalidatePath('/admin/clients')
+  revalidatePath('/[locale]/(dashboard)/admin/clients', 'page')
   return result.request_status as 'pending' | 'approved'
 }
 
@@ -254,7 +254,7 @@ export async function approveOrganizationAction(orgId: string) {
     })
   }
 
-  revalidatePath('/admin/clients')
+  revalidatePath('/[locale]/(dashboard)/admin/clients', 'page')
 }
 
 export async function rejectOrganizationAction(orgId: string) {
@@ -265,10 +265,13 @@ export async function rejectOrganizationAction(orgId: string) {
     .from('organizations')
     .update({ status: 'rejected' })
     .eq('id', orgId)
+    // Solo una solicitud pendiente: re-rechazar reenviaría el correo.
+    .eq('status', 'pending')
     .select('name')
-    .single()
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
+  if (!org) throw new Error('La solicitud ya fue revisada')
 
   const { data: admins } = await supabase
     .from('organization_members')
@@ -297,7 +300,7 @@ export async function rejectOrganizationAction(orgId: string) {
     })
   }
 
-  revalidatePath('/admin/clients')
+  revalidatePath('/[locale]/(dashboard)/admin/clients', 'page')
 }
 
 export async function exitOrganizationAction() {
