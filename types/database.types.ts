@@ -1996,6 +1996,118 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          data: Json
+          id: string
+          organization_id: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          data?: Json
+          id?: string
+          organization_id?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_access_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          ended_at: string | null
+          id: string
+          mode: string
+          organization_id: string
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          ended_at?: string | null
+          id?: string
+          mode?: string
+          organization_id: string
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          ended_at?: string | null
+          id?: string
+          mode?: string
+          organization_id?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_access_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_access_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_access_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_invitations: {
         Row: {
           accepted_at: string | null
@@ -2656,6 +2768,61 @@ export type Database = {
           },
         ]
       }
+      support_session_events: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          organization_id: string
+          path: string | null
+          request_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          label: string
+          organization_id: string
+          path?: string | null
+          request_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          organization_id?: string
+          path?: string | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_session_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_session_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_session_events_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "organization_access_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_monthly: {
         Row: {
           created_at: string
@@ -2992,6 +3159,7 @@ export type Database = {
           is_legacy_form: boolean
           name: string
           organization_id: string | null
+          required_catalogs: string[]
           updated_at: string
         }
         Insert: {
@@ -3005,6 +3173,7 @@ export type Database = {
           is_legacy_form?: boolean
           name: string
           organization_id?: string | null
+          required_catalogs?: string[]
           updated_at?: string
         }
         Update: {
@@ -3018,6 +3187,7 @@ export type Database = {
           is_legacy_form?: boolean
           name?: string
           organization_id?: string | null
+          required_catalogs?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -3040,10 +3210,16 @@ export type Database = {
         Returns: undefined
       }
       assert_org_keeps_admin: { Args: { p_org_id: string }; Returns: undefined }
+      decide_org_access: {
+        Args: { p_approve: boolean; p_request_id: string }
+        Returns: undefined
+      }
       default_role_id_for_legacy: {
         Args: { p_legacy_role: string }
         Returns: string
       }
+      end_my_org_access: { Args: never; Returns: undefined }
+      has_active_org_access: { Args: { p_org_id: string }; Returns: boolean }
       has_permission: {
         Args: { p_key: string; p_org_id: string }
         Returns: boolean
@@ -3066,6 +3242,13 @@ export type Database = {
       is_superadmin: { Args: never; Returns: boolean }
       legacy_role_for: { Args: { p_role_id: string }; Returns: string }
       my_permissions: { Args: { p_org_id: string }; Returns: string[] }
+      org_access_approvers: {
+        Args: { p_org_id: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       org_plan_has_feature: {
         Args: { p_feature: string; p_org_id: string }
         Returns: boolean
@@ -3074,6 +3257,15 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: number
       }
+      request_org_access: {
+        Args: { p_mode?: string; p_org_id: string }
+        Returns: {
+          created: boolean
+          request_id: string
+          request_status: string
+        }[]
+      }
+      revoke_org_access: { Args: { p_request_id: string }; Returns: undefined }
       role_grants: {
         Args: { p_key: string; p_role_id: string }
         Returns: boolean
@@ -3091,6 +3283,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      staff_display_name: { Args: { p_user_id: string }; Returns: string }
     }
     Enums: {
       workflow_node_type:

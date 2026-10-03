@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { subscribeAuthenticated } from '@/lib/supabase/realtime'
+import { useProfile } from '@/components/providers/profile-provider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -14,23 +17,52 @@ import {
   type ClientRow,
   type ClientOrgRow,
   getClientOrganizations,
-  enterOrganizationAction,
+  requestOrganizationAccess,
   approveOrganizationAction,
   rejectOrganizationAction,
+  type AccessMode,
 } from '../actions'
-import { Building2, LogIn, Loader2, Check, X } from 'lucide-react'
+import { Building2, Loader2, Check, X, Clock, KeyRound, ChevronDown, Eye } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { toast } from '@/lib/toast'
 
 interface Props {
   clients: ClientRow[]
 }
 
 export function ClientsList({ clients }: Props) {
+  const profile = useProfile()
   const [selectedClient, setSelectedClient] = useState<ClientRow | null>(null)
   const [orgs, setOrgs] = useState<ClientOrgRow[]>([])
   const [loadingOrgs, setLoadingOrgs] = useState(false)
-  const [enteringOrgId, setEnteringOrgId] = useState<string | null>(null)
   const [reviewingOrgId, setReviewingOrgId] = useState<string | null>(null)
+  const [requestingOrgId, setRequestingOrgId] = useState<string | null>(null)
+  const [requestMode, setRequestMode] = useState<AccessMode>('access')
   const [isPending, startTransition] = useTransition()
+
+  // Con el diálogo abierto, una aprobación o un rechazo cambia el botón al
+  // instante (Esperando aprobación → Entrar).
+  useEffect(() => {
+    if (!selectedClient) return
+    return subscribeAuthenticated(createClient(), (supabase) =>
+      supabase
+        // Nombre único por montaje (ver notifications-bell.tsx).
+        .channel(`access_requests_dialog:${profile.id}:${crypto.randomUUID()}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'organization_access_requests', filter: `requested_by=eq.${profile.id}` },
+          () => {
+            void getClientOrganizations(selectedClient.id).then(setOrgs)
+          },
+        ),
+    )
+  }, [selectedClient, profile.id])
 
   const openOrgs = async (client: ClientRow) => {
     setSelectedClient(client)
@@ -40,10 +72,18 @@ export function ClientsList({ clients }: Props) {
     setLoadingOrgs(false)
   }
 
-  const enterOrg = (orgId: string) => {
-    setEnteringOrgId(orgId)
+  const submitAccessRequest = (orgId: string) => {
+    setRequestingOrgId(orgId)
     startTransition(async () => {
-      await enterOrganizationAction(orgId)
+      try {
+        const status = await requestOrganizationAccess(orgId, requestMode)
+        toast.success(status === 'approved' ? 'Ya tienes acceso aprobado' : 'Solicitud enviada a los administradores')
+        if (selectedClient) setOrgs(await getClientOrganizations(selectedClient.id))
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'No se pudo enviar la solicitud')
+      } finally {
+        setRequestingOrgId(null)
+      }
     })
   }
 
@@ -107,11 +147,14 @@ export function ClientsList({ clients }: Props) {
             </Badge>
 
             <Button
-              variant="outline"
-              size="sm"
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
               onClick={() => openOrgs(client)}
+              title="Ver organizaciones"
+              aria-label="Ver organizaciones"
             >
-              Ver organizaciones
+              <Building2 className="h-4 w-4" />
             </Button>
           </div>
         ))}
@@ -143,7 +186,6 @@ export function ClientsList({ clients }: Props) {
               {orgs.map((membership) => {
                 const org = membership.organizations
                 if (!org) return null
-                const isEntering = enteringOrgId === org.id && isPending
                 const isReviewing = reviewingOrgId === org.id && isPending
                 const isPendingApproval = org.status === 'pending' || org.status === 'rejected'
 
@@ -190,19 +232,73 @@ export function ClientsList({ clients }: Props) {
                           Aprobar
                         </Button>
                       </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => enterOrg(org.id)}
-                        disabled={isPending}
-                      >
-                        {isEntering ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <LogIn className="size-4" />
-                        )}
-                        Entrar
+                    ) : membership.access === 'approved' ? (
+                      // Al aprobarse entra solo (ver support-access-realtime.tsx).
+                      <Button size="sm" disabled>
+                        <Loader2 className="size-4 animate-spin" />
+                        Ingresando…
                       </Button>
+                    ) : membership.access === 'pending' ? (
+                      <Button size="sm" variant="outline" disabled title="La organización aún no responde">
+                        <Clock className="size-4" />
+                        Esperando aprobación
+                      </Button>
+                    ) : (
+                      // Botón dividido: el principal envía; la flecha elige el modo.
+                      <div className="flex shrink-0 items-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-r-none"
+                          onClick={() => submitAccessRequest(org.id)}
+                          disabled={isPending}
+                        >
+                          {requestingOrgId === org.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : requestMode === 'control' ? (
+                            <Eye className="size-4" />
+                          ) : (
+                            <KeyRound className="size-4" />
+                          )}
+                          {requestMode === 'control' ? 'Solicitar acceso y tomar el control' : 'Solicitar acceso'}
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="rounded-l-none border-l-0 px-2"
+                              disabled={isPending}
+                              aria-label="Elegir tipo de solicitud"
+                            >
+                              <ChevronDown className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-72">
+                            <DropdownMenuRadioGroup
+                              value={requestMode}
+                              onValueChange={(value) => setRequestMode(value as AccessMode)}
+                            >
+                              <DropdownMenuRadioItem value="access" className="items-start">
+                                <span>
+                                  <span className="block font-medium">Solicitar acceso</span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    Entras a la organización cuando un administrador lo apruebe.
+                                  </span>
+                                </span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="control" className="items-start">
+                                <span>
+                                  <span className="block font-medium">Solicitar acceso y tomar el control</span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    La organización verá en vivo cada página que abras y cada acción que hagas.
+                                  </span>
+                                </span>
+                              </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     )}
                   </div>
                 )

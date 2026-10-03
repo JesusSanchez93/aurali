@@ -24,6 +24,8 @@ import { Copy, Download, Loader2, Pencil, Trash2, Upload, Workflow } from 'lucid
 import { toast } from '@/lib/toast'
 import { deleteGlobalWorkflow, duplicateGlobalWorkflow, exportWorkflow, updateGlobalWorkflow } from '../actions'
 import { sanitizeSvg } from '@/lib/sanitize-svg'
+import { Checkbox } from '@/components/ui/checkbox'
+import { GLOBAL_CATALOG_KEYS, ORG_CATALOGS, PROCESS_CATALOG_KEYS, type OrgCatalogKey } from '@/lib/catalogs/registry'
 
 export type WorkflowItem = {
   id: string
@@ -31,6 +33,10 @@ export type WorkflowItem = {
   description: string | null
   is_default: boolean
   is_legacy_form: boolean
+  /** Listados propios que usa este tipo de proceso. */
+  required_catalogs: string[]
+  /** Listados propios que ya usan los formularios del proceso. */
+  form_catalogs: string[]
   icon_svg: string | null
   gradient_color: string | null
   gradient_color_to: string | null
@@ -48,7 +54,13 @@ export function WorkflowCard({ wf, index = 0 }: { wf: WorkflowItem; index?: numb
   const [iconSvg, setIconSvg] = useState(wf.icon_svg ?? '')
   const [gradientColor, setGradientColor] = useState(wf.gradient_color ?? '#7c3aed')
   const [gradientColorTo, setGradientColorTo] = useState(wf.gradient_color_to ?? '#0ea5e9')
+  const [requiredCatalogs, setRequiredCatalogs] = useState<string[]>(wf.required_catalogs)
   const [isPending, startTransition] = useTransition()
+  const missingCatalogs = wf.form_catalogs.filter((key) => !requiredCatalogs.includes(key)) as OrgCatalogKey[]
+
+  function toggleCatalog(key: string, checked: boolean) {
+    setRequiredCatalogs((prev) => (checked ? [...new Set([...prev, key])] : prev.filter((k) => k !== key)))
+  }
   const fileRef = useRef<HTMLInputElement>(null)
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -69,6 +81,7 @@ export function WorkflowCard({ wf, index = 0 }: { wf: WorkflowItem; index?: numb
           icon_svg: iconSvg.trim() || null,
           gradient_color: gradientColor || null,
           gradient_color_to: gradientColorTo || null,
+          required_catalogs: requiredCatalogs,
         })
         toast.success('Flujo actualizado')
         setEditOpen(false)
@@ -300,6 +313,46 @@ export function WorkflowCard({ wf, index = 0 }: { wf: WorkflowItem; index?: numb
                 placeholder="Describe el propósito de este flujo…"
                 rows={3}
               />
+            </div>
+
+            {/* Listados */}
+            <div className="space-y-2">
+              <div>
+                <Label>Listados que usa este proceso</Label>
+                <p className="text-xs text-muted-foreground">
+                  La organización solo verá en Configuración los listados de sus procesos activos.
+                </p>
+              </div>
+              <div className="divide-y rounded-lg border">
+                {GLOBAL_CATALOG_KEYS.map((key) => (
+                  <label key={key} className="flex cursor-not-allowed items-start gap-3 px-3 py-2.5 text-muted-foreground">
+                    <Checkbox checked disabled className="mt-0.5" />
+                    <span className="text-sm">
+                      {ORG_CATALOGS[key].label}
+                      <span className="block text-xs">Global: aplica a todos los procesos.</span>
+                    </span>
+                  </label>
+                ))}
+                {PROCESS_CATALOG_KEYS.map((key) => (
+                  <label key={key} className="flex cursor-pointer items-start gap-3 px-3 py-2.5">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={requiredCatalogs.includes(key)}
+                      onCheckedChange={(checked) => toggleCatalog(key, checked === true)}
+                    />
+                    <span className="text-sm">
+                      {ORG_CATALOGS[key].label}
+                      <span className="block text-xs text-muted-foreground">{ORG_CATALOGS[key].description}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {missingCatalogs.length > 0 && (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Los formularios de este proceso usan {missingCatalogs.map((key) => ORG_CATALOGS[key].label).join(', ')},
+                  pero no está asociado: las organizaciones no podrán configurarlo.
+                </p>
+              )}
             </div>
 
             {/* Gradient colors */}

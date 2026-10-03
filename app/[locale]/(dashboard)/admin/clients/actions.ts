@@ -8,6 +8,7 @@ import { render } from '@react-email/render'
 import { resend } from '@/lib/resend'
 import { OrgApprovedEmail } from '@/emails/OrgApprovedEmail'
 import { OrgRejectedEmail } from '@/emails/OrgRejectedEmail'
+import { SupportAccessRequestEmail } from '@/emails/SupportAccessRequestEmail'
 
 export type ClientRow = {
   id: string
@@ -26,6 +27,8 @@ export type ClientOrgRow = {
     legal_name: string | null
     status: string | null
   } | null
+  /** Estado de la solicitud de acceso abierta del superadmin actual, si existe. */
+  access: 'pending' | 'approved' | null
 }
 
 export async function getAllClients(): Promise<ClientRow[]> {
@@ -85,22 +88,125 @@ export async function getClientOrganizations(userId: string): Promise<ClientOrgR
   await requireSuperAdmin()
   const supabase = await createClient()
 
-  const { data } = await supabase
-    .from('organization_members')
-    .select('role, organizations(id, name, legal_name, status)')
-    .eq('user_id', userId)
-    .eq('active', true)
+  const [{ data }, { data: { user } }] = await Promise.all([
+    supabase
+      .from('organization_members')
+      .select('role, organizations(id, name, legal_name, status)')
+      .eq('user_id', userId)
+      .eq('active', true),
+    supabase.auth.getUser(),
+  ])
 
-  return (data ?? []) as ClientOrgRow[]
+  const orgIds = (data ?? []).map((m) => m.organizations?.id).filter((id): id is string => !!id)
+  const { data: requests } = orgIds.length && user
+    ? await supabase
+        .from('organization_access_requests')
+        .select('organization_id, status')
+        .eq('requested_by', user.id)
+        .in('organization_id', orgIds)
+        .in('status', ['pending', 'approved'])
+    : { data: [] }
+
+  const accessByOrg = new Map((requests ?? []).map((r) => [r.organization_id, r.status as 'pending' | 'approved']))
+
+  return (data ?? []).map((m) => ({
+    ...m,
+    access: m.organizations ? accessByOrg.get(m.organizations.id) ?? null : null,
+  })) as ClientOrgRow[]
+}
+
+/**
+ * El personal de Aurali pide acceso a una organización. Los administradores
+ * (permiso settings.manage) reciben la notificación en la app — la crea la
+ * función SQL — y además un correo.
+ */
+export type AccessMode = 'access' | 'control'
+
+/**
+ * `control`: además de entrar, la organización ve en vivo todo lo que hace el
+ * superadmin (support_session_events). Ambos modos dan el mismo acceso.
+ */
+export async function requestOrganizationAccess(orgId: string, mode: AccessMode = 'access'): Promise<'pending' | 'approved'> {
+  await requireSuperAdmin()
+  const supabase = await createClient()
+
+  if (mode !== 'access' && mode !== 'control') throw new Error('Modo de acceso no válido')
+  const { data, error } = await supabase.rpc('request_org_access', { p_org_id: orgId, p_mode: mode })
+  if (error) throw new Error(error.message)
+  const result = data?.[0]
+  if (!result) throw new Error('No se pudo crear la solicitud')
+
+  if (result.created) {
+    const [{ data: approvers }, { data: org }, { data: { user } }] = await Promise.all([
+      supabase.rpc('org_access_approvers', { p_org_id: orgId }),
+      supabase.from('organizations').select('name').eq('id', orgId).maybeSingle(),
+      supabase.auth.getUser(),
+    ])
+    const { data: me } = user
+      ? await supabase.from('profiles').select('firstname, lastname').eq('id', user.id).maybeSingle()
+      : { data: null }
+
+    const recipients = (approvers ?? []).map((a) => a.email).filter((email): email is string => !!email)
+    if (recipients.length > 0) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+      const html = await render(
+        SupportAccessRequestEmail({
+          organizationName: org?.name ?? 'tu organización',
+          staffName: [me?.firstname, me?.lastname].filter(Boolean).join(' ') || 'El equipo de Aurali',
+          takeControl: mode === 'control',
+          reviewUrl: `${appUrl}/es/analytics`,
+        }) as React.ReactElement,
+      )
+      try {
+        await resend.emails.send({
+          from: 'Aurali <noreply@aurali.app>',
+          to: recipients,
+          subject: mode === 'control'
+            ? 'El equipo de Aurali solicita acceso y control de tu cuenta'
+            : 'El equipo de Aurali solicita acceso a tu cuenta',
+          html,
+        })
+      } catch (err) {
+        // La notificación dentro de la app ya quedó creada; el correo es un refuerzo.
+        console.error('[requestOrganizationAccess] No se pudo enviar el correo', err)
+      }
+    }
+  }
+
+  revalidatePath('/admin/clients')
+  return result.request_status as 'pending' | 'approved'
+}
+
+/**
+ * Acceso aprobado al que el superadmin todavía no entró (p. ej. la aprobación
+ * llegó mientras no tenía la app abierta). Se usa para ingresar automáticamente.
+ */
+export async function getApprovedAccessToEnter(): Promise<{ organizationId: string; organizationName: string | null } | null> {
+  const profile = await requireSuperAdmin()
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('organization_access_requests')
+    .select('organization_id, decided_at, organizations(name)')
+    .eq('requested_by', profile.id)
+    .eq('status', 'approved')
+    .order('decided_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data || data.organization_id === profile.current_organization_id) return null
+  return { organizationId: data.organization_id, organizationName: data.organizations?.name ?? null }
 }
 
 export async function enterOrganizationAction(orgId: string) {
   const [supabase, profile] = await Promise.all([createClient(), requireSuperAdmin()])
 
-  await supabase
+  // La base rechaza el cambio si no hay acceso aprobado (o membresía propia).
+  const { error } = await supabase
     .from('profiles')
     .update({ current_organization_id: orgId })
     .eq('id', profile.id)
+  if (error) throw new Error(error.message)
 
   revalidatePath('/', 'layout')
   redirect('/analytics')
@@ -195,12 +301,11 @@ export async function rejectOrganizationAction(orgId: string) {
 }
 
 export async function exitOrganizationAction() {
-  const [supabase, profile] = await Promise.all([createClient(), requireSuperAdmin()])
+  const [supabase] = await Promise.all([createClient(), requireSuperAdmin()])
 
-  await supabase
-    .from('profiles')
-    .update({ current_organization_id: null })
-    .eq('id', profile.id)
+  // Sale de la organización y su acceso termina: volver exige otra aprobación.
+  const { error } = await supabase.rpc('end_my_org_access')
+  if (error) throw new Error(error.message)
 
   revalidatePath('/', 'layout')
   redirect('/admin/clients')

@@ -31,6 +31,8 @@ export interface WorkflowExportPayload {
   gradientColor: string | null
   gradientColorTo: string | null
   isLegacyForm: boolean
+  /** Listados propios del proceso (ver lib/catalogs/registry.ts). Ausente en exportaciones antiguas. */
+  requiredCatalogs?: string[]
   nodes: WorkflowNodeExport[]
   edges: WorkflowEdgeExport[]
   exportedAt: string
@@ -44,6 +46,7 @@ export function buildWorkflowExportPayload(
     gradient_color: string | null
     gradient_color_to: string | null
     is_legacy_form: boolean
+    required_catalogs?: string[] | null
   },
   nodes: WorkflowNodeExport[],
   edges: WorkflowEdgeExport[],
@@ -56,6 +59,7 @@ export function buildWorkflowExportPayload(
     gradientColor: template.gradient_color,
     gradientColorTo: template.gradient_color_to,
     isLegacyForm: template.is_legacy_form,
+    requiredCatalogs: template.required_catalogs ?? [],
     nodes,
     edges,
     exportedAt: new Date().toISOString(),
@@ -91,6 +95,7 @@ export const workflowExportPayloadSchema = z
     gradientColor: z.string().nullable(),
     gradientColorTo: z.string().nullable(),
     isLegacyForm: z.boolean(),
+    requiredCatalogs: z.array(z.string()).optional(),
     nodes: z.array(workflowNodeSchema),
     edges: z.array(workflowEdgeSchema),
     exportedAt: z.string(),

@@ -2,7 +2,7 @@ import { getSessionProfile } from '@/lib/auth/get-session-profile';
 import { Link, redirect } from '@/i18n/routing';
 import { getTranslations } from 'next-intl/server';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, User, Building2, Landmark, FileText, GitBranch } from 'lucide-react';
+import { ArrowRight, User, Building2, FileText, GitBranch } from 'lucide-react';
 
 const STEP_LIST = [
   {
@@ -16,19 +16,14 @@ const STEP_LIST = [
     desc: 'Datos legales y ubicación de tu firma.',
   },
   {
-    icon: Landmark,
-    label: 'Bancos',
-    desc: 'Entidades bancarias con las que trabajas.',
-  },
-  {
     icon: FileText,
     label: 'Tipos de documento',
     desc: 'Documentos de identidad que acepta tu organización.',
   },
   {
     icon: GitBranch,
-    label: 'Flujo de trabajo',
-    desc: 'El proceso que guiará cada caso legal.',
+    label: 'Flujos de trabajo',
+    desc: 'Los tipos de proceso legal que manejará tu firma.',
   },
 ];
 
@@ -45,9 +40,10 @@ export default async function OnboardingPage(props: {
     case 'step1_completed':
       redirect({ href: '/onboarding/step2', locale });
     case 'step2_completed':
-      redirect({ href: '/onboarding/step3', locale });
+    // Valor heredado del paso de bancos, que ya no existe: sigue en documentos.
     case 'step3_completed':
-      redirect({ href: '/onboarding/step4', locale });
+      redirect({ href: '/onboarding/step3', locale });
+    case 'documents_completed':
     case 'step4_completed':
       redirect({ href: '/onboarding/workflow-selection', locale });
     case 'completed':

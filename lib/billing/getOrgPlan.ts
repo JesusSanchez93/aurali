@@ -2,8 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import type { OrgPlan } from './types'
 
 const DEFAULT_PLAN_CODE_FOR_NEW_ORGS = 'essential'
+// Toda cuenta nueva entra al plan básico con 30 días gratis: es lo que
+// promete el landing (landing.pricing en messages/*.json).
 const TRIAL_PERIOD_DAYS_BY_PLAN_CODE: Record<string, number> = {
-  essential: 15,
+  essential: 30,
   professional: 30,
 }
 

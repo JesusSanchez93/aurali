@@ -35,6 +35,16 @@ import { NavUser } from './nav-user';
 import { useTranslations } from 'next-intl';
 import { useProfile } from '@/components/providers/profile-provider';
 import type { PermissionKey } from '@/lib/auth/permission-keys';
+import type { PlanFeature } from '@/lib/billing/types';
+import type { OrgCatalogKey } from '@/lib/catalogs/registry';
+
+type NavSubItem = {
+  titleKey: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Listado que administra esta página; solo se muestra si aplica a la organización. */
+  catalog?: OrgCatalogKey;
+};
 
 type NavItem = {
   titleKey: string;
@@ -42,15 +52,17 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   /** Permiso requerido para ver el ítem; sin él lo ven todos los miembros. */
   permission?: PermissionKey;
-  sub?: { titleKey: string; url: string; icon: React.ComponentType<{ className?: string }> }[];
+  /** Feature de plan requerida; sin ella el ítem no se muestra (no está disponible en ese plan). */
+  planFeature?: PlanFeature;
+  sub?: NavSubItem[];
 };
 
-const SETTINGS_SUB = [
+const SETTINGS_SUB: NavSubItem[] = [
   { titleKey: 'workflows',   url: '/settings/workflows',    icon: Workflow  },
   { titleKey: 'formats',     url: '/settings/document-templates', icon: FileText },
   { titleKey: 'ai_variables',url: '/settings/ai-variables',     icon: Sparkles  },
-  { titleKey: 'banks',           url: '/settings/banks',        icon: Building2 },
-  { titleKey: 'document_types', url: '/settings/documents',    icon: IdCard    },
+  { titleKey: 'banks',           url: '/settings/banks',        icon: Building2, catalog: 'banks' },
+  { titleKey: 'document_types', url: '/settings/documents',    icon: IdCard,    catalog: 'documents' },
   { titleKey: 'email_settings', url: '/settings/email',        icon: Mail      },
 ];
 
@@ -62,7 +74,7 @@ export const orgItems: NavItem[] = [
   { titleKey: 'clients',     url: '/clients',        icon: Users      },
   { titleKey: 'payments',    url: '/payments',       icon: CreditCard,  permission: 'payments.view' },
   { titleKey: 'users',       url: '/settings/users', icon: Users,       permission: 'users.view'    },
-  { titleKey: 'roles',       url: '/settings/roles', icon: KeyRound,    permission: 'roles.manage'  },
+  { titleKey: 'roles',       url: '/settings/roles', icon: KeyRound,    permission: 'roles.manage', planFeature: 'custom_roles' },
   { titleKey: 'admin_audit', url: '/audit',          icon: ShieldAlert, permission: 'audit.view'    },
   { titleKey: 'settings',    url: '/settings',       icon: Settings, sub: SETTINGS_SUB },
 ];
@@ -212,13 +224,20 @@ export function AppSidebar() {
   const isImpersonating = isSuperAdmin && !!profile?.current_organization_id;
   const isOrgAdmin = profile?.org_role === 'ORG_ADMIN';
   const canTestDocGen = isSuperAdmin || isOrgAdmin;
-  const settingsSub = canTestDocGen
+  const catalogs = profile?.catalogs ?? [];
+  const settingsSub = (canTestDocGen
     ? SETTINGS_SUB
-    : SETTINGS_SUB.filter((s) => s.titleKey !== 'test_doc_gen');
+    : SETTINGS_SUB.filter((s) => s.titleKey !== 'test_doc_gen')
+  ).filter((s) => !s.catalog || catalogs.includes(s.catalog));
   const permissions = profile?.permissions ?? [];
+  const planFeatures = profile?.plan_features ?? [];
   const items = (isSuperAdmin && !isImpersonating
     ? adminItems
-    : orgItems.filter((item) => !item.permission || permissions.includes(item.permission))
+    : orgItems.filter(
+        (item) =>
+          (!item.permission || permissions.includes(item.permission)) &&
+          (!item.planFeature || planFeatures.includes(item.planFeature)),
+      )
   ).map((item) => (item.sub ? { ...item, sub: settingsSub } : item));
 
   return (
@@ -230,7 +249,11 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              {/* `key` por modo: al entrar o salir de una organización cambia el
+                  menú completo, y sin remontar, los ítems nuevos se quedaban en
+                  la variante `hidden` (invisibles). */}
               <motion.div
+                key={isSuperAdmin && !isImpersonating ? 'platform' : 'organization'}
                 variants={navContainerVariants}
                 initial="hidden"
                 animate="visible"

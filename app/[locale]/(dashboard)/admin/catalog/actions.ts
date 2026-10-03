@@ -71,7 +71,7 @@ export async function addCatalogBank(
     });
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }
 
 export async function updateCatalogBank(
@@ -105,7 +105,7 @@ export async function updateCatalogBank(
     .eq('id', id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }
 
 export async function toggleCatalogBank(id: string, isActive: boolean) {
@@ -117,7 +117,7 @@ export async function toggleCatalogBank(id: string, isActive: boolean) {
     .eq('id', id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }
 
 export async function deleteCatalogBank(id: string) {
@@ -125,7 +125,7 @@ export async function deleteCatalogBank(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('catalog_banks').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }
 
 // ─── DOCUMENTS ─────────────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ export async function addCatalogDocument(nameEs: string, nameEn: string, slug: s
     .insert({ slug: normalizedSlug, name: { es: nameEs, en: nameEn || nameEs } });
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }
 
 export async function updateCatalogDocument(id: string, nameEs: string, nameEn: string, slug: string) {
@@ -154,7 +154,7 @@ export async function updateCatalogDocument(id: string, nameEs: string, nameEn: 
     .eq('id', id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }
 
 export async function toggleCatalogDocument(id: string, isActive: boolean) {
@@ -166,7 +166,7 @@ export async function toggleCatalogDocument(id: string, isActive: boolean) {
     .eq('id', id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }
 
 export async function deleteCatalogDocument(id: string) {
@@ -174,5 +174,5 @@ export async function deleteCatalogDocument(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('catalog_documents').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/catalog');
+  revalidatePath('/admin/catalog', 'layout');
 }

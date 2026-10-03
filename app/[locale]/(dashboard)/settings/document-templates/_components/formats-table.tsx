@@ -26,9 +26,14 @@ interface Props {
 
 const stageVariants: Variants = {
     enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0, pointerEvents: 'none' }),
-    center: { x: 0, opacity: 1, pointerEvents: 'auto', transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } },
+    center: {
+        x: 0,
+        opacity: 1,
+        pointerEvents: 'auto',
+        transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1], staggerChildren: 0.04, delayChildren: 0.03 },
+    },
     // pointerEvents: 'none' keeps a mid-exit block (still mounted while it animates
-    // out, overlapping the incoming one under AnimatePresence's popLayout mode)
+    // out, overlapping the incoming one while both are mounted)
     // from swallowing clicks meant for the buttons fading/sliding in on top of it.
     exit: (dir: number) => ({
         x: dir > 0 ? -24 : 24,
@@ -36,6 +41,14 @@ const stageVariants: Variants = {
         pointerEvents: 'none',
         transition: { duration: 0.14, ease: 'easeIn' },
     }),
+};
+
+// Cada botón hereda el estado del panel (mismos nombres de variant): el
+// `staggerChildren` de arriba los hace entrar uno por uno.
+const actionItemVariants: Variants = {
+    enter: { opacity: 0, x: 6 },
+    center: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: 6 },
 };
 
 export default function FormatsTable({ templates }: Props) {
@@ -132,22 +145,12 @@ export default function FormatsTable({ templates }: Props) {
                     <div
                         key={template.id}
                         data-template-row={template.id}
-                        className={cn(
-                            'flex items-center gap-4 rounded-lg border px-4 py-3 text-sm animate-in fade-in slide-in-from-bottom-2 fill-mode-backwards transition-colors duration-300',
-                            rowStage === 'confirm' && 'border-destructive/40 bg-gradient-to-r from-destructive/25 via-destructive/10 to-transparent',
-                        )}
+                        className="relative flex items-center gap-4 overflow-hidden rounded-lg border px-4 py-3 text-sm animate-in fade-in slide-in-from-bottom-2 fill-mode-backwards"
                         style={{ animationDelay: `${index * 50}ms` }}
                         role="listitem"
                     >
-                        <div
-                            className={cn(
-                                'flex flex-1 min-w-0 items-center gap-4 transition-all duration-300',
-                                rowStage === 'actions' && '-translate-x-1',
-                                rowStage === 'confirm' && '-translate-x-2',
-                                rowStage === 'actions' && 'opacity-50',
-                            )}
-                        >
-                            <div className={cn('flex-1 min-w-0 font-medium', rowStage === 'confirm' && 'text-destructive')}>
+                        <div className="flex flex-1 min-w-0 items-center gap-4">
+                            <div className="flex-1 min-w-0 font-medium">
                                 {renamingId === template.id ? (
                                     <RenameInput
                                         template={template}
@@ -164,102 +167,94 @@ export default function FormatsTable({ templates }: Props) {
                                     </button>
                                 )}
                             </div>
-                            <div className={cn('w-16', rowStage === 'confirm' ? 'text-destructive' : 'text-muted-foreground')}>v{template.version ?? 1}</div>
-                            <div className={cn('w-28', rowStage === 'confirm' ? 'text-destructive' : 'text-muted-foreground')}>
+                            <div className="w-16 text-muted-foreground">v{template.version ?? 1}</div>
+                            <div className="w-28 text-muted-foreground">
                                 {new Date(template.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                             </div>
                         </div>
 
-                        <div className="w-20 shrink-0 overflow-hidden">
-                            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-                                {rowStage === 'idle' && (
-                                    <motion.div
-                                        key="idle"
-                                        custom={direction}
-                                        variants={stageVariants}
-                                        initial="enter"
-                                        animate="center"
-                                        exit="exit"
-                                        className="flex justify-end"
-                                    >
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            disabled={renamingId === template.id}
-                                            onClick={() => openActions(template.id)}
-                                            title={t('col_actions')}
-                                        >
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </motion.div>
-                                )}
+                        {/* Ancla en flujo normal: se desliza y se desvanece mientras el
+                            panel flotante está abierto. El contenido de la fila no se mueve. */}
+                        <motion.div
+                            className="shrink-0"
+                            animate={{ x: rowStage === 'idle' ? 0 : -12, opacity: rowStage === 'idle' ? 1 : 0 }}
+                            transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                        >
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                disabled={renamingId === template.id || rowStage !== 'idle'}
+                                onClick={() => openActions(template.id)}
+                                title={t('col_actions')}
+                            >
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </motion.div>
 
-                                {rowStage === 'actions' && (
-                                    <motion.div
-                                        key="actions"
-                                        custom={direction}
-                                        variants={stageVariants}
-                                        initial="enter"
-                                        animate="center"
-                                        exit="exit"
-                                        className="flex justify-end gap-1"
-                                    >
-                                        <Button variant="ghost" size="icon" asChild>
-                                            <Link
-                                                href={`/document-templates/edit/${template.id}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title={t('open_editor')}
-                                                onClick={closeToIdle}
-                                            >
-                                                <Pencil className="h-4 w-4" />
-                                                <ExternalLink className="sr-only h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            disabled={isPending}
-                                            onClick={goConfirm}
-                                            title={commonT('delete')}
-                                        >
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </motion.div>
-                                )}
+                        {/* Panel flotante de acciones: absolute, no reserva espacio ni
+                            empuja el contenido; desenfoca lo que tiene detrás. */}
+                        <AnimatePresence initial={false} custom={direction}>
+                            {rowStage !== 'idle' && (
+                                <motion.div
+                                    key={rowStage}
+                                    custom={direction}
+                                    variants={stageVariants}
+                                    initial="enter"
+                                    animate="center"
+                                    exit="exit"
+                                    className={cn(
+                                        'absolute inset-y-0 right-0 z-10 flex items-center gap-1 bg-muted/70 pl-10 pr-3 backdrop-blur-sm [mask-image:linear-gradient(to_right,transparent,black_2.5rem)]',
+                                        rowStage === 'confirm' && 'bg-destructive/10',
+                                    )}
+                                >
+                                    {rowStage === 'actions' && (
+                                        <>
+                                            <motion.div variants={actionItemVariants}>
+                                                <Button variant="ghost" size="icon" className="hover:bg-foreground/10" asChild>
+                                                    <Link
+                                                        href={`/document-templates/edit/${template.id}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        title={t('open_editor')}
+                                                        onClick={closeToIdle}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                        <ExternalLink className="sr-only h-4 w-4" />
+                                                    </Link>
+                                                </Button>
+                                            </motion.div>
+                                            <motion.div variants={actionItemVariants}>
+                                                <Button variant="ghost" size="icon" className="hover:bg-destructive/15 hover:text-destructive" disabled={isPending} onClick={goConfirm} title={commonT('delete')}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </motion.div>
+                                        </>
+                                    )}
 
-                                {rowStage === 'confirm' && (
-                                    <motion.div
-                                        key="confirm"
-                                        custom={direction}
-                                        variants={stageVariants}
-                                        initial="enter"
-                                        animate="center"
-                                        exit="exit"
-                                        className="flex justify-end gap-1"
-                                    >
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            disabled={isPending}
-                                            onClick={() => handleConfirmDelete(template.id)}
-                                            title={commonT('confirm')}
-                                        >
-                                            <Check className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            disabled={isPending}
-                                            onClick={goBackToActions}
-                                            title={commonT('cancel')}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                                    {rowStage === 'confirm' && (
+                                        <>
+                                            <motion.div variants={actionItemVariants}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="hover:bg-destructive/15 hover:text-destructive"
+                                                    disabled={isPending}
+                                                    onClick={() => handleConfirmDelete(template.id)}
+                                                    title={commonT('confirm')}
+                                                >
+                                                    <Check className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </motion.div>
+                                            <motion.div variants={actionItemVariants}>
+                                                <Button variant="ghost" size="icon" className="hover:bg-foreground/10" disabled={isPending} onClick={goBackToActions} title={commonT('cancel')}>
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 );
             })}

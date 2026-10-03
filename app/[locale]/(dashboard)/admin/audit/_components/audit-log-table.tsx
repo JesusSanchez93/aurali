@@ -50,6 +50,11 @@ const ACTION_LABELS: Record<string, string> = {
   role_permission_added: 'Permiso agregado a un rol',
   role_permission_removed: 'Permiso retirado de un rol',
   member_role_changed: 'Cambio de rol de un miembro',
+  support_access_requested: 'Equipo de Aurali solicitó acceso',
+  support_access_approved: 'Acceso del equipo de Aurali aprobado',
+  support_access_rejected: 'Acceso del equipo de Aurali rechazado',
+  support_access_revoked: 'Acceso del equipo de Aurali revocado',
+  support_access_ended: 'Equipo de Aurali salió de la organización',
 }
 
 // Actions worth flagging visually — the ones a superadmin is usually hunting for

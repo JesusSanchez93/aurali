@@ -25,13 +25,26 @@ type Stage = 'idle' | 'actions' | 'confirm';
 // explicación completa de cada detalle (pointerEvents en variants, etc.).
 const stageVariants: Variants = {
   enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0, pointerEvents: 'none' }),
-  center: { x: 0, opacity: 1, pointerEvents: 'auto', transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } },
+  center: {
+    x: 0,
+    opacity: 1,
+    pointerEvents: 'auto',
+    transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1], staggerChildren: 0.04, delayChildren: 0.03 },
+  },
   exit: (dir: number) => ({
     x: dir > 0 ? -24 : 24,
     opacity: 0,
     pointerEvents: 'none',
     transition: { duration: 0.14, ease: 'easeIn' },
   }),
+};
+
+// Cada botón hereda el estado del panel (mismos nombres de variant): el
+// `staggerChildren` de arriba los hace entrar uno por uno.
+const actionItemVariants: Variants = {
+  enter: { opacity: 0, x: 6 },
+  center: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 6 },
 };
 
 type DocType = { id: string; slug: string; name: { es?: string; en?: string } };
@@ -256,14 +269,15 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      {/* El texto cede el paso: si no caben lado a lado, las acciones bajan a su propia línea. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="min-w-[16rem] flex-1">
           <h2 className="text-lg font-semibold">Bancos</h2>
           <p className="text-sm text-muted-foreground">
-            Los bancos disponibles para que las organizaciones configuren durante el onboarding.
+            Los bancos disponibles para que las organizaciones los agreguen en Configuración.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Badge variant="secondary">{banks.length}</Badge>
           <Sheet
             open={sheetOpen}
@@ -368,20 +382,11 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
                   key={bank.id}
                   data-catalog-bank-row={bank.id}
                   role="listitem"
-                  className={cn(
-                    'flex items-center justify-between px-4 py-3 transition-colors duration-300',
-                    rowStage === 'confirm' && 'bg-gradient-to-r from-destructive/25 via-destructive/10 to-transparent',
-                  )}
+                  className="relative flex items-center justify-between gap-4 overflow-hidden px-4 py-3"
                 >
-                  <div
-                    className={cn(
-                      'flex flex-col gap-0.5 transition-all duration-300',
-                      rowStage === 'actions' && '-translate-x-1 opacity-50',
-                      rowStage === 'confirm' && '-translate-x-2',
-                    )}
-                  >
+                  <div className="flex flex-col gap-0.5 min-w-0">
                     <div className="flex items-center gap-3">
-                      <span className={cn(bank.is_active ? '' : 'text-muted-foreground line-through', rowStage === 'confirm' && 'text-destructive')}>
+                      <span className={cn(bank.is_active ? '' : 'text-muted-foreground line-through')}>
                         {bank.name}
                       </span>
                       <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
@@ -412,111 +417,97 @@ export function CatalogBanksSection({ initialBanks, documentTypes }: { initialBa
                     )}
                   </div>
 
-                  <div className="w-28 shrink-0 overflow-hidden">
-                    <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-                      {rowStage === 'idle' && (
-                        <motion.div
-                          key="idle"
-                          custom={direction}
-                          variants={stageVariants}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          className="flex justify-end"
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground"
-                            disabled={pendingId === bank.id}
-                            onClick={() => openActions(bank.id)}
-                            title="Acciones"
-                          >
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </Button>
-                        </motion.div>
-                      )}
+                  {/* Ancla en flujo normal: se desliza y se desvanece mientras el
+                      panel flotante está abierto. El contenido de la fila no se mueve. */}
+                  <motion.div
+                    className="shrink-0"
+                    animate={{ x: rowStage === 'idle' ? 0 : -12, opacity: rowStage === 'idle' ? 1 : 0 }}
+                    transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={pendingId === bank.id || rowStage !== 'idle'}
+                      onClick={() => openActions(bank.id)}
+                      title="Acciones"
+                    >
+                      {pendingId === bank.id ? <Spinner className="h-4 w-4" /> : <MoreVertical className="h-4 w-4" />}
+                    </Button>
+                  </motion.div>
 
-                      {rowStage === 'actions' && (
-                        <motion.div
-                          key="actions"
-                          custom={direction}
-                          variants={stageVariants}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          className="flex justify-end gap-1"
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground"
-                            onClick={() => openEdit(bank)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground"
-                            disabled={pendingId === bank.id}
-                            onClick={() => handleToggle(bank)}
-                            title={bank.is_active ? 'Desactivar' : 'Activar'}
-                          >
-                            {pendingId === bank.id ? (
-                              <Spinner className="h-3.5 w-3.5" />
-                            ) : bank.is_active ? (
-                              <EyeOff className="h-3.5 w-3.5" />
-                            ) : (
-                              <Eye className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={goConfirm}
-                            title="Eliminar"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </motion.div>
-                      )}
+                  {/* Panel flotante de acciones: absolute, no reserva espacio ni
+                      empuja el contenido; desenfoca lo que tiene detrás. */}
+                  <AnimatePresence initial={false} custom={direction}>
+                    {rowStage !== 'idle' && (
+                      <motion.div
+                        key={rowStage}
+                        custom={direction}
+                        variants={stageVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        className={cn(
+                          'absolute inset-y-0 right-0 z-10 flex items-center gap-1 bg-muted/70 pl-10 pr-3 backdrop-blur-sm [mask-image:linear-gradient(to_right,transparent,black_2.5rem)]',
+                          rowStage === 'confirm' && 'bg-destructive/10',
+                        )}
+                      >
+                        {rowStage === 'actions' && (
+                          <>
+                            <motion.div variants={actionItemVariants}>
+                              <Button variant="ghost" size="icon" className="hover:bg-foreground/10" onClick={() => openEdit(bank)} title="Editar">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </motion.div>
+                            <motion.div variants={actionItemVariants}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-foreground/10"
+                                disabled={pendingId === bank.id}
+                                onClick={() => handleToggle(bank)}
+                                title={bank.is_active ? 'Desactivar' : 'Activar'}
+                              >
+                                {pendingId === bank.id ? (
+                                  <Spinner className="h-4 w-4" />
+                                ) : bank.is_active ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </motion.div>
+                            <motion.div variants={actionItemVariants}>
+                              <Button variant="ghost" size="icon" className="hover:bg-destructive/15 hover:text-destructive" onClick={goConfirm} title="Eliminar">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </motion.div>
+                          </>
+                        )}
 
-                      {rowStage === 'confirm' && (
-                        <motion.div
-                          key="confirm"
-                          custom={direction}
-                          variants={stageVariants}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          className="flex justify-end gap-1"
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive"
-                            disabled={pendingId === bank.id}
-                            onClick={() => handleDelete(bank.id)}
-                            title="Confirmar"
-                          >
-                            {pendingId === bank.id ? <Spinner className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground"
-                            onClick={goBackToActions}
-                            title="Cancelar"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                        {rowStage === 'confirm' && (
+                          <>
+                            <motion.div variants={actionItemVariants}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:bg-destructive/15 hover:text-destructive"
+                                disabled={pendingId === bank.id}
+                                onClick={() => handleDelete(bank.id)}
+                                title="Confirmar"
+                              >
+                                {pendingId === bank.id ? <Spinner className="h-4 w-4" /> : <Check className="h-4 w-4 text-destructive" />}
+                              </Button>
+                            </motion.div>
+                            <motion.div variants={actionItemVariants}>
+                              <Button variant="ghost" size="icon" className="hover:bg-foreground/10" onClick={goBackToActions} title="Cancelar">
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </motion.div>
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}

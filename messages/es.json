@@ -628,17 +628,7 @@
       "title": "Paso 2 de 4: Datos de la organización"
     },
     "step3": {
-      "title": "Paso 3 de 4: Configura los bancos",
-      "description": "Selecciona los bancos con los que trabajará tu organización. Podrás modificarlos después.",
-      "add_bank": "Agregar banco",
-      "bank_name": "Nombre del banco",
-      "bank_name_placeholder": "Ej: Bancolombia",
-      "no_banks": "No hay bancos configurados aún.",
-      "add": "Agregar",
-      "remove": "Eliminar"
-    },
-    "step4": {
-      "title": "Paso 4 de 4: Tipos de documentos",
+      "title": "Tipos de documento",
       "description": "Configura los tipos de documento de identidad que aceptará tu organización.",
       "add_document": "Agregar documento",
       "document_name": "Nombre del documento",
@@ -661,9 +651,8 @@
       "aria_label": "Progreso del onboarding",
       "step1": "Perfil",
       "step2": "Empresa",
-      "step3": "Bancos",
-      "step4": "Documentos",
-      "workflow_selection": "Flujo"
+      "step3": "Documentos",
+      "workflow_selection": "Flujos"
     }
   },
   "auth": {
@@ -766,7 +755,7 @@
       "features": "Características",
       "benefits": "Beneficios",
       "howItWorks": "Cómo funciona",
-      "pricing": "Precios",
+      "pricing": "Prueba gratis",
       "cta": "Solicitar acceso",
       "platformCta": "Ir a la plataforma",
       "mobileAria": "Abrir menú principal",
@@ -933,36 +922,29 @@
       }
     },
     "pricing": {
-      "eyebrow": "Precios",
-      "title": "Un plan simple para cada etapa de tu bufete",
-      "description": "Sin letras pequeñas ni contratos forzosos. Cambia o cancela tu plan cuando quieras.",
-      "billingNote": "Precios en USD, facturación mensual.",
-      "perMonth": "USD/mes",
-      "popularBadge": "Más elegido",
-      "trialBadge": "{days} días gratis",
-      "cta": "Comenzar ahora",
-      "plans": {
-        "essential": {
-          "name": "Esencial",
-          "description": "Para bufetes pequeños que están automatizando sus primeros procesos.",
-          "features": {
-            "processes": "Hasta 50 procesos nuevos al mes",
-            "ai": "400 usos de IA al mes",
-            "users": "Hasta 3 usuarios",
-            "workflows": "Hasta 3 flujos de trabajo"
-          }
-        },
-        "professional": {
-          "name": "Profesional",
-          "description": "Para bufetes en crecimiento con varios abogados y más volumen de procesos.",
-          "features": {
-            "processes": "Hasta 250 procesos nuevos al mes",
-            "ai": "2.000 usos de IA al mes",
-            "users": "Hasta 10 usuarios",
-            "workflows": "Flujos de trabajo ilimitados"
-          }
+      "eyebrow": "Prueba gratis",
+      "title": "Empieza con 30 días gratis",
+      "description": "Usa Aurali en tu firma durante 30 días sin costo. Te damos acceso por etapas para acompañar bien a cada equipo.",
+      "trial": {
+        "title": "30 días gratis",
+        "description": "Acceso completo al plan básico desde que tu cuenta queda activa.",
+        "points": {
+          "noCard": "Sin tarjeta de crédito ni contratos.",
+          "fullAccess": "Procesos, documentos con IA, flujos y equipo desde el primer día.",
+          "continue": "Dentro de la plataforma verás cómo continuar cuando termine la prueba."
         }
-      }
+      },
+      "waitlist": {
+        "title": "Lista cerrada",
+        "description": "Estamos abriendo Aurali por etapas y con cupos limitados.",
+        "points": {
+          "stages": "Habilitamos nuevas firmas de forma progresiva.",
+          "review": "Revisamos cada solicitud antes de activar la cuenta.",
+          "email": "Te avisamos por correo cuando tu cuenta esté aprobada."
+        }
+      },
+      "cta": "Solicitar acceso",
+      "ctaNote": "Regístrate y quedarás en la lista; te escribimos al aprobar tu cuenta."
     },
     "finalCta": {
       "badge": "Acceso anticipado",

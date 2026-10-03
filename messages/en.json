@@ -628,17 +628,7 @@
       "title": "Step 2 of 4: Organization data"
     },
     "step3": {
-      "title": "Step 3 of 4: Configure banks",
-      "description": "Select the banks your organization will work with. You can change them later.",
-      "add_bank": "Add bank",
-      "bank_name": "Bank name",
-      "bank_name_placeholder": "E.g. Bancolombia",
-      "no_banks": "No banks configured yet.",
-      "add": "Add",
-      "remove": "Remove"
-    },
-    "step4": {
-      "title": "Step 4 of 4: Document types",
+      "title": "Document types",
       "description": "Configure the identity document types your organization will accept.",
       "add_document": "Add document",
       "document_name": "Document name",
@@ -661,9 +651,8 @@
       "aria_label": "Onboarding progress",
       "step1": "Profile",
       "step2": "Company",
-      "step3": "Banks",
-      "step4": "Documents",
-      "workflow_selection": "Flow"
+      "step3": "Documents",
+      "workflow_selection": "Workflows"
     }
   },
   "auth": {
@@ -766,7 +755,7 @@
       "features": "Features",
       "benefits": "Benefits",
       "howItWorks": "How it works",
-      "pricing": "Pricing",
+      "pricing": "Free trial",
       "cta": "Request access",
       "platformCta": "Go to platform",
       "mobileAria": "Open main menu",
@@ -933,36 +922,29 @@
       }
     },
     "pricing": {
-      "eyebrow": "Pricing",
-      "title": "One simple plan for every stage of your firm",
-      "description": "No fine print, no forced contracts. Change or cancel your plan whenever you want.",
-      "billingNote": "Prices in USD, billed monthly.",
-      "perMonth": "USD/mo",
-      "popularBadge": "Most popular",
-      "trialBadge": "{days}-day free trial",
-      "cta": "Get started",
-      "plans": {
-        "essential": {
-          "name": "Essential",
-          "description": "For small firms automating their first processes.",
-          "features": {
-            "processes": "Up to 50 new processes per month",
-            "ai": "400 AI uses per month",
-            "users": "Up to 3 users",
-            "workflows": "Up to 3 workflows"
-          }
-        },
-        "professional": {
-          "name": "Professional",
-          "description": "For growing firms with multiple lawyers and higher process volume.",
-          "features": {
-            "processes": "Up to 250 new processes per month",
-            "ai": "2,000 AI uses per month",
-            "users": "Up to 10 users",
-            "workflows": "Unlimited workflows"
-          }
+      "eyebrow": "Free trial",
+      "title": "Start with 30 days free",
+      "description": "Use Aurali at your firm for 30 days at no cost. We open access in stages so we can support every team properly.",
+      "trial": {
+        "title": "30 days free",
+        "description": "Full access to the basic plan from the moment your account is active.",
+        "points": {
+          "noCard": "No credit card, no contracts.",
+          "fullAccess": "Processes, AI documents, workflows and your team from day one.",
+          "continue": "Inside the platform you will see how to continue when the trial ends."
         }
-      }
+      },
+      "waitlist": {
+        "title": "Closed waitlist",
+        "description": "We are opening Aurali in stages, with limited spots.",
+        "points": {
+          "stages": "New firms are enabled progressively.",
+          "review": "We review every request before activating the account.",
+          "email": "We email you as soon as your account is approved."
+        }
+      },
+      "cta": "Request access",
+      "ctaNote": "Sign up to join the list; we will email you once your account is approved."
     },
     "finalCta": {
       "badge": "Early access",

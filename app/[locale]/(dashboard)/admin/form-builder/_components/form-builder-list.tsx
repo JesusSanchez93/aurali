@@ -178,19 +178,18 @@ export function FormBuilderList({ groups }: Props) {
             className="relative flex items-center justify-between gap-4 overflow-hidden px-4 py-3"
           >
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {form.form_name}
-                </p>
-                {form.is_published ? (
-                  <Badge className="shrink-0 text-[10px]">Publicado</Badge>
-                ) : (
-                  <Badge variant="outline" className="shrink-0 text-[10px]">Borrador</Badge>
-                )}
-              </div>
+              <p className="truncate text-sm font-medium">{form.form_name}</p>
               <p className="truncate text-xs text-muted-foreground">Tipo de proceso: {form.workflow_template_name}</p>
               <p className="truncate text-xs font-mono text-muted-foreground">{`{FORM_URL:${form.code}}`}</p>
             </div>
+
+            {/* Hijo directo de la fila: `items-center` lo centra en vertical
+                junto al botón de acciones, no alineado con el título. */}
+            {form.is_published ? (
+              <Badge className="shrink-0 text-[10px]">Publicado</Badge>
+            ) : (
+              <Badge variant="outline" className="shrink-0 text-[10px]">Borrador</Badge>
+            )}
 
             {/* Ancla en flujo normal — se desliza a la derecha y se
                 desvanece mientras el panel flotante está abierto, y vuelve
@@ -225,7 +224,7 @@ export function FormBuilderList({ groups }: Props) {
                   animate="center"
                   exit="exit"
                   className={cn(
-                    'absolute inset-y-0 right-0 z-10 flex items-center gap-1 rounded-l-lg bg-background/80 pl-8 pr-3 backdrop-blur-sm',
+                    'absolute inset-y-0 right-0 z-10 flex items-center gap-1 bg-muted/70 pl-10 pr-3 backdrop-blur-sm [mask-image:linear-gradient(to_right,transparent,black_2.5rem)]',
                     rowStage === 'confirm-delete' && 'bg-destructive/10',
                     rowStage === 'confirm-duplicate' && 'bg-primary/10',
                   )}
@@ -233,14 +232,14 @@ export function FormBuilderList({ groups }: Props) {
                   {rowStage === 'actions' && (
                     <>
                       <motion.div variants={actionItemVariants}>
-                        <Button variant="ghost" size="icon" asChild title="Editar">
+                        <Button variant="ghost" size="icon" className="hover:bg-foreground/10" asChild title="Editar">
                           <Link href={`/admin/form-builder/${form.code}`}>
                             <Pencil className="h-4 w-4" />
                           </Link>
                         </Button>
                       </motion.div>
                       <motion.div variants={actionItemVariants}>
-                        <Button variant="ghost" size="icon" onClick={goConfirmDuplicate} title="Duplicar">
+                        <Button variant="ghost" size="icon" className="hover:bg-foreground/10" onClick={goConfirmDuplicate} title="Duplicar">
                           <Copy className="h-4 w-4" />
                         </Button>
                       </motion.div>
@@ -248,6 +247,7 @@ export function FormBuilderList({ groups }: Props) {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="hover:bg-foreground/10"
                           disabled={pendingId === form.code}
                           onClick={() => handleExport(form.code, form.form_name)}
                           title="Exportar"
@@ -256,7 +256,7 @@ export function FormBuilderList({ groups }: Props) {
                         </Button>
                       </motion.div>
                       <motion.div variants={actionItemVariants}>
-                        <Button variant="ghost" size="icon" onClick={goConfirmDelete} title="Eliminar">
+                        <Button variant="ghost" size="icon" className="hover:bg-destructive/15 hover:text-destructive" onClick={goConfirmDelete} title="Eliminar">
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </motion.div>
@@ -269,6 +269,7 @@ export function FormBuilderList({ groups }: Props) {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="hover:bg-primary/15 hover:text-primary"
                           disabled={pendingId === form.code}
                           onClick={() => handleConfirmDuplicate(form.code)}
                           title="Confirmar"
@@ -277,7 +278,7 @@ export function FormBuilderList({ groups }: Props) {
                         </Button>
                       </motion.div>
                       <motion.div variants={actionItemVariants}>
-                        <Button variant="ghost" size="icon" onClick={goBackToActions} title="Cancelar">
+                        <Button variant="ghost" size="icon" className="hover:bg-foreground/10" onClick={goBackToActions} title="Cancelar">
                           <X className="h-4 w-4" />
                         </Button>
                       </motion.div>
@@ -290,6 +291,7 @@ export function FormBuilderList({ groups }: Props) {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="hover:bg-destructive/15 hover:text-destructive"
                           disabled={pendingId === form.code}
                           onClick={() => handleConfirmDelete(form.code)}
                           title="Confirmar"
@@ -298,7 +300,7 @@ export function FormBuilderList({ groups }: Props) {
                         </Button>
                       </motion.div>
                       <motion.div variants={actionItemVariants}>
-                        <Button variant="ghost" size="icon" onClick={goBackToActions} title="Cancelar">
+                        <Button variant="ghost" size="icon" className="hover:bg-foreground/10" onClick={goBackToActions} title="Cancelar">
                           <X className="h-4 w-4" />
                         </Button>
                       </motion.div>

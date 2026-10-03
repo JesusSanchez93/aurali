@@ -10,14 +10,15 @@ export default async function AdminWorkflowsPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-6 py-6">
-      <div className="flex items-center justify-between">
-        <div>
+      {/* Si no caben lado a lado, las acciones bajan a su propia línea. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="min-w-[16rem] flex-1">
           <h1 className="text-2xl font-semibold">Flujos de trabajo</h1>
           <p className="text-sm text-muted-foreground">
             Gestiona los flujos globales disponibles para todas las organizaciones.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <ImportWorkflowButton />
           <Button asChild>
             <Link href="/admin/workflows/new">

@@ -9,7 +9,6 @@ const STEP_KEYS = [
   { key: 'step1',              tKey: 'step1' },
   { key: 'step2',              tKey: 'step2' },
   { key: 'step3',              tKey: 'step3' },
-  { key: 'step4',              tKey: 'step4' },
   { key: 'workflow-selection', tKey: 'workflow_selection' },
 ]
 

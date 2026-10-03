@@ -11,14 +11,15 @@ export default async function AdminFormBuilderPage() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
-      <div className="flex items-center justify-between">
-        <div>
+      {/* Si no caben lado a lado, las acciones bajan a su propia línea. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="min-w-[16rem] flex-1">
           <h1 className="text-2xl font-semibold">Formularios</h1>
           <p className="text-sm text-muted-foreground">
             Formularios dinámicos que ven los clientes externos.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <ImportFormButton />
           <NewFormButton groups={groups} />
         </div>

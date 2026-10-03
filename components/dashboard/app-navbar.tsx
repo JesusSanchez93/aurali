@@ -9,6 +9,7 @@ import { adminItems, orgItems } from './app-sidebar';
 import { useTranslations } from 'next-intl';
 import { useProfile } from '@/components/providers/profile-provider';
 import { ChevronRight } from 'lucide-react';
+import { NotificationsBell } from './notifications-bell';
 
 export function AppNavBar() {
   const pathname = usePathname();
@@ -55,6 +56,7 @@ export function AppNavBar() {
         </nav>
         <div className="flex-auto" />
         <div className="flex items-center gap-2">
+          <NotificationsBell />
           <LanguageSwitcher />
           <ModeToggle />
         </div>

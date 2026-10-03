@@ -17,43 +17,42 @@ async function getContext() {
   return { supabase, user, orgId: profile.current_organization_id };
 }
 
-export async function getCatalogBanks() {
+export async function getCatalogDocuments() {
   const { supabase } = await getContext();
   const { data, error } = await supabase
-    .from('catalog_banks')
-    .select('id, name, code, slug')
+    .from('catalog_documents')
+    .select('id, slug, name')
     .eq('is_active', true)
-    .order('name', { ascending: true });
+    .order('slug', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []).map((d) => ({
+    id: d.id,
+    slug: d.slug as string,
+    name: d.name as { es?: string; en?: string },
+  }));
 }
 
-export async function saveOrgBanks(selectedIds: string[]) {
+export async function saveOrgDocuments(selectedIds: string[]) {
   const { supabase, user, orgId } = await getContext();
 
-  if (selectedIds.length === 0) throw new Error('Debes seleccionar al menos un banco');
+  if (selectedIds.length === 0) throw new Error('Debes seleccionar al menos un tipo de documento');
 
-  // Fetch selected catalog banks
-  const { data: catalogBanks, error: fetchError } = await supabase
-    .from('catalog_banks')
-    .select('name, code, slug, legal_rep_first_name, legal_rep_last_name')
+  // Fetch selected catalog documents
+  const { data: catalogDocs, error: fetchError } = await supabase
+    .from('catalog_documents')
+    .select('slug, name')
     .in('id', selectedIds);
 
-  if (fetchError || !catalogBanks) throw new Error('Error al obtener los bancos seleccionados');
+  if (fetchError || !catalogDocs) throw new Error('Error al obtener los documentos seleccionados');
 
-  // Replace org banks entirely
-  await supabase.from('banks').delete().eq('organization_id', orgId);
+  // Replace org documents entirely
+  await supabase.from('documents').delete().eq('organization_id', orgId);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertError } = await (supabase as any).from('banks').insert(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (catalogBanks as any[]).map((b) => ({
-      name: b.name,
-      code: b.code,
-      slug: b.slug,
-      legal_rep_first_name: b.legal_rep_first_name ?? null,
-      legal_rep_last_name:  b.legal_rep_last_name ?? null,
+  const { error: insertError } = await supabase.from('documents').insert(
+    catalogDocs.map((d) => ({
+      slug: d.slug,
+      name: d.name,
       organization_id: orgId,
       created_by: user.id,
     }))
@@ -61,6 +60,7 @@ export async function saveOrgBanks(selectedIds: string[]) {
 
   if (insertError) throw new Error(insertError.message);
 
-  // Advance onboarding status
-  await supabase.from('profiles').update({ onboarding_status: 'step3_completed' }).eq('id', user.id);
+  // No se reutiliza 'step3_completed': en cuentas a medio onboarding ese
+  // valor significa "bancos configurados" (paso que ya no existe).
+  await supabase.from('profiles').update({ onboarding_status: 'documents_completed' }).eq('id', user.id);
 }

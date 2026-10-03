@@ -1,7 +1,7 @@
-import { getCatalogBanks } from './actions';
-import { BanksSetupForm } from './_components/banks-setup-form';
+import { getCatalogDocuments } from './actions';
+import { DocumentsSetupForm } from './_components/documents-setup-form';
 
 export default async function Step3Page() {
-  const catalogBanks = await getCatalogBanks();
-  return <BanksSetupForm catalogBanks={catalogBanks} />;
+  const catalogDocuments = await getCatalogDocuments();
+  return <DocumentsSetupForm catalogDocuments={catalogDocuments} />;
 }

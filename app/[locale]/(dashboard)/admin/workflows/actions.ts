@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireSuperAdmin } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
+import { isProcessCatalogKey, processCatalogsInFormSchema } from '@/lib/catalogs/registry'
 import { buildWorkflowExportPayload, workflowExportPayloadSchema, type WorkflowExportPayload } from '@/lib/workflow/workflowExport'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,24 +38,40 @@ export async function getGlobalWorkflows() {
   const supabase = await createClient()
   const db = supabase as Supabase
 
-  const { data, error } = await db
-    .from('workflow_templates')
-    .select('id, name, description, is_default, is_legacy_form, icon_svg, gradient_color, gradient_color_to, created_at')
-    .is('organization_id', null)
-    .order('created_at', { ascending: false })
+  const [{ data, error }, { data: forms, error: formsError }] = await Promise.all([
+    db
+      .from('workflow_templates')
+      .select('id, name, description, is_default, is_legacy_form, required_catalogs, icon_svg, gradient_color, gradient_color_to, created_at')
+      .is('organization_id', null)
+      .order('created_at', { ascending: false }),
+    db.from('legal_process_form_schemas').select('workflow_template_id, schema'),
+  ])
 
   if (error) throw new Error(error.message)
-  return data as Array<{
+  if (formsError) throw new Error(formsError.message)
+
+  // Listados que ya usan los formularios de cada proceso, para avisar al
+  // superadmin si falta asociar alguno.
+  const formCatalogsByTemplate = new Map<string, Set<string>>()
+  for (const form of (forms ?? []) as Array<{ workflow_template_id: string | null; schema: unknown }>) {
+    if (!form.workflow_template_id) continue
+    const keys = formCatalogsByTemplate.get(form.workflow_template_id) ?? new Set<string>()
+    for (const key of processCatalogsInFormSchema(form.schema)) keys.add(key)
+    formCatalogsByTemplate.set(form.workflow_template_id, keys)
+  }
+
+  return (data as Array<{
     id: string
     name: string
     description: string | null
     is_default: boolean
     is_legacy_form: boolean
+    required_catalogs: string[]
     icon_svg: string | null
     gradient_color: string | null
     gradient_color_to: string | null
     created_at: string
-  }>
+  }>).map((wf) => ({ ...wf, form_catalogs: [...(formCatalogsByTemplate.get(wf.id) ?? [])] }))
 }
 
 /**
@@ -85,7 +102,15 @@ export async function createGlobalWorkflow(name: string, description?: string) {
  */
 export async function updateGlobalWorkflow(
   id: string,
-  values: { name: string; description?: string | null; icon_svg?: string | null; gradient_color?: string | null; gradient_color_to?: string | null },
+  values: {
+    name: string
+    description?: string | null
+    icon_svg?: string | null
+    gradient_color?: string | null
+    gradient_color_to?: string | null
+    /** Listados propios del proceso; si se omite, no se modifican. */
+    required_catalogs?: string[]
+  },
 ) {
   await requireSuperAdmin()
 
@@ -100,6 +125,9 @@ export async function updateGlobalWorkflow(
       icon_svg: values.icon_svg ?? null,
       gradient_color: values.gradient_color ?? null,
       gradient_color_to: values.gradient_color_to ?? null,
+      ...(values.required_catalogs
+        ? { required_catalogs: [...new Set(values.required_catalogs.filter(isProcessCatalogKey))] }
+        : {}),
     })
     .eq('id', id)
     .is('organization_id', null)
@@ -107,6 +135,8 @@ export async function updateGlobalWorkflow(
   if (error) throw new Error(error.message)
 
   revalidatePath('/admin/workflows')
+  // El menú de Configuración de las organizaciones depende de estos listados.
+  revalidatePath('/', 'layout')
 }
 
 /**
@@ -125,7 +155,7 @@ export async function duplicateGlobalWorkflow(sourceId: string, name: string): P
 
   const { data: source, error: sourceErr } = await db
     .from('workflow_templates')
-    .select('description, icon_svg, gradient_color, gradient_color_to')
+    .select('description, icon_svg, gradient_color, gradient_color_to, required_catalogs')
     .eq('id', sourceId)
     .is('organization_id', null)
     .single()
@@ -140,6 +170,7 @@ export async function duplicateGlobalWorkflow(sourceId: string, name: string): P
       icon_svg: source.icon_svg,
       gradient_color: source.gradient_color,
       gradient_color_to: source.gradient_color_to,
+      required_catalogs: source.required_catalogs ?? [],
       organization_id: null,
       is_default: false,
       is_legacy_form: false,
@@ -205,7 +236,7 @@ export async function exportWorkflow(id: string): Promise<WorkflowExportPayload>
 
   const { data: template, error } = await db
     .from('workflow_templates')
-    .select('name, description, icon_svg, gradient_color, gradient_color_to, is_legacy_form')
+    .select('name, description, icon_svg, gradient_color, gradient_color_to, is_legacy_form, required_catalogs')
     .eq('id', id)
     .is('organization_id', null)
     .single()
@@ -260,6 +291,7 @@ export async function importWorkflow(payload: WorkflowExportPayload): Promise<{ 
       organization_id: null,
       is_default: false,
       is_legacy_form: parsed.data.isLegacyForm,
+      required_catalogs: (parsed.data.requiredCatalogs ?? []).filter(isProcessCatalogKey),
     })
     .select('id')
     .single()

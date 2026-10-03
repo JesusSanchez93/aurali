@@ -19,9 +19,14 @@ type Stage = 'idle' | 'confirm';
 
 const stageVariants: Variants = {
   enter: (dir: number) => ({ x: dir > 0 ? 24 : -24, opacity: 0, pointerEvents: 'none' }),
-  center: { x: 0, opacity: 1, pointerEvents: 'auto', transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] } },
+  center: {
+    x: 0,
+    opacity: 1,
+    pointerEvents: 'auto',
+    transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1], staggerChildren: 0.04, delayChildren: 0.03 },
+  },
   // pointerEvents: 'none' keeps a mid-exit block (still mounted while it animates
-  // out, overlapping the incoming one under AnimatePresence's popLayout mode)
+  // out, overlapping the incoming one while both are mounted)
   // from swallowing clicks meant for the buttons fading/sliding in on top of it.
   exit: (dir: number) => ({
     x: dir > 0 ? -24 : 24,
@@ -29,6 +34,14 @@ const stageVariants: Variants = {
     pointerEvents: 'none',
     transition: { duration: 0.14, ease: 'easeIn' },
   }),
+};
+
+// Cada botón hereda el estado del panel (mismos nombres de variant): el
+// `staggerChildren` de arriba los hace entrar uno por uno.
+const actionItemVariants: Variants = {
+  enter: { opacity: 0, x: 6 },
+  center: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 6 },
 };
 
 interface Props {
@@ -163,22 +176,14 @@ export function DocumentsSection({ initialDocuments, catalogDocuments }: Props) 
                   key={doc.id}
                   data-document-row={doc.id}
                   role="listitem"
-                  className={cn(
-                    'flex items-center gap-4 rounded-lg border px-4 py-3 text-sm animate-in fade-in slide-in-from-bottom-2 fill-mode-backwards transition-colors duration-300',
-                    rowStage === 'confirm' && 'border-destructive/40 bg-gradient-to-r from-destructive/25 via-destructive/10 to-transparent',
-                  )}
+                  className="relative flex items-center gap-4 overflow-hidden rounded-lg border px-4 py-3 text-sm animate-in fade-in slide-in-from-bottom-2 fill-mode-backwards"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div
-                    className={cn(
-                      'flex flex-1 min-w-0 items-center gap-2 transition-all duration-300',
-                      rowStage === 'confirm' && '-translate-x-2',
-                    )}
-                  >
+                  <div className="flex flex-1 min-w-0 items-center gap-2">
                     <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
                       {doc.slug}
                     </span>
-                    <span className={cn('font-medium', rowStage === 'confirm' && 'text-destructive')}>
+                    <span className="font-medium">
                       {doc.name?.es ?? doc.slug}
                     </span>
                     {doc.name?.en && doc.name.en !== doc.name.es && (
@@ -186,60 +191,63 @@ export function DocumentsSection({ initialDocuments, catalogDocuments }: Props) 
                     )}
                   </div>
 
-                  <div className="w-20 shrink-0 overflow-hidden">
-                    <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-                      {rowStage === 'idle' && (
-                        <motion.div
-                          key="idle"
-                          custom={direction}
-                          variants={stageVariants}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          className="flex justify-end"
-                        >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={pendingId === doc.id}
-                            onClick={() => goConfirm(doc.id)}
-                            title="Eliminar"
-                          >
-                            {pendingId === doc.id ? (
-                              <Spinner className="h-4 w-4" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            )}
-                          </Button>
-                        </motion.div>
-                      )}
-
-                      {rowStage === 'confirm' && (
-                        <motion.div
-                          key="confirm"
-                          custom={direction}
-                          variants={stageVariants}
-                          initial="enter"
-                          animate="center"
-                          exit="exit"
-                          className="flex justify-end gap-1"
-                        >
-                          <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(doc)} title="Confirmar">
-                            <Check className="h-4 w-4 text-destructive" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={goBackToIdle} title="Cancelar">
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
                   <Switch
                     checked={doc.is_active}
                     onCheckedChange={() => handleToggle(doc)}
                     disabled={pendingId === doc.id}
                   />
+
+                  {/* Ancla en flujo normal: se desliza y se desvanece mientras el
+                      panel flotante está abierto. El contenido de la fila no se mueve. */}
+                  <motion.div
+                    className="shrink-0"
+                    animate={{ x: rowStage === 'idle' ? 0 : -12, opacity: rowStage === 'idle' ? 1 : 0 }}
+                    transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={pendingId === doc.id || rowStage !== 'idle'}
+                      onClick={() => goConfirm(doc.id)}
+                      title="Eliminar"
+                    >
+                      {pendingId === doc.id ? <Spinner className="h-4 w-4" /> : <Trash2 className="h-4 w-4 text-destructive" />}
+                    </Button>
+                  </motion.div>
+
+                  {/* Panel flotante de acciones: absolute, no reserva espacio ni
+                      empuja el contenido; desenfoca lo que tiene detrás. */}
+                  <AnimatePresence initial={false} custom={direction}>
+                    {rowStage !== 'idle' && (
+                      <motion.div
+                        key={rowStage}
+                        custom={direction}
+                        variants={stageVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        className={cn(
+                          'absolute inset-y-0 right-0 z-10 flex items-center gap-1 bg-muted/70 pl-10 pr-3 backdrop-blur-sm [mask-image:linear-gradient(to_right,transparent,black_2.5rem)]',
+                          rowStage === 'confirm' && 'bg-destructive/10',
+                        )}
+                      >
+                        {rowStage === 'confirm' && (
+                          <>
+                            <motion.div variants={actionItemVariants}>
+                              <Button variant="ghost" size="icon" className="hover:bg-destructive/15 hover:text-destructive" onClick={() => handleConfirmDelete(doc)} title="Confirmar">
+                                <Check className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </motion.div>
+                            <motion.div variants={actionItemVariants}>
+                              <Button variant="ghost" size="icon" className="hover:bg-foreground/10" onClick={goBackToIdle} title="Cancelar">
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </motion.div>
+                          </>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
