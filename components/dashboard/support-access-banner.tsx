@@ -2,7 +2,7 @@ import { ShieldCheck, ShieldQuestion } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import type { SessionProfile } from '@/lib/auth/get-session-profile'
 import { AccessRequestButtons } from './access-request-buttons'
-import { SupportActivityPanel, type SupportActivityEvent } from './support-activity-panel'
+import { SupportControlViewer } from './support-control-viewer'
 
 interface Props {
   profile: SessionProfile
@@ -34,27 +34,14 @@ export async function SupportAccessBanner({ profile }: Props) {
     }),
   )
 
-  // En modo control, la organización ve en vivo la actividad del superadmin.
+  // En modo control, la pantalla de la organización sigue a la del superadmin.
   const controlIndex = requests.findIndex((r) => r.status === 'approved' && r.mode === 'control')
   const control = controlIndex >= 0 ? requests[controlIndex] : null
-  const { data: initialEvents } = control
-    ? await supabase
-        .from('support_session_events')
-        .select('id, kind, label, path, created_at')
-        .eq('request_id', control.id)
-        .order('created_at', { ascending: false })
-        .limit(50)
-    : { data: null }
 
   return (
     <>
       {control && (
-        <SupportActivityPanel
-          key={control.id}
-          requestId={control.id}
-          staffName={names[controlIndex]}
-          initialEvents={(initialEvents ?? []) as SupportActivityEvent[]}
-        />
+        <SupportControlViewer key={control.id} requestId={control.id} staffName={names[controlIndex]} />
       )}
       {requests.map((r, i) => {
         const approved = r.status === 'approved'
@@ -70,10 +57,10 @@ export async function SupportAccessBanner({ profile }: Props) {
                 <strong className="font-semibold">{names[i]}</strong>
                 {approved
                   ? r.mode === 'control'
-                    ? ', del equipo de Aurali, tiene el control de tu cuenta. Ves su actividad en vivo.'
+                    ? ', del equipo de Aurali, tiene el control de tu cuenta. Tu pantalla sigue la suya.'
                     : ', del equipo de Aurali, tiene acceso a tu cuenta.'
                   : r.mode === 'control'
-                    ? ', del equipo de Aurali, solicita acceso y tomar el control de tu cuenta. Verás en vivo todo lo que haga.'
+                    ? ', del equipo de Aurali, solicita acceso y tomar el control de tu cuenta. Tu pantalla seguirá la suya.'
                     : ', del equipo de Aurali, solicita acceso a tu cuenta.'}
                 {!approved && !canManage && (
                   <span className="text-amber-900"> · Un administrador debe aprobarla.</span>

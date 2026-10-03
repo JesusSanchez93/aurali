@@ -33,7 +33,7 @@ export async function SuperAdminBanner({ profile }: Props) {
         </span>
         <strong className="font-bold sm:hidden">{org?.name ?? profile.current_organization_id}</strong>
         {profile.support_access?.mode === 'control' && (
-          <span className="hidden rounded bg-amber-950/10 px-1.5 py-0.5 text-xs font-semibold md:inline" title="La organización ve en vivo cada página que abres y cada acción que haces">
+          <span className="hidden rounded bg-amber-950/10 px-1.5 py-0.5 text-xs font-semibold md:inline" title="La pantalla de la organización sigue la tuya: páginas, cursor y clics">
             Modo control: la organización ve tu actividad
           </span>
         )}

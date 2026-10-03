@@ -28,8 +28,8 @@ export function SupportAccessRequestEmail({ organizationName, staffName, takeCon
             </Text>
             {takeControl && (
               <Text>
-                Si lo apruebas, verás en vivo dentro de la plataforma cada página que abra y cada acción que
-                realice mientras esté en tu cuenta.
+                Si lo apruebas, tu pantalla en la plataforma seguirá la suya: verás en vivo cada página que
+                abra, su cursor y cada clic mientras esté en tu cuenta.
               </Text>
             )}
             <Text>

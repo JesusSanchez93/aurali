@@ -64,13 +64,13 @@ export default async function DashboardLayout({ children }: Props) {
           <SupportAccessRealtime />
           <SupportSessionTracker />
           <AppSidebar />
-          <main className="relative flex flex-1 flex-col overflow-auto bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:shadow-sm">
+          <main data-cobrowse="main" className="relative flex flex-1 flex-col overflow-auto bg-background md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:shadow-sm">
             <SuperAdminBanner profile={profile} />
             <SupportAccessBanner profile={profile} />
             <EmailConnectionBanner profile={profile} />
             <PlanUsageBanner profile={profile} />
             <AppNavBar />
-            <div className="flex flex-1 flex-col">
+            <div data-cobrowse="content" className="flex flex-1 flex-col">
               <div className="@container/main flex flex-1 flex-col gap-2">
                 <div className="flex flex-col gap-4 py-0 md:gap-6 md:py-0">
                   {children}

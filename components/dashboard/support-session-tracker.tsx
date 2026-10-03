@@ -2,27 +2,39 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { subscribeAuthenticated } from '@/lib/supabase/realtime'
 import { useProfile } from '@/components/providers/profile-provider'
+import {
+  CLICKABLE,
+  anchorFor,
+  anchoredPoint,
+  controlLabel,
+  stripLocale,
+  supportControlTopic,
+  type AnchoredPoint,
+  type Anchor,
+  type SupportControlMessage,
+} from '@/lib/support/cobrowse'
 
-const CLICKABLE = 'button, a[href], [role="menuitem"], [role="menuitemradio"], [role="tab"], [role="option"], [role="switch"], [role="checkbox"]'
-
-/** Nombre visible de un control: lo que lee el usuario, nunca lo escrito en campos. */
-function controlLabel(el: Element): string {
-  const fromAttr = el.getAttribute('aria-label') || el.getAttribute('title')
-  const text = (fromAttr || (el as HTMLElement).innerText || '').replace(/\s+/g, ' ').trim()
-  return text.slice(0, 120)
-}
+// Cursor y scroll viajan juntos cada FLUSH_MS: queda bajo el límite de
+// mensajes por segundo del cliente de Realtime.
+const FLUSH_MS = 150
 
 function pageLabel(): string {
   return document.title.replace(/\s*\|\s*Aurali\s*$/, '').trim() || 'Página'
 }
 
+const currentPath = () => stripLocale(window.location.pathname) + window.location.search
+
 /**
- * Modo "tomar el control": registra cada página que abre el superadmin y cada
- * control que pulsa, para que la organización lo vea en vivo
- * (support_session_events). Solo corre con un acceso de control vigente y RLS
- * vuelve a exigirlo al insertar. No renderiza nada.
+ * Modo "tomar el control" (lado del superadmin). La pantalla de la
+ * organización sigue a la suya: emite por Broadcast la página, el cursor, los
+ * clics y el scroll (ver support-control-viewer.tsx). Además deja la
+ * auditoría en support_session_events. Solo corre con un acceso de control
+ * vigente; RLS vuelve a exigirlo para el canal y para los eventos. No
+ * renderiza nada.
  */
 export function SupportSessionTracker() {
   const profile = useProfile()
@@ -30,7 +42,13 @@ export function SupportSessionTracker() {
   const access = profile.support_access
   const orgId = profile.current_organization_id
   const active = profile.system_role === 'SUPERADMIN' && !!orgId && access?.mode === 'control'
+  const requestId = active ? access.requestId : null
   const lastRef = useRef<{ key: string; at: number } | null>(null)
+  const channelRef = useRef<RealtimeChannel | null>(null)
+
+  const send = (message: SupportControlMessage) => {
+    void channelRef.current?.send({ type: 'broadcast', event: message.event, payload: message.payload })
+  }
 
   const record = (kind: 'navigation' | 'action', label: string, path: string | null) => {
     if (!active || !access || !orgId || !label) return
@@ -46,24 +64,79 @@ export function SupportSessionTracker() {
       })
   }
 
+  // Canal: al conectarse (o cuando la organización pide sincronizar) se
+  // reenvía la página actual.
+  useEffect(() => {
+    if (!requestId) return
+    const cleanup = subscribeAuthenticated(
+      createClient(),
+      (supabase) =>
+        supabase
+          .channel(supportControlTopic(requestId), { config: { private: true, broadcast: { self: false } } })
+          .on('broadcast', { event: 'sync' }, () => send({ event: 'nav', payload: { path: currentPath() } })),
+      (status, channel) => {
+        channelRef.current = status === 'SUBSCRIBED' ? channel : null
+        if (status === 'SUBSCRIBED') send({ event: 'nav', payload: { path: currentPath() } })
+      },
+    )
+    const onUnload = () => send({ event: 'leave', payload: {} })
+    window.addEventListener('beforeunload', onUnload)
+    return () => {
+      onUnload()
+      window.removeEventListener('beforeunload', onUnload)
+      channelRef.current = null
+      cleanup()
+    }
+  }, [requestId])
+
   // Páginas: el título se actualiza un instante después de navegar.
   useEffect(() => {
     if (!active) return
-    const timer = setTimeout(() => record('navigation', pageLabel(), pathname.replace(/^\/(es|en)(?=\/|$)/, '') || '/'), 400)
+    send({ event: 'nav', payload: { path: currentPath() } })
+    const timer = setTimeout(() => record('navigation', pageLabel(), stripLocale(pathname)), 400)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, pathname])
 
-  // Acciones: botones, enlaces, opciones de menú y pestañas que pulsa.
+  // Cursor, clics y scroll.
   useEffect(() => {
     if (!active) return
-    const onClick = (event: MouseEvent) => {
-      const target = (event.target as Element | null)?.closest(CLICKABLE)
-      if (!target) return
-      record('action', controlLabel(target), null)
+    let pointer: AnchoredPoint | undefined
+    let scroll: { anchor: Anchor; ratio: number } | undefined
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || !(event.target instanceof Element)) return
+      pointer = anchoredPoint(event.target, event.clientX, event.clientY)
     }
+    const onScroll = (event: Event) => {
+      const el = event.target instanceof Element ? event.target : document.scrollingElement
+      if (!el) return
+      const max = el.scrollHeight - el.clientHeight
+      scroll = { anchor: anchorFor(el), ratio: max > 0 ? el.scrollTop / max : 0 }
+    }
+    const onClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) return
+      const target = event.target.closest(CLICKABLE)
+      const label = target ? controlLabel(target) : ''
+      send({ event: 'click', payload: { ...anchoredPoint(target ?? event.target, event.clientX, event.clientY), label } })
+      if (target) record('action', label, null)
+    }
+    const flush = setInterval(() => {
+      if (!pointer && !scroll) return
+      send({ event: 'state', payload: { pointer, scroll } })
+      pointer = undefined
+      scroll = undefined
+    }, FLUSH_MS)
+
+    document.addEventListener('pointermove', onPointerMove, { passive: true })
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true })
     document.addEventListener('click', onClick, true)
-    return () => document.removeEventListener('click', onClick, true)
+    return () => {
+      clearInterval(flush)
+      document.removeEventListener('pointermove', onPointerMove)
+      document.removeEventListener('scroll', onScroll, { capture: true })
+      document.removeEventListener('click', onClick, true)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
 

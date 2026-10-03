@@ -3210,6 +3210,7 @@ export type Database = {
         Returns: undefined
       }
       assert_org_keeps_admin: { Args: { p_org_id: string }; Returns: undefined }
+      can_join_support_control: { Args: { p_topic: string }; Returns: boolean }
       decide_org_access: {
         Args: { p_approve: boolean; p_request_id: string }
         Returns: undefined

@@ -123,8 +123,9 @@ export async function getClientOrganizations(userId: string): Promise<ClientOrgR
 export type AccessMode = 'access' | 'control'
 
 /**
- * `control`: además de entrar, la organización ve en vivo todo lo que hace el
- * superadmin (support_session_events). Ambos modos dan el mismo acceso.
+ * `control`: además de entrar, la pantalla de la organización sigue la del
+ * superadmin (página, cursor, clics y scroll; ver lib/support/cobrowse.ts).
+ * Ambos modos dan el mismo acceso.
  */
 export async function requestOrganizationAccess(orgId: string, mode: AccessMode = 'access'): Promise<'pending' | 'approved'> {
   await requireSuperAdmin()

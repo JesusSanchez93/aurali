@@ -306,7 +306,7 @@ export function ClientsList({ clients }: Props) {
                                 <span>
                                   <span className="block font-medium">Solicitar acceso y tomar el control</span>
                                   <span className="block text-xs text-muted-foreground">
-                                    La organización verá en vivo cada página que abras y cada acción que hagas.
+                                    La pantalla de la organización seguirá la tuya: páginas, cursor y clics.
                                   </span>
                                 </span>
                               </DropdownMenuRadioItem>
